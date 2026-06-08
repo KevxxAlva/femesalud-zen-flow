@@ -103,7 +103,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen">
         <AppSidebar />
-        <main className="px-4 py-4 md:ml-[17.5rem] md:pr-6 md:py-6">
+        <main className="px-4 pt-20 pb-6 md:ml-[17.5rem] md:pr-6 md:py-6 md:pt-6">
           <Outlet />
         </main>
       </div>
