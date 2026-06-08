@@ -1,16 +1,8 @@
+import { useState } from "react";
 import { Link, useRouterState } from "@tanstack/react-router";
 import {
-  Home,
-  Calendar,
-  Users,
-  FileText,
-  FlaskConical,
-  Receipt,
-  Package,
-  Stethoscope,
-  UserRound,
-  Settings,
-  Heart,
+  Home, Calendar, Users, FileText, FlaskConical, Receipt,
+  Package, Stethoscope, UserRound, Settings, Heart, Menu, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -25,13 +17,12 @@ const modules = [
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
   { title: "Doctores", url: "/doctores", icon: UserRound },
   { title: "Configuración", url: "/configuracion", icon: Settings },
-];
+] as const;
 
-export function AppSidebar() {
+function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
   return (
-    <aside className="fixed left-4 top-4 bottom-4 z-30 hidden w-64 flex-col rounded-3xl glass-card shadow-sm md:flex">
+    <>
       <div className="flex items-center gap-2.5 px-6 pt-6 pb-8">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve to-mauve-soft shadow-sm">
           <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
@@ -41,7 +32,6 @@ export function AppSidebar() {
           <p className="text-[11px] text-muted-foreground">Premium Clinical Suite</p>
         </div>
       </div>
-
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
         {modules.map((m) => {
           const active = pathname === m.url;
@@ -50,6 +40,7 @@ export function AppSidebar() {
             <Link
               key={m.url}
               to={m.url}
+              onClick={onNavigate}
               className={cn(
                 "group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300",
                 active
@@ -69,7 +60,6 @@ export function AppSidebar() {
           );
         })}
       </nav>
-
       <div className="m-3 rounded-2xl bg-gradient-to-br from-blush/60 to-accent/50 p-4">
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-full bg-gradient-to-br from-mauve to-blush" />
@@ -79,6 +69,52 @@ export function AppSidebar() {
           </div>
         </div>
       </div>
-    </aside>
+    </>
+  );
+}
+
+export function AppSidebar() {
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  return (
+    <>
+      {/* Desktop */}
+      <aside className="fixed left-4 top-4 bottom-4 z-30 hidden w-64 flex-col rounded-3xl glass-card shadow-sm md:flex">
+        <SidebarBody />
+      </aside>
+
+      {/* Mobile trigger */}
+      <button
+        onClick={() => setMobileOpen(true)}
+        aria-label="Abrir menú"
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl glass-card shadow-sm md:hidden"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+
+      {/* Mobile overlay + drawer */}
+      <div
+        onClick={() => setMobileOpen(false)}
+        className={cn(
+          "fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+      />
+      <aside
+        className={cn(
+          "fixed left-3 top-3 bottom-3 z-50 flex w-64 flex-col rounded-3xl glass-card shadow-lg transition-all duration-300 ease-out md:hidden",
+          mobileOpen ? "translate-x-0 opacity-100" : "-translate-x-[110%] opacity-0",
+        )}
+      >
+        <button
+          onClick={() => setMobileOpen(false)}
+          aria-label="Cerrar menú"
+          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"
+        >
+          <X className="h-4 w-4" />
+        </button>
+        <SidebarBody onNavigate={() => setMobileOpen(false)} />
+      </aside>
+    </>
   );
 }
