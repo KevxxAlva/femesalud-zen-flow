@@ -10,7 +10,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { AppSidebar } from "@/components/AppSidebar";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -18,9 +18,7 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="font-display text-7xl font-bold text-foreground">404</h1>
         <h2 className="mt-4 text-xl font-semibold">Página no encontrada</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Esta ruta no existe en FemeSalud.
-        </p>
+        <p className="mt-2 text-sm text-muted-foreground">Esta ruta no existe en FemeSalud.</p>
         <a
           href="/"
           className="mt-6 inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"
@@ -101,12 +99,8 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="min-h-screen">
-        <AppSidebar />
-        <main className="px-4 pt-20 pb-6 md:ml-[17.5rem] md:pr-6 md:py-6 md:pt-6">
-          <Outlet />
-        </main>
-      </div>
+      <Outlet />
+      <Toaster richColors position="top-right" />
     </QueryClientProvider>
   );
 }
