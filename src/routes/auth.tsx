@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { Heart, Loader2, Eye, EyeOff, Headphones, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Loader2, Eye, EyeOff, Headphones, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "bootstrap">("login");
+  const [mode, setMode] = useState<"login" | "bootstrap" | "recovery" | "reset-password">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -24,10 +24,23 @@ function AuthPage() {
   const [currentSlide, setCurrentSlide] = useState(0);
 
   useEffect(() => {
+    // Detect if we landed from a Supabase password recovery link
+    const hash = window.location.hash;
+    const params = new URLSearchParams(window.location.search);
+    
+    if (hash && hash.includes("type=recovery")) {
+      setMode("reset-password");
+    } else if (params.get("bootstrap") === "true") {
+      setMode("bootstrap");
+    }
+
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) router.navigate({ to: "/", replace: true });
+      // Only redirect to dashboard if not currently in password recovery flow
+      if (data.session && !hash.includes("type=recovery") && mode !== "reset-password") {
+        router.navigate({ to: "/", replace: true });
+      }
     });
-  }, [router]);
+  }, [router, mode]);
 
   // Auto-rotate slides on the right side
   useEffect(() => {
@@ -69,23 +82,35 @@ function AuthPage() {
     }
   };
 
-  const handleSocialLogin = (provider: "google" | "facebook") => {
-    toast.info(`Iniciando conexión con ${provider === "google" ? "Google" : "Facebook"}...`);
-    supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/`,
-      },
-    }).catch((err) => {
-      toast.error(err.message || "Error al conectar proveedor social");
+  const handleRecovery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/auth`,
     });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Enlace enviado. Por favor revisa tu correo electrónico.");
+    setMode("login");
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password.length < 8) {
+      return toast.error("La contraseña debe tener al menos 8 caracteres.");
+    }
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    toast.success("Contraseña actualizada con éxito.");
+    router.navigate({ to: "/", replace: true });
   };
 
   const slides = [
     {
       title: "Gestiona tu agenda sin esfuerzo",
       description: "Asigna turnos, envía recordatorios automáticos y evita inasistencias en tu consulta.",
-      buttonText: "Ver agenda",
       badge: "Agenda Inteligente",
       featureTitle: "Agenda y Citas en Tiempo Real",
       featureDesc: "La sincronización instantánea permite a tu equipo administrativo y médico estar coordinados en todo momento.",
@@ -93,7 +118,6 @@ function AuthPage() {
     {
       title: "Historias Clínicas Premium",
       description: "Accede al historial de tus pacientes, recetas previas y archivos adjuntos desde cualquier dispositivo.",
-      buttonText: "Ver pacientes",
       badge: "Ficha Médica Digital",
       featureTitle: "Historial Clínico Unificado",
       featureDesc: "Toda la información médica de tus pacientes protegida con encriptación de nivel clínico y accesibilidad instantánea.",
@@ -101,7 +125,6 @@ function AuthPage() {
     {
       title: "Facturación y Reportes Clave",
       description: "Monitorea tus ingresos diarios, mensuales y el estado de pagos de consultas de forma clara.",
-      buttonText: "Ver reportes",
       badge: "Finanzas Médicas",
       featureTitle: "Métricas y Análisis de Crecimiento",
       featureDesc: "Toma decisiones basadas en datos reales. Analiza el rendimiento de tu clínica y optimiza la atención.",
@@ -278,18 +301,11 @@ function AuthPage() {
 
         {/* Form Body Container */}
         <div className="my-auto py-8 max-w-[360px] w-full mx-auto">
-          {mode === "login" ? (
+          {mode === "login" && (
             <>
               <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Sign in</h2>
               <p className="text-sm text-zinc-400 mt-2">
-                ¿Primer administrador?{" "}
-                <button
-                  type="button"
-                  onClick={() => setMode("bootstrap")}
-                  className="text-[#A855F7] font-semibold hover:underline bg-transparent border-0 p-0 cursor-pointer"
-                >
-                  Crear ahora
-                </button>
+                Introduce tus credenciales para acceder a la suite clínica.
               </p>
 
               <form onSubmit={handleLogin} className="mt-8 space-y-5">
@@ -340,7 +356,7 @@ function AuthPage() {
                   </label>
                   <button
                     type="button"
-                    onClick={() => toast.info("Comunícate con soporte para restablecer tu contraseña.")}
+                    onClick={() => setMode("recovery")}
                     className="font-bold text-zinc-400 hover:text-[#A855F7] transition-colors bg-transparent border-0 cursor-pointer p-0"
                   >
                     Forgot Password?
@@ -356,18 +372,95 @@ function AuthPage() {
                 </Button>
               </form>
             </>
-          ) : (
+          )}
+
+          {mode === "recovery" && (
             <>
-              <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Primer Admin</h2>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Recuperar contraseña</h2>
               <p className="text-sm text-zinc-400 mt-2">
-                ¿Ya tienes una cuenta?{" "}
+                Ingresa tu correo y te enviaremos las instrucciones para restablecer tu acceso.
+              </p>
+
+              <form onSubmit={handleRecovery} className="mt-8 space-y-5">
+                <div className="space-y-1.5 text-left">
+                  <Label htmlFor="recovery-email" className="text-zinc-500 font-medium text-xs">E-mail</Label>
+                  <Input
+                    id="recovery-email"
+                    type="email"
+                    placeholder="ejemplo@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Enviar enlace"}
+                </Button>
+
                 <button
                   type="button"
                   onClick={() => setMode("login")}
-                  className="text-[#A855F7] font-semibold hover:underline bg-transparent border-0 p-0 cursor-pointer"
+                  className="w-full flex items-center justify-center gap-2 text-xs font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 mt-4 bg-transparent border-0 cursor-pointer p-0"
                 >
-                  Iniciar sesión
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Volver a iniciar sesión
                 </button>
+              </form>
+            </>
+          )}
+
+          {mode === "reset-password" && (
+            <>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Nueva contraseña</h2>
+              <p className="text-sm text-zinc-400 mt-2">
+                Ingresa tu nueva contraseña para reestablecer tu acceso a la plataforma.
+              </p>
+
+              <form onSubmit={handleResetPassword} className="mt-8 space-y-5">
+                <div className="space-y-1.5 text-left">
+                  <Label htmlFor="new-password" className="text-zinc-500 font-medium text-xs">Nueva contraseña</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 p-0 cursor-pointer bg-transparent border-0 flex items-center"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                >
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Actualizar contraseña"}
+                </Button>
+              </form>
+            </>
+          )}
+
+          {mode === "bootstrap" && (
+            <>
+              <h2 className="font-display text-3xl font-bold tracking-tight text-zinc-900 dark:text-white">Primer Admin</h2>
+              <p className="text-sm text-zinc-400 mt-2">
+                Crea la primera cuenta del sistema. Quedará automáticamente como administrador.
               </p>
 
               <form onSubmit={handleBootstrap} className="mt-8 space-y-4">
@@ -422,48 +515,22 @@ function AuthPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0 pt-1"
+                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Crear administrador"}
                 </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setMode("login")}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-bold text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 mt-4 bg-transparent border-0 cursor-pointer p-0"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  Volver a iniciar sesión
+                </button>
               </form>
             </>
           )}
-
-          {/* Social login partition */}
-          <div className="relative flex py-5 items-center">
-            <div className="flex-grow border-t border-zinc-100 dark:border-zinc-800"></div>
-            <span className="flex-shrink mx-4 text-[10px] text-zinc-400 font-bold uppercase tracking-wider">or</span>
-            <div className="flex-grow border-t border-zinc-100 dark:border-zinc-800"></div>
-          </div>
-
-          {/* Social buttons */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => handleSocialLogin("google")}
-              className="w-full h-11 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path
-                  fill="#EA4335"
-                  d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.478 0-6.3-2.822-6.3-6.3s2.822-6.3 6.3-6.3c1.706 0 3.208.68 4.3 1.777l3.076-3.076C18.66 1.896 15.65 1 12.24 1c-6.076 0-11 4.924-11 11s4.924 11 11 11c5.87 0 10.87-4.223 10.87-11 0-.717-.078-1.417-.24-2.114H12.24z"
-                />
-              </svg>
-              Continue with Google
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSocialLogin("facebook")}
-              className="w-full h-11 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold shadow-sm transition-all flex items-center justify-center gap-3 cursor-pointer"
-            >
-              <svg className="w-4 h-4" fill="#1877F2" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              Continue with Facebook
-            </button>
-          </div>
         </div>
 
         {/* Footer info */}
@@ -563,4 +630,3 @@ function AuthPage() {
     </div>
   );
 }
-
