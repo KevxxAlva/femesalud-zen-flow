@@ -5,7 +5,10 @@ import {
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { useStore, type AppointmentStatus } from "@/lib/store";
+import { usePatients } from "@/lib/api/patients";
+import { useAppointments } from "@/lib/api/appointments";
+import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
+import { useMyProfile, useDoctors } from "@/lib/api/profiles";
 
 function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const w = 120, h = 36;
@@ -21,58 +24,64 @@ function Sparkline({ data, className }: { data: number[]; className?: string }) 
   );
 }
 
-const statusBg: Record<AppointmentStatus, string> = {
+const statusBg: Record<string, string> = {
   programada: "bg-mauve/15 text-mauve",
   completada: "bg-sage/50 text-sage-foreground",
   cancelada: "bg-destructive/15 text-destructive",
 };
 
 const tagBg: Record<string, string> = {
-  Activo: "bg-sage/50 text-sage-foreground",
-  "En tratamiento": "bg-mauve/15 text-mauve",
-  Nuevo: "bg-blush/60 text-blush-foreground",
-  Alta: "bg-muted text-muted-foreground",
+  activo: "bg-sage/50 text-sage-foreground",
+  en_tratamiento: "bg-mauve/15 text-mauve",
+  nuevo: "bg-blush/60 text-blush-foreground",
+  alta: "bg-muted text-muted-foreground",
 };
 
-const initials = (n: string) => n.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
-const todayISO = () => new Date().toISOString().slice(0, 10);
+const initials = (n: string) => (n || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function Dashboard() {
-  const patients = useStore((s) => s.patients);
-  const appointments = useStore((s) => s.appointments);
+  const { user } = useAuthSession();
+  const isAdmin = useIsAdmin();
+  const { data: profile } = useMyProfile(user?.id);
+  const { data: patients = [] } = usePatients();
+  const { data: appointments = [] } = useAppointments();
+  const { data: doctors = [] } = useDoctors();
 
-  const today = todayISO();
+  const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
+  const today = new Date().toISOString().slice(0, 10);
+
   const stats = useMemo(() => {
-    const todays = appointments.filter((a) => a.date === today);
+    const todays = appointments.filter((a) => a.scheduled_at.slice(0, 10) === today);
     const upcoming = appointments
-      .filter((a) => a.status === "programada" && a.date >= today)
-      .sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))
+      .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
       .slice(0, 5);
     const recent = [...patients]
-      .sort((a, b) => b.lastVisit.localeCompare(a.lastVisit))
+      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
       .slice(0, 4);
-    const completedThisMonth = appointments.filter((a) => a.status === "completada").length;
-    const income = completedThisMonth * 220;
-    // sparklines from last N appointments dates
+    const completed = appointments.filter((a) => a.status === "completada");
+    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
     const consultSpark = Array.from({ length: 10 }).map((_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (9 - i));
       const iso = d.toISOString().slice(0, 10);
-      return appointments.filter((a) => a.date === iso).length;
+      return appointments.filter((a) => a.scheduled_at.slice(0, 10) === iso).length;
     });
-    const patientSpark = Array.from({ length: 10 }).map((_, i) => 30 + i * 7 + (i % 3) * 5);
+    const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patients.length - (9 - i)));
     const incomeSpark = consultSpark.map((v) => 10 + v * 4);
-    return { todays, upcoming, recent, income, completedThisMonth, consultSpark, patientSpark, incomeSpark };
+    return { todays, upcoming, recent, income, completed: completed.length, consultSpark, patientSpark, incomeSpark };
   }, [appointments, patients, today]);
+
+  const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Doctor";
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="ml-14 md:ml-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground" suppressHydrationWarning>
             {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Buen día, Dra. Lucía</h1>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Buen día, {displayName}</h1>
         </div>
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-2xl glass-card px-4 py-2.5 sm:flex">
@@ -81,8 +90,7 @@ export function Dashboard() {
           </div>
           <button className="rounded-2xl glass-card p-2.5 transition hover:bg-accent"><Bell className="h-4 w-4" /></button>
           <Link to="/agenda" className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm shadow-mauve/30 transition hover:shadow-md">
-            <Plus className="h-4 w-4" />
-            Nueva cita
+            <Plus className="h-4 w-4" /> Nueva cita
           </Link>
         </div>
       </header>
@@ -96,13 +104,13 @@ export function Dashboard() {
               <Sparkles className="h-3 w-3" /> Resumen inteligente del día
             </div>
             <h2 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-              Tu jornada luce tranquila y bien organizada.
+              {isAdmin ? "Visión completa de la clínica." : "Tu jornada luce tranquila."}
             </h2>
             <p className="mt-2 text-sm text-primary-foreground/85">
-              Hoy tienes {stats.todays.length} citas, {patients.length} pacientes activos y {stats.completedThisMonth} consultas completadas este mes.
+              Hoy hay {stats.todays.length} citas, {patients.length} pacientes {isAdmin ? "en total" : "asignados"} y {stats.completed} consultas completadas.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Link to="/agenda" className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-mauve transition hover:bg-white/90">Ver agenda completa</Link>
+              <Link to="/agenda" className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-mauve transition hover:bg-white/90">Ver agenda</Link>
               <Link to="/pacientes" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur transition hover:bg-white/25">Ver pacientes</Link>
             </div>
           </div>
@@ -121,7 +129,7 @@ export function Dashboard() {
           <div className="mt-5 space-y-3">
             {[
               { label: "Ocupación de salas", value: Math.min(100, stats.todays.length * 12), tone: "bg-mauve" },
-              { label: "Citas completadas", value: Math.min(100, stats.completedThisMonth * 15), tone: "bg-blush-foreground" },
+              { label: "Citas completadas", value: Math.min(100, stats.completed * 15), tone: "bg-blush-foreground" },
               { label: "Satisfacción", value: 94, tone: "bg-sage-foreground" },
             ].map((m) => (
               <div key={m.label}>
@@ -178,26 +186,32 @@ export function Dashboard() {
             {stats.upcoming.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">No hay citas programadas.</p>
             )}
-            {stats.upcoming.map((a) => (
-              <div key={a.id} className="relative mb-5 last:mb-0">
-                <div className="absolute -left-[18px] top-1.5 h-3 w-3 rounded-full border-2 border-background bg-gradient-to-br from-mauve to-mauve-soft shadow-sm" />
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card/50 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-1 text-xs font-medium">
-                      <Clock className="h-3 w-3 text-mauve" />
-                      {a.date === today ? "Hoy" : new Date(a.date).toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {a.time}
+            {stats.upcoming.map((a) => {
+              const d = a.scheduled_at.slice(0, 10);
+              const dt = new Date(a.scheduled_at);
+              const pad = (n: number) => String(n).padStart(2, "0");
+              const time = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+              return (
+                <div key={a.id} className="relative mb-5 last:mb-0">
+                  <div className="absolute -left-[18px] top-1.5 h-3 w-3 rounded-full border-2 border-background bg-gradient-to-br from-mauve to-mauve-soft shadow-sm" />
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card/50 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-1 text-xs font-medium" suppressHydrationWarning>
+                        <Clock className="h-3 w-3 text-mauve" />
+                        {d === today ? "Hoy" : new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {time}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold">{a.patient_name}</p>
+                        <p className="text-xs text-muted-foreground">{a.reason || "—"} · {doctorMap.get(a.doctor_id) || "Doctor"}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-semibold">{a.patientName}</p>
-                      <p className="text-xs text-muted-foreground">{a.reason} · {a.doctor}</p>
-                    </div>
+                    <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>
+                      {a.status}
+                    </span>
                   </div>
-                  <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>
-                    {a.status}
-                  </span>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -210,20 +224,21 @@ export function Dashboard() {
             <Link to="/pacientes" className="text-xs font-medium text-mauve hover:underline">Ver todos →</Link>
           </div>
           <ul className="mt-5 space-y-2.5">
+            {stats.recent.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Aún no hay pacientes.</li>}
             {stats.recent.map((p) => (
               <li key={p.id} className="flex items-center justify-between rounded-2xl p-2.5 transition-all duration-300 hover:bg-muted/60">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground shadow-sm">
-                    {initials(p.name)}
+                    {initials(p.full_name)}
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{p.name}</p>
-                    <p className="text-[11px] text-muted-foreground">
-                      {p.doctor} · {p.lastVisit === today ? "hoy" : new Date(p.lastVisit).toLocaleDateString("es-ES")}
+                    <p className="text-sm font-semibold">{p.full_name}</p>
+                    <p className="text-[11px] text-muted-foreground" suppressHydrationWarning>
+                      {doctorMap.get(p.assigned_doctor_id ?? "") || "Sin asignar"}
                     </p>
                   </div>
                 </div>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status])}>
+                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status] || "bg-muted text-muted-foreground")}>
                   {p.status}
                 </span>
               </li>

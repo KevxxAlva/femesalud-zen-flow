@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { Link, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   Home, Calendar, Users, FileText, FlaskConical, Receipt,
-  Package, Stethoscope, UserRound, Settings, Heart, Menu, X,
+  Package, Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
+import { useMyProfile } from "@/lib/api/profiles";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
-const modules = [
+const baseModules = [
   { title: "Inicio", url: "/", icon: Home },
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Pacientes", url: "/pacientes", icon: Users },
@@ -15,15 +19,36 @@ const modules = [
   { title: "Facturación", url: "/facturacion", icon: Receipt },
   { title: "Inventario", url: "/inventario", icon: Package },
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
+] as const;
+
+const adminModules = [
   { title: "Doctores", url: "/doctores", icon: UserRound },
   { title: "Configuración", url: "/configuracion", icon: Settings },
 ] as const;
 
+const initials = (n: string) =>
+  (n || "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { user } = useAuthSession();
+  const { data: profile } = useMyProfile(user?.id);
+  const isAdmin = useIsAdmin();
+  const router = useRouter();
+  const qc = useQueryClient();
+
+  const modules = [...baseModules, ...(isAdmin ? adminModules : [])];
+
+  const handleLogout = async () => {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    router.navigate({ to: "/auth", replace: true });
+  };
+
   return (
     <>
-      <div className="flex items-center gap-2.5 px-6 pt-6 pb-8">
+      <div className="flex items-center gap-2.5 px-6 pt-6 pb-6">
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve to-mauve-soft shadow-sm">
           <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
         </div>
@@ -62,11 +87,25 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
       <div className="m-3 rounded-2xl bg-gradient-to-br from-blush/60 to-accent/50 p-4">
         <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-full bg-gradient-to-br from-mauve to-blush" />
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">Dra. Lucía Vega</p>
-            <p className="truncate text-[11px] text-muted-foreground">Ginecología</p>
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-mauve to-blush text-xs font-semibold text-primary-foreground">
+            {initials(profile?.full_name || user?.email || "U")}
           </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold">
+              {profile?.full_name?.trim() || user?.email?.split("@")[0] || "Usuario"}
+            </p>
+            <p className="truncate text-[11px] text-muted-foreground flex items-center gap-1">
+              {isAdmin && <Shield className="h-3 w-3 text-mauve" />}
+              {isAdmin ? "Administrador" : profile?.specialty || "Doctor"}
+            </p>
+          </div>
+          <button
+            onClick={handleLogout}
+            aria-label="Cerrar sesión"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </>
@@ -78,12 +117,10 @@ export function AppSidebar() {
 
   return (
     <>
-      {/* Desktop */}
       <aside className="fixed left-4 top-4 bottom-4 z-30 hidden w-64 flex-col rounded-3xl glass-card shadow-sm md:flex">
         <SidebarBody />
       </aside>
 
-      {/* Mobile trigger */}
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Abrir menú"
@@ -92,7 +129,6 @@ export function AppSidebar() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Mobile overlay + drawer */}
       <div
         onClick={() => setMobileOpen(false)}
         className={cn(

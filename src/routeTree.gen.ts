@@ -9,109 +9,128 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ServiciosRouteImport } from './routes/servicios'
-import { Route as PacientesRouteImport } from './routes/pacientes'
-import { Route as LaboratorioRouteImport } from './routes/laboratorio'
-import { Route as InventarioRouteImport } from './routes/inventario'
-import { Route as HistoriasRouteImport } from './routes/historias'
-import { Route as FacturacionRouteImport } from './routes/facturacion'
-import { Route as DoctoresRouteImport } from './routes/doctores'
-import { Route as ConfiguracionRouteImport } from './routes/configuracion'
-import { Route as AgendaRouteImport } from './routes/agenda'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
+import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
+import { Route as AuthenticatedPacientesRouteImport } from './routes/_authenticated/pacientes'
+import { Route as AuthenticatedLaboratorioRouteImport } from './routes/_authenticated/laboratorio'
+import { Route as AuthenticatedInventarioRouteImport } from './routes/_authenticated/inventario'
+import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
+import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
+import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
+import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
+import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 
-const ServiciosRoute = ServiciosRouteImport.update({
-  id: '/servicios',
-  path: '/servicios',
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PacientesRoute = PacientesRouteImport.update({
-  id: '/pacientes',
-  path: '/pacientes',
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const LaboratorioRoute = LaboratorioRouteImport.update({
-  id: '/laboratorio',
-  path: '/laboratorio',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const InventarioRoute = InventarioRouteImport.update({
-  id: '/inventario',
-  path: '/inventario',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoriasRoute = HistoriasRouteImport.update({
-  id: '/historias',
-  path: '/historias',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const FacturacionRoute = FacturacionRouteImport.update({
-  id: '/facturacion',
-  path: '/facturacion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DoctoresRoute = DoctoresRouteImport.update({
-  id: '/doctores',
-  path: '/doctores',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfiguracionRoute = ConfiguracionRouteImport.update({
-  id: '/configuracion',
-  path: '/configuracion',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AgendaRoute = AgendaRouteImport.update({
-  id: '/agenda',
-  path: '/agenda',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
+const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedServiciosRoute = AuthenticatedServiciosRouteImport.update({
+  id: '/servicios',
+  path: '/servicios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedPacientesRoute = AuthenticatedPacientesRouteImport.update({
+  id: '/pacientes',
+  path: '/pacientes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedLaboratorioRoute =
+  AuthenticatedLaboratorioRouteImport.update({
+    id: '/laboratorio',
+    path: '/laboratorio',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedInventarioRoute = AuthenticatedInventarioRouteImport.update({
+  id: '/inventario',
+  path: '/inventario',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedHistoriasRoute = AuthenticatedHistoriasRouteImport.update({
+  id: '/historias',
+  path: '/historias',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedFacturacionRoute =
+  AuthenticatedFacturacionRouteImport.update({
+    id: '/facturacion',
+    path: '/facturacion',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedDoctoresRoute = AuthenticatedDoctoresRouteImport.update({
+  id: '/doctores',
+  path: '/doctores',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedConfiguracionRoute =
+  AuthenticatedConfiguracionRouteImport.update({
+    id: '/configuracion',
+    path: '/configuracion',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
+  id: '/agenda',
+  path: '/agenda',
+  getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/configuracion': typeof ConfiguracionRoute
-  '/doctores': typeof DoctoresRoute
-  '/facturacion': typeof FacturacionRoute
-  '/historias': typeof HistoriasRoute
-  '/inventario': typeof InventarioRoute
-  '/laboratorio': typeof LaboratorioRoute
-  '/pacientes': typeof PacientesRoute
-  '/servicios': typeof ServiciosRoute
+  '/': typeof AuthenticatedIndexRoute
+  '/auth': typeof AuthRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/doctores': typeof AuthenticatedDoctoresRoute
+  '/facturacion': typeof AuthenticatedFacturacionRoute
+  '/historias': typeof AuthenticatedHistoriasRoute
+  '/inventario': typeof AuthenticatedInventarioRoute
+  '/laboratorio': typeof AuthenticatedLaboratorioRoute
+  '/pacientes': typeof AuthenticatedPacientesRoute
+  '/servicios': typeof AuthenticatedServiciosRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/configuracion': typeof ConfiguracionRoute
-  '/doctores': typeof DoctoresRoute
-  '/facturacion': typeof FacturacionRoute
-  '/historias': typeof HistoriasRoute
-  '/inventario': typeof InventarioRoute
-  '/laboratorio': typeof LaboratorioRoute
-  '/pacientes': typeof PacientesRoute
-  '/servicios': typeof ServiciosRoute
+  '/auth': typeof AuthRoute
+  '/agenda': typeof AuthenticatedAgendaRoute
+  '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/doctores': typeof AuthenticatedDoctoresRoute
+  '/facturacion': typeof AuthenticatedFacturacionRoute
+  '/historias': typeof AuthenticatedHistoriasRoute
+  '/inventario': typeof AuthenticatedInventarioRoute
+  '/laboratorio': typeof AuthenticatedLaboratorioRoute
+  '/pacientes': typeof AuthenticatedPacientesRoute
+  '/servicios': typeof AuthenticatedServiciosRoute
+  '/': typeof AuthenticatedIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/agenda': typeof AgendaRoute
-  '/configuracion': typeof ConfiguracionRoute
-  '/doctores': typeof DoctoresRoute
-  '/facturacion': typeof FacturacionRoute
-  '/historias': typeof HistoriasRoute
-  '/inventario': typeof InventarioRoute
-  '/laboratorio': typeof LaboratorioRoute
-  '/pacientes': typeof PacientesRoute
-  '/servicios': typeof ServiciosRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
+  '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
+  '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
+  '/_authenticated/inventario': typeof AuthenticatedInventarioRoute
+  '/_authenticated/laboratorio': typeof AuthenticatedLaboratorioRoute
+  '/_authenticated/pacientes': typeof AuthenticatedPacientesRoute
+  '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
+  '/_authenticated/': typeof AuthenticatedIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/auth'
     | '/agenda'
     | '/configuracion'
     | '/doctores'
@@ -123,7 +142,7 @@ export interface FileRouteTypes {
     | '/servicios'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
+    | '/auth'
     | '/agenda'
     | '/configuracion'
     | '/doctores'
@@ -133,119 +152,149 @@ export interface FileRouteTypes {
     | '/laboratorio'
     | '/pacientes'
     | '/servicios'
+    | '/'
   id:
     | '__root__'
-    | '/'
-    | '/agenda'
-    | '/configuracion'
-    | '/doctores'
-    | '/facturacion'
-    | '/historias'
-    | '/inventario'
-    | '/laboratorio'
-    | '/pacientes'
-    | '/servicios'
+    | '/_authenticated'
+    | '/auth'
+    | '/_authenticated/agenda'
+    | '/_authenticated/configuracion'
+    | '/_authenticated/doctores'
+    | '/_authenticated/facturacion'
+    | '/_authenticated/historias'
+    | '/_authenticated/inventario'
+    | '/_authenticated/laboratorio'
+    | '/_authenticated/pacientes'
+    | '/_authenticated/servicios'
+    | '/_authenticated/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  AgendaRoute: typeof AgendaRoute
-  ConfiguracionRoute: typeof ConfiguracionRoute
-  DoctoresRoute: typeof DoctoresRoute
-  FacturacionRoute: typeof FacturacionRoute
-  HistoriasRoute: typeof HistoriasRoute
-  InventarioRoute: typeof InventarioRoute
-  LaboratorioRoute: typeof LaboratorioRoute
-  PacientesRoute: typeof PacientesRoute
-  ServiciosRoute: typeof ServiciosRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/servicios': {
-      id: '/servicios'
-      path: '/servicios'
-      fullPath: '/servicios'
-      preLoaderRoute: typeof ServiciosRouteImport
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/pacientes': {
-      id: '/pacientes'
-      path: '/pacientes'
-      fullPath: '/pacientes'
-      preLoaderRoute: typeof PacientesRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/laboratorio': {
-      id: '/laboratorio'
-      path: '/laboratorio'
-      fullPath: '/laboratorio'
-      preLoaderRoute: typeof LaboratorioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/inventario': {
-      id: '/inventario'
-      path: '/inventario'
-      fullPath: '/inventario'
-      preLoaderRoute: typeof InventarioRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/historias': {
-      id: '/historias'
-      path: '/historias'
-      fullPath: '/historias'
-      preLoaderRoute: typeof HistoriasRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/facturacion': {
-      id: '/facturacion'
-      path: '/facturacion'
-      fullPath: '/facturacion'
-      preLoaderRoute: typeof FacturacionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/doctores': {
-      id: '/doctores'
-      path: '/doctores'
-      fullPath: '/doctores'
-      preLoaderRoute: typeof DoctoresRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuracion': {
-      id: '/configuracion'
-      path: '/configuracion'
-      fullPath: '/configuracion'
-      preLoaderRoute: typeof ConfiguracionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/agenda': {
-      id: '/agenda'
-      path: '/agenda'
-      fullPath: '/agenda'
-      preLoaderRoute: typeof AgendaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_authenticated/': {
+      id: '/_authenticated/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof AuthenticatedIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/servicios': {
+      id: '/_authenticated/servicios'
+      path: '/servicios'
+      fullPath: '/servicios'
+      preLoaderRoute: typeof AuthenticatedServiciosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pacientes': {
+      id: '/_authenticated/pacientes'
+      path: '/pacientes'
+      fullPath: '/pacientes'
+      preLoaderRoute: typeof AuthenticatedPacientesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/laboratorio': {
+      id: '/_authenticated/laboratorio'
+      path: '/laboratorio'
+      fullPath: '/laboratorio'
+      preLoaderRoute: typeof AuthenticatedLaboratorioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/inventario': {
+      id: '/_authenticated/inventario'
+      path: '/inventario'
+      fullPath: '/inventario'
+      preLoaderRoute: typeof AuthenticatedInventarioRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/historias': {
+      id: '/_authenticated/historias'
+      path: '/historias'
+      fullPath: '/historias'
+      preLoaderRoute: typeof AuthenticatedHistoriasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/facturacion': {
+      id: '/_authenticated/facturacion'
+      path: '/facturacion'
+      fullPath: '/facturacion'
+      preLoaderRoute: typeof AuthenticatedFacturacionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/doctores': {
+      id: '/_authenticated/doctores'
+      path: '/doctores'
+      fullPath: '/doctores'
+      preLoaderRoute: typeof AuthenticatedDoctoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/configuracion': {
+      id: '/_authenticated/configuracion'
+      path: '/configuracion'
+      fullPath: '/configuracion'
+      preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/agenda': {
+      id: '/_authenticated/agenda'
+      path: '/agenda'
+      fullPath: '/agenda'
+      preLoaderRoute: typeof AuthenticatedAgendaRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
   }
 }
 
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
+  AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
+  AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
+  AuthenticatedInventarioRoute: typeof AuthenticatedInventarioRoute
+  AuthenticatedLaboratorioRoute: typeof AuthenticatedLaboratorioRoute
+  AuthenticatedPacientesRoute: typeof AuthenticatedPacientesRoute
+  AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
+  AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
+  AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
+  AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
+  AuthenticatedInventarioRoute: AuthenticatedInventarioRoute,
+  AuthenticatedLaboratorioRoute: AuthenticatedLaboratorioRoute,
+  AuthenticatedPacientesRoute: AuthenticatedPacientesRoute,
+  AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,
+  AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AgendaRoute: AgendaRoute,
-  ConfiguracionRoute: ConfiguracionRoute,
-  DoctoresRoute: DoctoresRoute,
-  FacturacionRoute: FacturacionRoute,
-  HistoriasRoute: HistoriasRoute,
-  InventarioRoute: InventarioRoute,
-  LaboratorioRoute: LaboratorioRoute,
-  PacientesRoute: PacientesRoute,
-  ServiciosRoute: ServiciosRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
