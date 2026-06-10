@@ -16,7 +16,6 @@ import { Route as AuthenticatedServiciosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
 import { Route as AuthenticatedPacientesRouteImport } from './routes/_authenticated/pacientes'
 import { Route as AuthenticatedLaboratorioRouteImport } from './routes/_authenticated/laboratorio'
-import { Route as AuthenticatedInventarioRouteImport } from './routes/_authenticated/inventario'
 import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
 import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
@@ -58,11 +57,6 @@ const AuthenticatedLaboratorioRoute =
     path: '/laboratorio',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedInventarioRoute = AuthenticatedInventarioRouteImport.update({
-  id: '/inventario',
-  path: '/inventario',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedHistoriasRoute = AuthenticatedHistoriasRouteImport.update({
   id: '/historias',
   path: '/historias',
@@ -99,7 +93,6 @@ export interface FileRoutesByFullPath {
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/inventario': typeof AuthenticatedInventarioRoute
   '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
   '/reportes': typeof AuthenticatedReportesRoute
@@ -112,7 +105,6 @@ export interface FileRoutesByTo {
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/inventario': typeof AuthenticatedInventarioRoute
   '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
   '/reportes': typeof AuthenticatedReportesRoute
@@ -128,7 +120,6 @@ export interface FileRoutesById {
   '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
   '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
-  '/_authenticated/inventario': typeof AuthenticatedInventarioRoute
   '/_authenticated/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/_authenticated/pacientes': typeof AuthenticatedPacientesRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
@@ -145,7 +136,6 @@ export interface FileRouteTypes {
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/inventario'
     | '/laboratorio'
     | '/pacientes'
     | '/reportes'
@@ -158,7 +148,6 @@ export interface FileRouteTypes {
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/inventario'
     | '/laboratorio'
     | '/pacientes'
     | '/reportes'
@@ -173,7 +162,6 @@ export interface FileRouteTypes {
     | '/_authenticated/doctores'
     | '/_authenticated/facturacion'
     | '/_authenticated/historias'
-    | '/_authenticated/inventario'
     | '/_authenticated/laboratorio'
     | '/_authenticated/pacientes'
     | '/_authenticated/reportes'
@@ -237,13 +225,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedLaboratorioRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/inventario': {
-      id: '/_authenticated/inventario'
-      path: '/inventario'
-      fullPath: '/inventario'
-      preLoaderRoute: typeof AuthenticatedInventarioRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/historias': {
       id: '/_authenticated/historias'
       path: '/historias'
@@ -288,7 +269,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
   AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
-  AuthenticatedInventarioRoute: typeof AuthenticatedInventarioRoute
   AuthenticatedLaboratorioRoute: typeof AuthenticatedLaboratorioRoute
   AuthenticatedPacientesRoute: typeof AuthenticatedPacientesRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
@@ -302,7 +282,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
   AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
-  AuthenticatedInventarioRoute: AuthenticatedInventarioRoute,
   AuthenticatedLaboratorioRoute: AuthenticatedLaboratorioRoute,
   AuthenticatedPacientesRoute: AuthenticatedPacientesRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,

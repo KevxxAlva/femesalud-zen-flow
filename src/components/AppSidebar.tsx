@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
-  Home, Calendar, Users, FileText, FlaskConical, Receipt,
-  Package, Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield, FileBarChart,
+  Home, Calendar, Users, FileText, FlaskConical, Receipt, FileBarChart,
+  Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
   Sun, Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,6 @@ const baseModules = [
   { title: "Laboratorio", url: "/laboratorio", icon: FlaskConical },
   { title: "Reportes", url: "/reportes", icon: FileBarChart },
   { title: "Facturación", url: "/facturacion", icon: Receipt },
-  { title: "Inventario", url: "/inventario", icon: Package },
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
 ] as const;
 
