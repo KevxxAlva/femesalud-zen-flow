@@ -12,6 +12,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { PatientForm } from "@/components/PatientForm";
+import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { cn } from "@/lib/utils";
@@ -147,7 +148,7 @@ export function PatientsPage() {
       <PatientForm open={formOpen} onOpenChange={setFormOpen} patient={editing} />
 
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="sm:max-w-md rounded-3xl">
+        <DialogContent className="sm:max-w-2xl rounded-3xl max-h-[90vh] overflow-y-auto">
           {viewing && (
             <>
               <DialogHeader><DialogTitle>Detalle del paciente</DialogTitle></DialogHeader>
@@ -166,8 +167,11 @@ export function PatientsPage() {
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Email</dt><dd>{viewing.email || "—"}</dd></div>
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Teléfono</dt><dd>{viewing.phone || "—"}</dd></div>
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Médico</dt><dd>{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</dd></div>
-                {viewing.notes && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Notas</dt><dd>{viewing.notes}</dd></div>}
+                {viewing.notes && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Notas generales</dt><dd>{viewing.notes}</dd></div>}
               </dl>
+              <div className="mt-4 border-t border-border/60 pt-4">
+                <ClinicalNotesPanel patientId={viewing.id} />
+              </div>
             </>
           )}
         </DialogContent>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   Home, Calendar, Users, FileText, FlaskConical, Receipt,
-  Package, Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
+  Package, Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield, FileBarChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
@@ -16,6 +16,7 @@ const baseModules = [
   { title: "Pacientes", url: "/pacientes", icon: Users },
   { title: "Historias Clínicas", url: "/historias", icon: FileText },
   { title: "Laboratorio", url: "/laboratorio", icon: FlaskConical },
+  { title: "Reportes", url: "/reportes", icon: FileBarChart },
   { title: "Facturación", url: "/facturacion", icon: Receipt },
   { title: "Inventario", url: "/inventario", icon: Package },
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },

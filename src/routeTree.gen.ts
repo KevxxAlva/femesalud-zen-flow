@@ -13,6 +13,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
+import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
 import { Route as AuthenticatedPacientesRouteImport } from './routes/_authenticated/pacientes'
 import { Route as AuthenticatedLaboratorioRouteImport } from './routes/_authenticated/laboratorio'
 import { Route as AuthenticatedInventarioRouteImport } from './routes/_authenticated/inventario'
@@ -39,6 +40,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedServiciosRoute = AuthenticatedServiciosRouteImport.update({
   id: '/servicios',
   path: '/servicios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedReportesRoute = AuthenticatedReportesRouteImport.update({
+  id: '/reportes',
+  path: '/reportes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedPacientesRoute = AuthenticatedPacientesRouteImport.update({
@@ -96,6 +102,7 @@ export interface FileRoutesByFullPath {
   '/inventario': typeof AuthenticatedInventarioRoute
   '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
+  '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
 }
 export interface FileRoutesByTo {
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/inventario': typeof AuthenticatedInventarioRoute
   '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
+  '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
   '/': typeof AuthenticatedIndexRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/_authenticated/inventario': typeof AuthenticatedInventarioRoute
   '/_authenticated/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/_authenticated/pacientes': typeof AuthenticatedPacientesRoute
+  '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/inventario'
     | '/laboratorio'
     | '/pacientes'
+    | '/reportes'
     | '/servicios'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -151,6 +161,7 @@ export interface FileRouteTypes {
     | '/inventario'
     | '/laboratorio'
     | '/pacientes'
+    | '/reportes'
     | '/servicios'
     | '/'
   id:
@@ -165,6 +176,7 @@ export interface FileRouteTypes {
     | '/_authenticated/inventario'
     | '/_authenticated/laboratorio'
     | '/_authenticated/pacientes'
+    | '/_authenticated/reportes'
     | '/_authenticated/servicios'
     | '/_authenticated/'
   fileRoutesById: FileRoutesById
@@ -202,6 +214,13 @@ declare module '@tanstack/react-router' {
       path: '/servicios'
       fullPath: '/servicios'
       preLoaderRoute: typeof AuthenticatedServiciosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/reportes': {
+      id: '/_authenticated/reportes'
+      path: '/reportes'
+      fullPath: '/reportes'
+      preLoaderRoute: typeof AuthenticatedReportesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/pacientes': {
@@ -272,6 +291,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedInventarioRoute: typeof AuthenticatedInventarioRoute
   AuthenticatedLaboratorioRoute: typeof AuthenticatedLaboratorioRoute
   AuthenticatedPacientesRoute: typeof AuthenticatedPacientesRoute
+  AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
 }
@@ -285,6 +305,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedInventarioRoute: AuthenticatedInventarioRoute,
   AuthenticatedLaboratorioRoute: AuthenticatedLaboratorioRoute,
   AuthenticatedPacientesRoute: AuthenticatedPacientesRoute,
+  AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
 }
@@ -299,13 +320,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
