@@ -189,6 +189,27 @@ export function Dashboard() {
     return list.sort((a, b) => b.rawDate.localeCompare(a.rawDate)).slice(0, 5);
   }, [appointments, patients]);
 
+  // Notification read tracking
+  const [lastReadTime, setLastReadTime] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("notifications_last_read") || "";
+    }
+    return "";
+  });
+
+  const unreadCount = useMemo(() => {
+    if (!lastReadTime) return notifications.length;
+    return notifications.filter((n) => n.rawDate > lastReadTime).length;
+  }, [notifications, lastReadTime]);
+
+  const handleOpenChange = (open: boolean) => {
+    if (open && notifications.length > 0) {
+      const newestDate = notifications[0].rawDate;
+      setLastReadTime(newestDate);
+      localStorage.setItem("notifications_last_read", newestDate);
+    }
+  };
+
   // Search filters
   const filteredUpcoming = useMemo(() => {
     return stats.upcoming.filter((a) => {
@@ -237,13 +258,13 @@ export function Dashboard() {
             )}
           </div>
           
-          <Popover>
+          <Popover onOpenChange={handleOpenChange}>
             <PopoverTrigger asChild>
               <button className="relative rounded-2xl glass-card p-2.5 transition hover:bg-accent cursor-pointer">
                 <Bell className="h-4 w-4" />
-                {notifications.length > 0 && (
+                {unreadCount > 0 && (
                   <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
-                    {notifications.length}
+                    {unreadCount}
                   </span>
                 )}
               </button>
