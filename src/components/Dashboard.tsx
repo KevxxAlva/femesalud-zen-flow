@@ -1,7 +1,7 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
-  Activity, CalendarClock, TrendingUp, Users, Sparkles, ArrowUpRight,
-  Clock, Plus, Search, Bell,
+  Activity, CalendarClock, TrendingUp, Users, Sparkles, ArrowUpRight, ArrowDownRight,
+  Clock, Plus, Search, Bell, X,
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { usePatients } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 function Sparkline({ data, className }: { data: number[]; className?: string }) {
   const w = 120, h = 36;
@@ -52,6 +53,70 @@ export function Dashboard() {
 
   const stats = useMemo(() => {
     const todays = appointments.filter((a) => a.scheduled_at.slice(0, 10) === today);
+    
+    // Yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+    const yesterdays = appointments.filter((a) => a.scheduled_at.slice(0, 10) === yesterdayStr);
+
+    let consultDelta = 0;
+    if (yesterdays.length > 0) {
+      consultDelta = Math.round(((todays.length - yesterdays.length) / yesterdays.length) * 100);
+    } else if (todays.length > 0) {
+      consultDelta = 100;
+    }
+
+    // Patients registered in last 7 days vs previous 7 days
+    const msInDay = 24 * 60 * 60 * 1000;
+    const now = new Date();
+    const sevenDaysAgo = new Date(now.getTime() - 7 * msInDay);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * msInDay);
+
+    const patientsLast7Days = patients.filter((p) => new Date(p.created_at) >= sevenDaysAgo);
+    const patientsPrev7Days = patients.filter((p) => {
+      const pDate = new Date(p.created_at);
+      return pDate >= fourteenDaysAgo && pDate < sevenDaysAgo;
+    });
+
+    let patientDelta = 0;
+    if (patientsPrev7Days.length > 0) {
+      patientDelta = Math.round(((patientsLast7Days.length - patientsPrev7Days.length) / patientsPrev7Days.length) * 100);
+    } else if (patientsLast7Days.length > 0) {
+      patientDelta = 100;
+    }
+
+    // Completed appointments revenue this month so far vs last month (same period)
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    const currentDate = now.getDate();
+
+    const startOfThisMonth = new Date(currentYear, currentMonth, 1);
+    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
+    const endOfLastMonthSameDay = new Date(currentYear, currentMonth - 1, currentDate, 23, 59, 59);
+
+    const completed = appointments.filter((a) => a.status === "completada");
+    
+    const thisMonthCompleted = completed.filter((a) => {
+      const aDate = new Date(a.scheduled_at);
+      return aDate >= startOfThisMonth && aDate <= now;
+    });
+    const lastMonthCompletedSamePeriod = completed.filter((a) => {
+      const aDate = new Date(a.scheduled_at);
+      return aDate >= startOfLastMonth && aDate <= endOfLastMonthSameDay;
+    });
+
+    const thisMonthIncome = thisMonthCompleted.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+    const lastMonthIncomeSamePeriod = lastMonthCompletedSamePeriod.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+
+    let incomeDelta = 0;
+    if (lastMonthIncomeSamePeriod > 0) {
+      incomeDelta = Math.round(((thisMonthIncome - lastMonthIncomeSamePeriod) / lastMonthIncomeSamePeriod) * 100);
+    } else if (thisMonthIncome > 0) {
+      incomeDelta = 100;
+    }
+
+    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
     const upcoming = appointments
       .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
@@ -59,8 +124,7 @@ export function Dashboard() {
     const recent = [...patients]
       .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
       .slice(0, 4);
-    const completed = appointments.filter((a) => a.status === "completada");
-    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+
     const consultSpark = Array.from({ length: 10 }).map((_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - (9 - i));
@@ -69,10 +133,84 @@ export function Dashboard() {
     });
     const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patients.length - (9 - i)));
     const incomeSpark = consultSpark.map((v) => 10 + v * 4);
-    return { todays, upcoming, recent, income, completed: completed.length, consultSpark, patientSpark, incomeSpark };
+    
+    return { 
+      todays, 
+      upcoming, 
+      recent, 
+      income, 
+      completed: completed.length, 
+      consultSpark, 
+      patientSpark, 
+      incomeSpark,
+      consultDelta,
+      patientDelta,
+      incomeDelta
+    };
   }, [appointments, patients, today]);
 
   const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Doctor";
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const notifications = useMemo(() => {
+    const list: { id: string; text: string; time: string; type: "appointment" | "patient"; rawDate: string }[] = [];
+    
+    // Appointments created recently
+    const sortedApps = [...appointments]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, 3);
+      
+    sortedApps.forEach((app) => {
+      list.push({
+        id: `app-${app.id}`,
+        text: `Nueva cita agendada para ${app.patient_name || "Paciente"}`,
+        time: new Date(app.created_at).toLocaleDateString("es-ES") + " " + new Date(app.created_at).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
+        type: "appointment",
+        rawDate: app.created_at
+      });
+    });
+
+    // Patients registered recently
+    const sortedPatients = [...patients]
+      .sort((a, b) => b.created_at.localeCompare(a.created_at))
+      .slice(0, 3);
+
+    sortedPatients.forEach((pat) => {
+      list.push({
+        id: `pat-${pat.id}`,
+        text: `Nuevo paciente registrado: ${pat.full_name}`,
+        time: new Date(pat.created_at).toLocaleDateString("es-ES") + " " + new Date(pat.created_at).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
+        type: "patient",
+        rawDate: pat.created_at
+      });
+    });
+
+    // Sort combined list by created_at DESC
+    return list.sort((a, b) => b.rawDate.localeCompare(a.rawDate)).slice(0, 5);
+  }, [appointments, patients]);
+
+  // Search filters
+  const filteredUpcoming = useMemo(() => {
+    return stats.upcoming.filter((a) => {
+      if (!searchQuery.trim()) return true;
+      const term = searchQuery.toLowerCase();
+      const patientName = a.patient_name || "";
+      const reason = a.reason || "";
+      return (
+        patientName.toLowerCase().includes(term) ||
+        reason.toLowerCase().includes(term)
+      );
+    });
+  }, [stats.upcoming, searchQuery]);
+
+  const filteredRecent = useMemo(() => {
+    return stats.recent.filter((p) => {
+      if (!searchQuery.trim()) return true;
+      const term = searchQuery.toLowerCase();
+      const fullName = p.full_name || "";
+      return fullName.toLowerCase().includes(term);
+    });
+  }, [stats.recent, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -86,9 +224,60 @@ export function Dashboard() {
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 rounded-2xl glass-card px-4 py-2.5 sm:flex">
             <Search className="h-4 w-4 text-muted-foreground" />
-            <input placeholder="Buscar pacientes, citas..." className="w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground" />
+            <input 
+              placeholder="Buscar pacientes, citas..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground" 
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-xs text-muted-foreground hover:text-foreground">
+                <X className="h-3 w-3" />
+              </button>
+            )}
           </div>
-          <button className="rounded-2xl glass-card p-2.5 transition hover:bg-accent"><Bell className="h-4 w-4" /></button>
+          
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className="relative rounded-2xl glass-card p-2.5 transition hover:bg-accent cursor-pointer">
+                <Bell className="h-4 w-4" />
+                {notifications.length > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
+                    {notifications.length}
+                  </span>
+                )}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 rounded-3xl p-4 shadow-xl border border-muted/50 bg-card" align="end">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-muted/50 pb-2">
+                  <h4 className="font-semibold text-sm">Notificaciones</h4>
+                  <span className="text-[10px] bg-mauve/10 text-mauve px-2 py-0.5 rounded-full font-medium">En vivo</span>
+                </div>
+                {notifications.length === 0 ? (
+                  <p className="text-xs text-muted-foreground text-center py-4">No hay notificaciones recientes</p>
+                ) : (
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                    {notifications.map((n) => (
+                      <div key={n.id} className="text-xs p-2.5 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-muted/50 flex gap-2.5 items-start">
+                        <div className={cn(
+                          "p-1.5 rounded-xl flex-shrink-0 mt-0.5",
+                          n.type === "appointment" ? "bg-mauve/10 text-mauve" : "bg-blush/10 text-blush"
+                        )}>
+                          {n.type === "appointment" ? <CalendarClock className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+                        </div>
+                        <div className="space-y-0.5 min-w-0">
+                          <p className="font-medium text-foreground leading-tight">{n.text}</p>
+                          <p className="text-[10px] text-muted-foreground">{n.time}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
+
           <Link to="/agenda" className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm shadow-mauve/30 transition hover:shadow-md">
             <Plus className="h-4 w-4" /> Nueva cita
           </Link>
@@ -104,10 +293,22 @@ export function Dashboard() {
               <Sparkles className="h-3 w-3" /> Resumen inteligente del día
             </div>
             <h2 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-              {isAdmin ? "Visión completa de la clínica." : "Tu jornada luce tranquila."}
+              {isAdmin 
+                ? "Visión completa de la clínica." 
+                : stats.todays.length === 0 
+                  ? "Tu jornada está libre hoy." 
+                  : stats.todays.length === 1 
+                    ? "Tienes una cita programada." 
+                    : stats.todays.length <= 3 
+                      ? "Tu jornada luce tranquila." 
+                      : "Tienes una jornada activa hoy."}
             </h2>
             <p className="mt-2 text-sm text-primary-foreground/85">
-              Hoy hay {stats.todays.length} citas, {patients.length} pacientes {isAdmin ? "en total" : "asignados"} y {stats.completed} consultas completadas.
+              Hoy hay {stats.todays.length === 1 ? "1 cita" : `${stats.todays.length} citas`},{" "}
+              {patients.length === 1 
+                ? `1 paciente ${isAdmin ? "en total" : "asignado"}` 
+                : `${patients.length} pacientes ${isAdmin ? "en total" : "asignados"}`}{" "}
+              y {stats.completed === 1 ? "1 consulta completada" : `${stats.completed} consultas completadas`}.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               <Link to="/agenda" className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-mauve transition hover:bg-white/90">Ver agenda</Link>
@@ -146,19 +347,27 @@ export function Dashboard() {
         </div>
 
         {[
-          { label: "Consultas hoy", value: stats.todays.length.toString(), delta: "+12%", icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
-          { label: "Pacientes totales", value: patients.length.toString(), delta: "+5%", icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
-          { label: "Ingresos del mes", value: `$${(stats.income / 1000).toFixed(1)}k`, delta: "+18%", icon: TrendingUp, tone: "text-sage-foreground", spark: stats.incomeSpark },
+          { label: "Consultas hoy", value: stats.todays.length.toString(), delta: stats.consultDelta, icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
+          { label: "Pacientes totales", value: patients.length.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
+          { label: "Ingresos del mes", value: `$${(stats.income / 1000).toFixed(1)}k`, delta: stats.incomeDelta, icon: TrendingUp, tone: "text-sage-foreground", spark: stats.incomeSpark },
         ].map((k) => {
           const Icon = k.icon;
+          const isPositive = k.delta >= 0;
+          const deltaText = isPositive ? `+${k.delta}%` : `${k.delta}%`;
           return (
             <div key={k.label} className="col-span-12 rounded-3xl glass-card p-5 shadow-sm sm:col-span-6 lg:col-span-4">
               <div className="flex items-start justify-between">
                 <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl bg-muted", k.tone)}>
                   <Icon className="h-5 w-5" />
                 </div>
-                <span className="inline-flex items-center gap-1 rounded-full bg-sage/40 px-2 py-0.5 text-[11px] font-medium text-sage-foreground">
-                  <ArrowUpRight className="h-3 w-3" />{k.delta}
+                <span className={cn(
+                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                  isPositive 
+                    ? "bg-sage/40 text-sage-foreground" 
+                    : "bg-red-500/10 text-red-500"
+                )}>
+                  {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                  {deltaText}
                 </span>
               </div>
               <div className="mt-4 flex items-end justify-between gap-3">
@@ -183,10 +392,10 @@ export function Dashboard() {
 
           <div className="relative mt-6 pl-6">
             <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-mauve via-blush to-transparent" />
-            {stats.upcoming.length === 0 && (
+            {filteredUpcoming.length === 0 && (
               <p className="py-6 text-center text-sm text-muted-foreground">No hay citas programadas.</p>
             )}
-            {stats.upcoming.map((a) => {
+            {filteredUpcoming.map((a) => {
               const d = a.scheduled_at.slice(0, 10);
               const dt = new Date(a.scheduled_at);
               const pad = (n: number) => String(n).padStart(2, "0");
@@ -224,8 +433,8 @@ export function Dashboard() {
             <Link to="/pacientes" className="text-xs font-medium text-mauve hover:underline">Ver todos →</Link>
           </div>
           <ul className="mt-5 space-y-2.5">
-            {stats.recent.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Aún no hay pacientes.</li>}
-            {stats.recent.map((p) => (
+            {filteredRecent.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Aún no hay pacientes.</li>}
+            {filteredRecent.map((p) => (
               <li key={p.id} className="flex items-center justify-between rounded-2xl p-2.5 transition-all duration-300 hover:bg-muted/60">
                 <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground shadow-sm">
