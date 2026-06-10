@@ -9,6 +9,27 @@ import { useAppointments } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
 import { toast } from "sonner";
 
+const loadLogoBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } else {
+        resolve("");
+      }
+    };
+    img.onerror = () => resolve("");
+    img.src = url;
+  });
+};
+
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function daysAgoISO(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
 
@@ -45,37 +66,68 @@ export function ReportsPage() {
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
   }, [appointments]);
 
-  const exportPDF = () => {
+  const exportPDF = async () => {
     try {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Header
-      doc.setFillColor(139, 92, 175);
-      doc.rect(0, 0, pageWidth, 60, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.text("FemeSalud", 40, 38);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text("Reporte ejecutivo", pageWidth - 40, 38, { align: "right" });
+      const logoBase64 = await loadLogoBase64("/logo.png");
 
+      // Font Setup
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 60, 60);
+
+      // Top Header
+      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
+      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
+      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+
+      // Consultorio Header
+      doc.setFont("times", "normal");
+      doc.setFontSize(12.5);
+      doc.setTextColor(0);
+      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setFontSize(17.5);
+      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+
+      // Date Format: Valle de la Pascua, DD / MM / AAAA
+      const today = new Date();
+      const topDay = String(today.getDate()).padStart(2, "0");
+      const topMonth = String(today.getMonth() + 1).padStart(2, "0");
+      const topYear = String(today.getFullYear());
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 40, 155, { align: "right" });
+
+      // Title (REPORTE EJECUTIVO, bold, centered, underlined)
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("REPORTE EJECUTIVO", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("REPORTE EJECUTIVO");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
+
+      // Date range & generation info
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
       doc.setTextColor(40, 40, 50);
-      doc.setFontSize(11);
-      doc.text(`Rango: ${from}  →  ${to}`, 40, 88);
+      doc.text(`Rango: ${from}  →  ${to}`, 40, 225);
       doc.setFontSize(9);
       doc.setTextColor(120, 120, 130);
-      doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, 40, 104);
+      doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, 40, 239);
 
-      // KPIs table
+      // KPIs table (Indicadores clave)
       doc.setTextColor(40, 40, 50);
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
-      doc.text("Indicadores clave", 40, 134);
+      doc.setFontSize(12);
+      doc.setFont("times", "bold");
+      doc.text("Indicadores clave", 40, 269);
 
       autoTable(doc, {
-        startY: 144,
+        startY: 279,
         head: [["Métrica", "Valor"]],
         body: [
           ["Citas en el período", String(stats.total)],
@@ -87,15 +139,15 @@ export function ReportsPage() {
           ["Pacientes totales", String(patients.length)],
         ],
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 6 },
+        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        styles: { font: "times", fontSize: 10, cellPadding: 6 },
         margin: { left: 40, right: 40 },
       });
 
       // Upcoming appointments
-      const after = (doc as any).lastAutoTable.finalY + 24;
-      doc.setFontSize(13);
-      doc.setFont("helvetica", "bold");
+      const after = (doc as any).lastAutoTable.finalY + 25;
+      doc.setFontSize(12);
+      doc.setFont("times", "bold");
       doc.text("Próximas citas", 40, after);
 
       autoTable(doc, {
@@ -113,18 +165,39 @@ export function ReportsPage() {
           ];
         }),
         theme: "striped",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255 },
-        styles: { fontSize: 9, cellPadding: 5 },
+        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
 
-      // Footer on each page
+      // Draw Watermark and Page Footer on all pages
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
+
+        // Draw Watermark Logo in center
+        try {
+          if (logoBase64) {
+            doc.saveGraphicsState();
+            const gState = new (doc as any).GState({ opacity: 0.04 });
+            doc.setGState(gState);
+            const imgWidth = 350;
+            const imgHeight = 350;
+            const imgX = (pageWidth - imgWidth) / 2;
+            const imgY = (pageHeight - imgHeight) / 2 - 20;
+            doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+            doc.restoreGraphicsState();
+          }
+        } catch (watermarkErr) {
+          console.error("Error drawing watermark:", watermarkErr);
+        }
+
+        // Footer Text
+        doc.setFont("times", "normal");
         doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`FemeSalud — Página ${i} de ${pageCount}`, pageWidth / 2, doc.internal.pageSize.getHeight() - 20, { align: "center" });
+        doc.setTextColor(150, 150, 150);
+        doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, pageHeight - 20);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, pageHeight - 20, { align: "right" });
       }
 
       doc.save(`femesalud-reporte-${from}-${to}.pdf`);

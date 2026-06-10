@@ -83,7 +83,6 @@ export function PatientsPage() {
   const [openAtencion, setOpenAtencion] = useState(false);
 
   // Form states for certificates
-  const [patientCI, setPatientCI] = useState("");
   const [reposoDays, setReposoDays] = useState("3");
   const [reposoStart, setReposoStart] = useState(() => new Date().toISOString().slice(0, 10));
   const [reposoReason, setReposoReason] = useState("");
@@ -110,7 +109,6 @@ export function PatientsPage() {
       setDoctorMpps("");
       setDoctorCmc("");
     }
-    setPatientCI("");
     setReposoReason("");
     setOpenReposo(true);
   };
@@ -128,58 +126,85 @@ export function PatientsPage() {
       setDoctorMpps("");
       setDoctorCmc("");
     }
-    setPatientCI("");
     setAtencionReason("");
     setOpenAtencion(true);
   };
 
-  const handleExportFicha = (patient: Patient) => {
+  const handleExportFicha = async (patient: Patient) => {
     try {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      // Header
-      doc.setFillColor(139, 92, 175);
-      doc.rect(0, 0, pageWidth, 60, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.text("FemeSalud", 40, 38);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text("FICHA DE HISTORIAL CLÍNICO", pageWidth - 40, 38, { align: "right" });
+      const logoBase64 = await loadLogoBase64("/logo.png");
 
-      doc.setTextColor(40, 40, 50);
-      doc.setFontSize(12);
-      doc.setFont("helvetica", "bold");
-      doc.text("Datos del Paciente", 40, 95);
+      // Font Setup
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 60, 60);
+
+      // Top Header
+      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
+      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
+      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+
+      // Consultorio Header
+      doc.setFont("times", "normal");
+      doc.setFontSize(12.5);
+      doc.setTextColor(0);
+      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setFontSize(17.5);
+      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+
+      // Date Format: Valle de la Pascua, DD / MM / AAAA
+      const today = new Date();
+      const topDay = String(today.getDate()).padStart(2, "0");
+      const topMonth = String(today.getMonth() + 1).padStart(2, "0");
+      const topYear = String(today.getFullYear());
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 40, 155, { align: "right" });
+
+      // Title (FICHA DE HISTORIAL CLÍNICO, bold, centered, underlined)
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("FICHA DE HISTORIAL CLÍNICO", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("FICHA DE HISTORIAL CLÍNICO");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("Datos del Paciente", 40, 225);
 
       autoTable(doc, {
-        startY: 105,
+        startY: 235,
         head: [["Campo", "Información"]],
         body: [
           ["Nombre Completo", patient.full_name || "—"],
+          ["Cédula / Identificación", patient.document_id || "—"],
           ["Fecha de Nacimiento", patient.birth_date || "—"],
-          ["Género", patient.gender || "—"],
           ["Correo Electrónico", patient.email || "—"],
           ["Teléfono", patient.phone || "—"],
           ["Médico Asignado", doctorMap.get(patient.assigned_doctor_id ?? "") || "Sin asignar"],
           ["Notas Generales", patient.notes || "—"],
         ],
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255 },
-        styles: { fontSize: 10, cellPadding: 5 },
+        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        styles: { font: "times", fontSize: 10, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
 
       const after = (doc as any).lastAutoTable.finalY + 25;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
       doc.text("Historial de Consultas", 40, after);
 
       if (patientNotes.length === 0) {
-        doc.setFont("helvetica", "italic");
-        doc.setFontSize(9);
+        doc.setFont("times", "italic");
+        doc.setFontSize(9.5);
         doc.setTextColor(120, 120, 130);
         doc.text("No se registran notas clínicas en el historial de este paciente.", 40, after + 15);
       } else {
@@ -192,8 +217,8 @@ export function PatientsPage() {
             n.content || "—",
           ]),
           theme: "striped",
-          headStyles: { fillColor: [139, 92, 175], textColor: 255 },
-          styles: { fontSize: 9, cellPadding: 5 },
+          headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+          styles: { font: "times", fontSize: 9, cellPadding: 5 },
           columnStyles: {
             0: { cellWidth: 70 },
             1: { cellWidth: 120 },
@@ -203,14 +228,34 @@ export function PatientsPage() {
         });
       }
 
-      // Footer
+      // Draw Watermark and Page Footer on all pages
       const pageCount = doc.getNumberOfPages();
       for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
+
+        // Draw Watermark Logo in center
+        try {
+          if (logoBase64) {
+            doc.saveGraphicsState();
+            const gState = new (doc as any).GState({ opacity: 0.04 });
+            doc.setGState(gState);
+            const imgWidth = 550;
+            const imgHeight = 550;
+            const imgX = (pageWidth - imgWidth) / 2;
+            const imgY = (pageHeight - imgHeight) / 2 - 20;
+            doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+            doc.restoreGraphicsState();
+          }
+        } catch (watermarkErr) {
+          console.error("Error drawing watermark:", watermarkErr);
+        }
+
+        // Footer Text
+        doc.setFont("times", "normal");
         doc.setFontSize(8);
-        doc.setTextColor(150);
-        doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, doc.internal.pageSize.getHeight() - 20);
-        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 20, { align: "right" });
+        doc.setTextColor(150, 150, 150);
+        doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, pageHeight - 20);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, pageHeight - 20, { align: "right" });
       }
 
       doc.save(`Ficha_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
@@ -301,15 +346,32 @@ export function PatientsPage() {
       doc.setFontSize(12);
       doc.text(patient.full_name, pageWidth / 2, 296, { align: "center" });
 
-      // C.I. & Diagnosis line
+      let ciLabel = "C.I. V-";
+      let displayCI = patient.document_id || "";
+      if (displayCI.startsWith("V-")) {
+        ciLabel = "C.I. V-";
+        displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("E-")) {
+        ciLabel = "C.I. E-";
+        displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("P-")) {
+        ciLabel = "Pasaporte ";
+        displayCI = displayCI.slice(2);
+      } else {
+        ciLabel = "C.I. ";
+      }
+
       doc.setFont("times", "normal");
       doc.setFontSize(11);
-      doc.text("C.I. V-", 70, 335);
-      doc.line(110, 335, 280, 335);
+      doc.text(ciLabel, 70, 335);
+      const labelWidth = doc.getTextWidth(ciLabel);
+      const lineStartX = 70 + labelWidth + 5;
+      const lineEndX = 280;
+      doc.line(lineStartX, 335, lineEndX, 335);
 
       doc.setFont("times", "bold");
       doc.setFontSize(11.5);
-      doc.text(patientCI || "", 195, 331, { align: "center" });
+      doc.text(displayCI, (lineStartX + lineEndX) / 2, 331, { align: "center" });
 
       doc.setFont("times", "normal");
       doc.setFontSize(11);
@@ -457,14 +519,28 @@ export function PatientsPage() {
       doc.setFontSize(11.5);
       doc.text(patient.full_name, 190, 296, { align: "center" });
 
-      doc.setFont("times", "normal");
-      doc.setFontSize(11);
-      doc.text("C.I. ", 315, 300);
+      let ciLabel = "C.I. ";
+      let displayCI = patient.document_id || "";
+      if (displayCI.startsWith("V-")) {
+        ciLabel = "C.I. V-";
+        displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("E-")) {
+        ciLabel = "C.I. E-";
+        displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("P-")) {
+        ciLabel = "P-";
+        displayCI = displayCI.slice(2);
+      }
 
-      doc.line(340, 300, 460, 300);
+      doc.text(ciLabel, 315, 300);
+      const labelWidth = doc.getTextWidth(ciLabel);
+      const lineStartX = 315 + labelWidth + 5;
+      const lineEndX = 460;
+
+      doc.line(lineStartX, 300, lineEndX, 300);
       doc.setFont("times", "bold");
       doc.setFontSize(11.5);
-      doc.text(patientCI || "", 400, 296, { align: "center" });
+      doc.text(displayCI, (lineStartX + lineEndX) / 2, 296, { align: "center" });
 
       doc.setFont("times", "normal");
       doc.setFontSize(11);
@@ -604,7 +680,6 @@ export function PatientsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-semibold leading-tight">{p.full_name}</p>
-                    <p className="text-[11px] text-muted-foreground">{p.gender || "—"}</p>
                   </div>
                 </div>
                 <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status] || "bg-muted text-muted-foreground")}>{statusLabel(p.status)}</span>
@@ -667,8 +742,8 @@ export function PatientsPage() {
                 </div>
               </div>
               <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <div><dt className="text-xs text-muted-foreground">Nacimiento</dt><dd>{viewing.birth_date || "—"}</dd></div>
-                <div><dt className="text-xs text-muted-foreground">Género</dt><dd>{viewing.gender || "—"}</dd></div>
+                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Cédula / Identificación</dt><dd>{viewing.document_id || "—"}</dd></div>
+                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Nacimiento</dt><dd>{viewing.birth_date || "—"}</dd></div>
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Email</dt><dd>{viewing.email || "—"}</dd></div>
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Teléfono</dt><dd>{viewing.phone || "—"}</dd></div>
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Médico</dt><dd>{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</dd></div>
@@ -689,16 +764,6 @@ export function PatientsPage() {
             <DialogTitle className="flex items-center gap-1.5"><Printer className="h-5 w-5 text-mauve" /> Constancia de Reposo</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2 text-sm">
-            <div className="grid gap-1">
-              <Label htmlFor="rp-ci">Cédula del Paciente (C.I.)</Label>
-              <Input
-                id="rp-ci"
-                placeholder="Ej. V-12345678"
-                value={patientCI}
-                onChange={(e) => setPatientCI(e.target.value)}
-                className="rounded-xl"
-              />
-            </div>
             <div className="grid gap-1">
               <Label htmlFor="rp-days">Días de reposo</Label>
               <Input
@@ -784,16 +849,6 @@ export function PatientsPage() {
             <DialogTitle className="flex items-center gap-1.5"><Printer className="h-5 w-5 text-mauve" /> Constancia de Atención</DialogTitle>
           </DialogHeader>
           <div className="grid gap-3 py-2 text-sm">
-            <div className="grid gap-1">
-              <Label htmlFor="at-ci">Cédula del Paciente (C.I.)</Label>
-              <Input
-                id="at-ci"
-                placeholder="Ej. V-12345678"
-                value={patientCI}
-                onChange={(e) => setPatientCI(e.target.value)}
-                className="rounded-xl"
-              />
-            </div>
             <div className="grid gap-1">
               <Label htmlFor="at-date">Fecha de consulta</Label>
               <Input

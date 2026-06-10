@@ -9,13 +9,13 @@ export interface Patient {
   email: string | null;
   phone: string | null;
   birth_date: string | null;
-  gender: string | null;
   address: string | null;
   status: string;
   assigned_doctor_id: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;
+  document_id: string | null;
 }
 
 export type PatientInput = Omit<Patient, "id" | "created_at" | "updated_at">;

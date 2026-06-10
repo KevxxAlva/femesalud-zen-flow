@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -38,10 +38,36 @@ export function PatientForm({
   const [email, setEmail] = useState(patient?.email ?? "");
   const [phone, setPhone] = useState(patient?.phone ?? "");
   const [birth_date, setBirth] = useState(patient?.birth_date ?? "");
-  const [gender, setGender] = useState(patient?.gender ?? "femenino");
   const [status, setStatus] = useState(patient?.status ?? "nuevo");
   const [assigned_doctor_id, setDoctor] = useState(defaultDoctor);
   const [notes, setNotes] = useState(patient?.notes ?? "");
+  
+  // Helpers to parse prefix and number
+  const getDocParts = (docId: string | null) => {
+    const val = docId ?? "";
+    if (val.startsWith("V-")) return ["V-", val.slice(2)];
+    if (val.startsWith("E-")) return ["E-", val.slice(2)];
+    if (val.startsWith("P-")) return ["P-", val.slice(2)];
+    return ["none", val];
+  };
+
+  const [initialPrefix, initialNumber] = getDocParts(patient?.document_id ?? null);
+  const [idPrefix, setIdPrefix] = useState(initialPrefix);
+  const [idNumber, setIdNumber] = useState(initialNumber);
+
+  useEffect(() => {
+    setName(patient?.full_name ?? "");
+    setEmail(patient?.email ?? "");
+    setPhone(patient?.phone ?? "");
+    setBirth(patient?.birth_date ?? "");
+    setStatus(patient?.status ?? "nuevo");
+    setDoctor(defaultDoctor);
+    setNotes(patient?.notes ?? "");
+    
+    const [pfx, num] = getDocParts(patient?.document_id ?? null);
+    setIdPrefix(pfx);
+    setIdNumber(num);
+  }, [patient, defaultDoctor]);
 
   const create = useCreatePatient();
   const update = useUpdatePatient();
@@ -56,16 +82,17 @@ export function PatientForm({
       return;
     }
     try {
+      const combinedDocId = idNumber.trim() ? `${idPrefix === "none" ? "" : idPrefix}${idNumber.trim()}` : null;
       const payload = {
         full_name: full_name.trim(),
         email: email || null,
         phone: phone || null,
         birth_date: birth_date || null,
-        gender: gender || null,
         status,
         assigned_doctor_id: doctorId,
         address: null,
         notes: notes || null,
+        document_id: combinedDocId,
       };
       if (isEdit && patient) {
         await update.mutateAsync({ id: patient.id, ...payload });
@@ -96,35 +123,50 @@ export function PatientForm({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" value={email ?? ""} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="phone">Teléfono</Label>
-              <Input id="phone" value={phone ?? ""} onChange={(e) => setPhone(e.target.value)} />
-            </div>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="grid gap-2">
-              <Label htmlFor="birth">Nacimiento</Label>
-              <Input id="birth" type="date" value={birth_date ?? ""} onChange={(e) => setBirth(e.target.value)} />
-            </div>
-            <div className="grid gap-2">
-              <Label>Género</Label>
-              <Select value={gender ?? ""} onValueChange={setGender}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="femenino">Femenino</SelectItem>
-                  <SelectItem value="masculino">Masculino</SelectItem>
-                  <SelectItem value="otro">Otro</SelectItem>
+              <Label>Tipo de Identificación</Label>
+              <Select value={idPrefix} onValueChange={setIdPrefix}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecciona tipo" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="V-">Venezolano (V-)</SelectItem>
+                  <SelectItem value="E-">Extranjero (E-)</SelectItem>
+                  <SelectItem value="P-">Pasaporte (P-)</SelectItem>
+                  <SelectItem value="none">Otro / Sin prefijo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="grid gap-2">
+              <Label htmlFor="doc-number">Número de Documento</Label>
+              <Input
+                id="doc-number"
+                placeholder={idPrefix === "V-" || idPrefix === "E-" ? "Ej. 12345678" : "Número de documento"}
+                value={idNumber}
+                onChange={(e) => setIdNumber(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Teléfono</Label>
+              <Input id="phone" value={phone ?? ""} onChange={(e) => setPhone(e.target.value)} className="rounded-xl" />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" type="email" value={email ?? ""} onChange={(e) => setEmail(e.target.value)} className="rounded-xl" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-2">
+              <Label htmlFor="birth">Nacimiento</Label>
+              <Input id="birth" type="date" value={birth_date ?? ""} onChange={(e) => setBirth(e.target.value)} className="rounded-xl" />
+            </div>
+            <div className="grid gap-2">
               <Label>Estado</Label>
               <Select value={status} onValueChange={setStatus}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}</SelectContent>
+                <SelectTrigger className="rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent className="rounded-2xl">{STATUSES.map((s) => <SelectItem key={s} value={s}>{statusLabel(s)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
