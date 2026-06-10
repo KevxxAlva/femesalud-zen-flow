@@ -2,6 +2,8 @@
 
 Plataforma premium de gestión médica diseñada para optimizar los flujos de trabajo de profesionales de la salud y clínicas privadas. Ofrece una experiencia fluida, rápida y segura en la administración de pacientes, citas e historias clínicas.
 
+<img width="1349" height="641" alt="image" src="https://github.com/user-attachments/assets/38285178-19cc-4851-9785-fde649bc8082" />
+
 ---
 
 ## 🚀 Características Principales
