@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2 } from "lucide-react";
+import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2, FileDown, Printer, FileText } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -14,9 +14,40 @@ import {
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
-import { useDoctors } from "@/lib/api/profiles";
+import { useDoctors, useMyProfile } from "@/lib/api/profiles";
+import { useClinicalNotes } from "@/lib/api/clinical-notes";
+import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+
+const loadLogoBase64 = (url: string): Promise<string> => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL("image/png"));
+      } else {
+        resolve("");
+      }
+    };
+    img.onerror = () => resolve("");
+    img.src = url;
+  });
+};
 
 const STATUSES = ["Todos", "nuevo", "activo", "en_tratamiento", "alta"];
 const statusLabel = (s: string) => ({ Todos: "Todos", nuevo: "Nuevo", activo: "Activo", en_tratamiento: "En tratamiento", alta: "Alta" } as Record<string, string>)[s] ?? s;
@@ -42,6 +73,460 @@ export function PatientsPage() {
   const [toDelete, setToDelete] = useState<Patient | null>(null);
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
+
+  const { user: me } = useAuthSession();
+  const { data: myProfile } = useMyProfile(me?.id);
+  const { data: patientNotes = [] } = useClinicalNotes(viewing?.id);
+
+  // Document export states
+  const [openReposo, setOpenReposo] = useState(false);
+  const [openAtencion, setOpenAtencion] = useState(false);
+
+  // Form states for certificates
+  const [patientCI, setPatientCI] = useState("");
+  const [reposoDays, setReposoDays] = useState("3");
+  const [reposoStart, setReposoStart] = useState(() => new Date().toISOString().slice(0, 10));
+  const [reposoReason, setReposoReason] = useState("");
+
+  const [atencionDate, setAtencionDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [atencionTime, setAtencionTime] = useState("10:00");
+  const [atencionReason, setAtencionReason] = useState("");
+
+  // Doctor credentials
+  const [doctorUni, setDoctorUni] = useState("UC-CHET");
+  const [doctorMpps, setDoctorMpps] = useState("102.927");
+  const [doctorCmc, setDoctorCmc] = useState("11.619");
+
+  const handleOpenReposoDialog = (patient: Patient) => {
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+    const docName = docObj?.full_name || myProfile?.full_name || "";
+
+    if (docName.toLowerCase().includes("carli")) {
+      setDoctorUni("UC-CHET");
+      setDoctorMpps("102.927");
+      setDoctorCmc("11.619");
+    } else {
+      setDoctorUni(docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET");
+      setDoctorMpps("");
+      setDoctorCmc("");
+    }
+    setPatientCI("");
+    setReposoReason("");
+    setOpenReposo(true);
+  };
+
+  const handleOpenAtencionDialog = (patient: Patient) => {
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+    const docName = docObj?.full_name || myProfile?.full_name || "";
+
+    if (docName.toLowerCase().includes("carli")) {
+      setDoctorUni("UC-CHET");
+      setDoctorMpps("102.927");
+      setDoctorCmc("11.619");
+    } else {
+      setDoctorUni(docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET");
+      setDoctorMpps("");
+      setDoctorCmc("");
+    }
+    setPatientCI("");
+    setAtencionReason("");
+    setOpenAtencion(true);
+  };
+
+  const handleExportFicha = (patient: Patient) => {
+    try {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      // Header
+      doc.setFillColor(139, 92, 175);
+      doc.rect(0, 0, pageWidth, 60, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(20);
+      doc.text("FemeSalud", 40, 38);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.text("FICHA DE HISTORIAL CLÍNICO", pageWidth - 40, 38, { align: "right" });
+
+      doc.setTextColor(40, 40, 50);
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("Datos del Paciente", 40, 95);
+
+      autoTable(doc, {
+        startY: 105,
+        head: [["Campo", "Información"]],
+        body: [
+          ["Nombre Completo", patient.full_name || "—"],
+          ["Fecha de Nacimiento", patient.birth_date || "—"],
+          ["Género", patient.gender || "—"],
+          ["Correo Electrónico", patient.email || "—"],
+          ["Teléfono", patient.phone || "—"],
+          ["Médico Asignado", doctorMap.get(patient.assigned_doctor_id ?? "") || "Sin asignar"],
+          ["Notas Generales", patient.notes || "—"],
+        ],
+        theme: "grid",
+        headStyles: { fillColor: [139, 92, 175], textColor: 255 },
+        styles: { fontSize: 10, cellPadding: 5 },
+        margin: { left: 40, right: 40 },
+      });
+
+      const after = (doc as any).lastAutoTable.finalY + 25;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text("Historial de Consultas", 40, after);
+
+      if (patientNotes.length === 0) {
+        doc.setFont("helvetica", "italic");
+        doc.setFontSize(9);
+        doc.setTextColor(120, 120, 130);
+        doc.text("No se registran notas clínicas en el historial de este paciente.", 40, after + 15);
+      } else {
+        autoTable(doc, {
+          startY: after + 10,
+          head: [["Fecha", "Título", "Detalle / Indicaciones"]],
+          body: patientNotes.map((n) => [
+            new Date(n.note_date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }),
+            n.title || "—",
+            n.content || "—",
+          ]),
+          theme: "striped",
+          headStyles: { fillColor: [139, 92, 175], textColor: 255 },
+          styles: { fontSize: 9, cellPadding: 5 },
+          columnStyles: {
+            0: { cellWidth: 70 },
+            1: { cellWidth: 120 },
+            2: { cellWidth: 320 },
+          },
+          margin: { left: 40, right: 40 },
+        });
+      }
+
+      // Footer
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, doc.internal.pageSize.getHeight() - 20);
+        doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, doc.internal.pageSize.getHeight() - 20, { align: "right" });
+      }
+
+      doc.save(`Ficha_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
+      toast.success("Ficha médica exportada");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al exportar");
+    }
+  };
+
+  const handleExportReposo = async (patient: Patient) => {
+    try {
+      const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+      const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
+      const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Draw Watermark Logo in center
+      try {
+        const logoBase64 = await loadLogoBase64("/logo.png");
+        if (logoBase64) {
+          doc.saveGraphicsState();
+          const gState = new (doc as any).GState({ opacity: 0.04 });
+          doc.setGState(gState);
+          const imgWidth = 550;
+          const imgHeight = 550;
+          const imgX = (pageWidth - imgWidth) / 2;
+          const imgY = (pageHeight - imgHeight) / 2 - 20;
+          doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+          doc.restoreGraphicsState();
+        }
+      } catch (watermarkErr) {
+        console.error("Error drawing watermark:", watermarkErr);
+      }
+
+      // Font Setup
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 60, 60);
+
+      // Top Header
+      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
+      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
+      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+
+      // Consultorio Header
+      doc.setFont("times", "normal");
+      doc.setFontSize(12.5);
+      doc.setTextColor(0);
+      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setFontSize(17.5);
+      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+
+      // Date Format: Valle de la Pascua, DD / MM / AAAA
+      const today = new Date();
+      const topDay = String(today.getDate()).padStart(2, "0");
+      const topMonth = String(today.getMonth() + 1).padStart(2, "0");
+      const topYear = String(today.getFullYear());
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 70, 155, { align: "right" });
+
+      // Title (CONSTANCIA DE REPOSO, bold, centered, underlined)
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("CONSTANCIA DE REPOSO", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("CONSTANCIA DE REPOSO");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
+
+      // Salutation
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("A quien pueda interesar", 70, 235);
+
+      // Body text start
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text("Quien suscribe, médico tratante, certifica que examinó a:", 70, 265);
+
+      // Patient name line (drawn line, with name written on top)
+      doc.line(70, 300, pageWidth - 70, 300);
+      doc.setFont("times", "bold");
+      doc.setFontSize(12);
+      doc.text(patient.full_name, pageWidth / 2, 296, { align: "center" });
+
+      // C.I. & Diagnosis line
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text("C.I. V-", 70, 335);
+      doc.line(110, 335, 280, 335);
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(patientCI || "", 195, 331, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(", quien presenta: Diagnóstico:", 285, 335);
+
+      // Diagnosis lines
+      const splitReason = doc.splitTextToSize(reposoReason || "", pageWidth - 140);
+
+      doc.line(70, 370, pageWidth - 70, 370);
+      if (splitReason[0]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[0], pageWidth / 2, 366, { align: "center" });
+      }
+
+      doc.line(70, 405, pageWidth - 70, 405);
+      if (splitReason[1]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[1], pageWidth / 2, 401, { align: "center" });
+      }
+
+      // Reposo days line
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(`Se le indicó tratamiento y reposo por (   ${reposoDays}   ) días a partir de la presente fecha`, 70, 440);
+
+      // Start Date
+      const [sYear, sMonth, sDay] = reposoStart.split("-");
+      const reposoStartFormatted = `${sDay} / ${sMonth} / ${sYear}`;
+      doc.text(`(   ${reposoStartFormatted}   ).`, 70, 470);
+
+      doc.text("Constancia que se expide a petición de la persona interesada.", 70, 510);
+
+      // Signature line
+      const sigY = 590;
+      doc.setDrawColor(120);
+      doc.setLineWidth(0.5);
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(pageWidth / 2 - 100, sigY, pageWidth / 2 + 100, sigY);
+      doc.setLineDashPattern([], 0); // Restore solid line
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(doctorName, pageWidth / 2, sigY + 16, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(doctorSpecialty, pageWidth / 2, sigY + 29, { align: "center" });
+
+      if (doctorUni) {
+        doc.text(doctorUni, pageWidth / 2, sigY + 42, { align: "center" });
+      }
+
+      const regText = `MPPS ${doctorMpps || "______"}   CMC ${doctorCmc || "______"}`;
+      doc.text(regText, pageWidth / 2, sigY + 55, { align: "center" });
+
+      doc.save(`Reposo_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
+      setOpenReposo(false);
+      toast.success("Constancia de reposo generada");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al exportar");
+    }
+  };
+
+  const handleExportAtencion = async (patient: Patient) => {
+    try {
+      const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+      const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
+      const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Draw Watermark Logo in center
+      try {
+        const logoBase64 = await loadLogoBase64("/logo.png");
+        if (logoBase64) {
+          doc.saveGraphicsState();
+          const gState = new (doc as any).GState({ opacity: 0.04 });
+          doc.setGState(gState);
+          const imgWidth = 550;
+          const imgHeight = 550;
+          const imgX = (pageWidth - imgWidth) / 2;
+          const imgY = (pageHeight - imgHeight) / 2 - 20;
+          doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+          doc.restoreGraphicsState();
+        }
+      } catch (watermarkErr) {
+        console.error("Error drawing watermark:", watermarkErr);
+      }
+
+      // Font Setup
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 60, 60);
+
+      // Top Header
+      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
+      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
+      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+
+      // Consultorio Header
+      doc.setFont("times", "normal");
+      doc.setFontSize(12.5);
+      doc.setTextColor(0);
+      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setFontSize(17.5);
+      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+
+      // Date Format: Valle de la Pascua, DD / MM / AAAA
+      const today = new Date();
+      const topDay = String(today.getDate()).padStart(2, "0");
+      const topMonth = String(today.getMonth() + 1).padStart(2, "0");
+      const topYear = String(today.getFullYear());
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 70, 155, { align: "right" });
+
+      // Title (CONSTANCIA DE ATENCION MEDICA, bold, centered, underlined)
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("CONSTANCIA DE ATENCION MEDICA", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("CONSTANCIA DE ATENCION MEDICA");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
+
+      // Salutation
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("A quien pueda interesar", 70, 235);
+
+      // Body text start
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text("Quien suscribe, médico tratante, certifica que examinó a:", 70, 265);
+
+      // Patient Name and C.I. line
+      // line 1: _________________________________ C.I. ____________________, quien
+      doc.line(70, 300, 310, 300);
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(patient.full_name, 190, 296, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text("C.I. ", 315, 300);
+
+      doc.line(340, 300, 460, 300);
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(patientCI || "", 400, 296, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(", quien", 465, 300);
+
+      // Diagnosis lines
+      const splitReason = doc.splitTextToSize(atencionReason || "", pageWidth - 140);
+
+      doc.text("presenta:", 70, 335);
+      doc.line(120, 335, pageWidth - 70, 335);
+      if (splitReason[0]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[0], (pageWidth + 50) / 2, 331, { align: "center" });
+      }
+
+      doc.line(70, 370, pageWidth - 70, 370);
+      if (splitReason[1]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[1], pageWidth / 2, 366, { align: "center" });
+      }
+
+      // Acudió line
+      const [aYear, aMonth, aDay] = atencionDate.split("-");
+      const atencionDateFormatted = `${aDay} / ${aMonth} / ${aYear}`;
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(`Acudió a consulta el día de hoy: (   ${atencionDateFormatted}   ).`, 70, 405);
+
+      doc.text("Constancia que se expide a petición de la persona interesada.", 70, 445);
+
+      // Signature line
+      const sigY = 530;
+      doc.setDrawColor(120);
+      doc.setLineWidth(0.5);
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(pageWidth / 2 - 100, sigY, pageWidth / 2 + 100, sigY);
+      doc.setLineDashPattern([], 0); // Restore solid line
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(doctorName, pageWidth / 2, sigY + 16, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(doctorSpecialty, pageWidth / 2, sigY + 29, { align: "center" });
+
+      if (doctorUni) {
+        doc.text(doctorUni, pageWidth / 2, sigY + 42, { align: "center" });
+      }
+
+      const regText = `MPPS ${doctorMpps || "______"}   CMC ${doctorCmc || "______"}`;
+      doc.text(regText, pageWidth / 2, sigY + 55, { align: "center" });
+
+      doc.save(`Atencion_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
+      setOpenAtencion(false);
+      toast.success("Constancia de atención generada");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al exportar");
+    }
+  };
 
   const filtered = useMemo(() => {
     const term = q.toLowerCase().trim();
@@ -151,7 +636,27 @@ export function PatientsPage() {
         <DialogContent className="sm:max-w-2xl rounded-3xl max-h-[90vh] overflow-y-auto">
           {viewing && (
             <>
-              <DialogHeader><DialogTitle>Detalle del paciente</DialogTitle></DialogHeader>
+              <DialogHeader className="flex flex-row items-center justify-between pr-6">
+                <DialogTitle>Detalle del paciente</DialogTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="rounded-xl flex items-center gap-1.5 h-8 cursor-pointer">
+                      <FileDown className="h-4 w-4" /> Exportar...
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="rounded-2xl bg-card border border-muted/50 p-1.5 shadow-xl" align="end">
+                    <DropdownMenuItem onClick={() => handleExportFicha(viewing)} className="rounded-xl cursor-pointer text-xs flex items-center gap-1.5 px-3 py-2 hover:bg-muted">
+                      <FileText className="h-3.5 w-3.5 text-mauve" /> Exportar Ficha Médica
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenReposoDialog(viewing)} className="rounded-xl cursor-pointer text-xs flex items-center gap-1.5 px-3 py-2 hover:bg-muted">
+                      <Printer className="h-3.5 w-3.5 text-mauve" /> Constancia de Reposo
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenAtencionDialog(viewing)} className="rounded-xl cursor-pointer text-xs flex items-center gap-1.5 px-3 py-2 hover:bg-muted">
+                      <Printer className="h-3.5 w-3.5 text-mauve" /> Constancia de Atención
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </DialogHeader>
               <div className="flex items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve to-blush text-base font-semibold text-primary-foreground">
                   {initials(viewing.full_name)}
@@ -174,6 +679,194 @@ export function PatientsPage() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Constancia de Reposo */}
+      <Dialog open={openReposo} onOpenChange={setOpenReposo}>
+        <DialogContent className="rounded-3xl sm:max-w-md bg-card p-6 border border-muted/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-1.5"><Printer className="h-5 w-5 text-mauve" /> Constancia de Reposo</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 text-sm">
+            <div className="grid gap-1">
+              <Label htmlFor="rp-ci">Cédula del Paciente (C.I.)</Label>
+              <Input
+                id="rp-ci"
+                placeholder="Ej. V-12345678"
+                value={patientCI}
+                onChange={(e) => setPatientCI(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="rp-days">Días de reposo</Label>
+              <Input
+                id="rp-days"
+                type="number"
+                min="1"
+                max="90"
+                value={reposoDays}
+                onChange={(e) => setReposoDays(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="rp-start">Fecha de inicio</Label>
+              <Input
+                id="rp-start"
+                type="date"
+                value={reposoStart}
+                onChange={(e) => setReposoStart(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="rp-reason">Diagnóstico / Motivo de reposo</Label>
+              <Textarea
+                id="rp-reason"
+                value={reposoReason}
+                onChange={(e) => setReposoReason(e.target.value)}
+                placeholder="Escribe el diagnóstico médico o motivo..."
+                className="rounded-xl min-h-[70px]"
+              />
+            </div>
+
+            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
+              <div className="grid gap-1">
+                <Label htmlFor="rp-doc-uni">Universidad / Título Adicional</Label>
+                <Input
+                  id="rp-doc-uni"
+                  placeholder="Ej. UC-CHET"
+                  value={doctorUni}
+                  onChange={(e) => setDoctorUni(e.target.value)}
+                  className="rounded-xl text-xs h-9"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="rp-doc-mpps">Registro MPPS</Label>
+                  <Input
+                    id="rp-doc-mpps"
+                    placeholder="Ej. 102.927"
+                    value={doctorMpps}
+                    onChange={(e) => setDoctorMpps(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="rp-doc-cmc">Registro CMC</Label>
+                  <Input
+                    id="rp-doc-cmc"
+                    placeholder="Ej. 11.619"
+                    value={doctorCmc}
+                    onChange={(e) => setDoctorCmc(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border/60 pt-3 mt-2">
+            <Button variant="ghost" onClick={() => setOpenReposo(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={() => viewing && handleExportReposo(viewing)} className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30">
+              Generar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Constancia de Atención */}
+      <Dialog open={openAtencion} onOpenChange={setOpenAtencion}>
+        <DialogContent className="rounded-3xl sm:max-w-md bg-card p-6 border border-muted/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-1.5"><Printer className="h-5 w-5 text-mauve" /> Constancia de Atención</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 text-sm">
+            <div className="grid gap-1">
+              <Label htmlFor="at-ci">Cédula del Paciente (C.I.)</Label>
+              <Input
+                id="at-ci"
+                placeholder="Ej. V-12345678"
+                value={patientCI}
+                onChange={(e) => setPatientCI(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="at-date">Fecha de consulta</Label>
+              <Input
+                id="at-date"
+                type="date"
+                value={atencionDate}
+                onChange={(e) => setAtencionDate(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="at-time">Hora de consulta</Label>
+              <Input
+                id="at-time"
+                type="time"
+                value={atencionTime}
+                onChange={(e) => setAtencionTime(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="at-reason">Concepto de la consulta</Label>
+              <Textarea
+                id="at-reason"
+                value={atencionReason}
+                onChange={(e) => setAtencionReason(e.target.value)}
+                placeholder="Escribe el concepto..."
+                className="rounded-xl min-h-[70px]"
+              />
+            </div>
+
+            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
+              <div className="grid gap-1">
+                <Label htmlFor="at-doc-uni">Universidad / Título Adicional</Label>
+                <Input
+                  id="at-doc-uni"
+                  placeholder="Ej. UC-CHET"
+                  value={doctorUni}
+                  onChange={(e) => setDoctorUni(e.target.value)}
+                  className="rounded-xl text-xs h-9"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="at-doc-mpps">Registro MPPS</Label>
+                  <Input
+                    id="at-doc-mpps"
+                    placeholder="Ej. 102.927"
+                    value={doctorMpps}
+                    onChange={(e) => setDoctorMpps(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="at-doc-cmc">Registro CMC</Label>
+                  <Input
+                    id="at-doc-cmc"
+                    placeholder="Ej. 11.619"
+                    value={doctorCmc}
+                    onChange={(e) => setDoctorCmc(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border/60 pt-3 mt-2">
+            <Button variant="ghost" onClick={() => setOpenAtencion(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={() => viewing && handleExportAtencion(viewing)} className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30">
+              Generar PDF
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 
