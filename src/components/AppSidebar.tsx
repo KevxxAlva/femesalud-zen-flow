@@ -3,12 +3,14 @@ import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   Home, Calendar, Users, FileText, FlaskConical, Receipt,
   Package, Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield, FileBarChart,
+  Sun, Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { useMyProfile } from "@/lib/api/profiles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTheme } from "@/hooks/useTheme";
 
 const baseModules = [
   { title: "Inicio", url: "/", icon: Home },
@@ -37,6 +39,7 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const isAdmin = useIsAdmin();
   const router = useRouter();
   const qc = useQueryClient();
+  const { isDark, toggleTheme } = useTheme();
 
   const modules = [...baseModules, ...(isAdmin ? adminModules : [])];
 
@@ -100,6 +103,13 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
               {isAdmin ? "Administrador" : profile?.specialty || "Doctor"}
             </p>
           </div>
+          <button
+            onClick={toggleTheme}
+            aria-label="Cambiar tema"
+            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve"
+          >
+            {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+          </button>
           <button
             onClick={handleLogout}
             aria-label="Cerrar sesión"
