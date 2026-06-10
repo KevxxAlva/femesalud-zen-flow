@@ -69,6 +69,14 @@ function DoctoresAdmin() {
     } catch (err) { toast.error(err instanceof Error ? err.message : "Error"); }
   };
 
+  const handleToggleDoctor = async (p: ProfileWithRoles) => {
+    const isDoctor = p.roles.includes("doctor");
+    try {
+      await toggle.mutateAsync({ userId: p.id, role: "doctor", enable: !isDoctor });
+      toast.success(isDoctor ? "Doctor removido" : "Promovido a doctor");
+    } catch (err) { toast.error(err instanceof Error ? err.message : "Error"); }
+  };
+
   const handleDelete = async () => {
     if (!toDelete) return;
     setBusy(true);
@@ -104,6 +112,7 @@ function DoctoresAdmin() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {profiles.map((p) => {
             const isAdmin = p.roles.includes("admin");
+            const isDoctor = p.roles.includes("doctor");
             const isMe = p.id === me?.id;
             return (
               <div key={p.id} className="rounded-3xl glass-card p-5 shadow-sm">
@@ -129,17 +138,26 @@ function DoctoresAdmin() {
                   {p.roles.length === 0 && <span className="text-[11px] text-muted-foreground">Sin rol</span>}
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
-                  <button
-                    onClick={() => handleToggleAdmin(p)}
-                    disabled={isMe || toggle.isPending}
-                    className="text-xs font-medium text-mauve hover:underline disabled:opacity-40 disabled:no-underline"
-                  >
-                    {isAdmin ? <><ShieldOff className="mr-1 inline h-3 w-3" />Quitar admin</> : <><Shield className="mr-1 inline h-3 w-3" />Promover a admin</>}
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => handleToggleAdmin(p)}
+                      disabled={isMe || toggle.isPending}
+                      className="text-xs font-medium text-mauve hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer"
+                    >
+                      {isAdmin ? <><ShieldOff className="mr-1 inline h-3 w-3" />Quitar admin</> : <><Shield className="mr-1 inline h-3 w-3" />Promover a admin</>}
+                    </button>
+                    <button
+                      onClick={() => handleToggleDoctor(p)}
+                      disabled={toggle.isPending}
+                      className="text-xs font-medium text-teal-600 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer"
+                    >
+                      {isDoctor ? <><ShieldOff className="mr-1 inline h-3 w-3" />Quitar doctor</> : <><Stethoscope className="mr-1 inline h-3 w-3" />Asignar doctor</>}
+                    </button>
+                  </div>
                   <button
                     onClick={() => setToDelete(p)}
                     disabled={isMe}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40"
+                    className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 cursor-pointer"
                     aria-label="Eliminar usuario"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
