@@ -19,6 +19,7 @@ export interface Appointment {
 
 export interface AppointmentWithPatient extends Appointment {
   patient_name?: string;
+  has_consultation?: boolean;
 }
 
 export type AppointmentInput = {
@@ -38,12 +39,13 @@ export function useAppointments() {
     queryFn: async (): Promise<AppointmentWithPatient[]> => {
       const { data, error } = await supabase
         .from("appointments")
-        .select("*, patients(full_name)")
+        .select("*, patients(full_name), consultations(id)")
         .order("scheduled_at", { ascending: false });
       if (error) throw error;
       return (data ?? []).map((a: any) => ({
         ...a,
         patient_name: a.patients?.full_name ?? "—",
+        has_consultation: !!a.consultations && a.consultations.length > 0,
       }));
     },
   });

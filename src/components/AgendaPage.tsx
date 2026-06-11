@@ -1,11 +1,12 @@
 import { useMemo, useState } from "react";
-import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AppointmentForm } from "@/components/AppointmentForm";
+import { ConsultationForm } from "@/components/ConsultationForm";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment, type AppointmentWithPatient } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
 import { cn } from "@/lib/utils";
@@ -100,6 +101,10 @@ export function AgendaPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentWithPatient | null>(null);
   const [toDelete, setToDelete] = useState<AppointmentWithPatient | null>(null);
+
+  // Consultation states
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const [consultationApp, setConsultationApp] = useState<AppointmentWithPatient | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
   const weekEnd = useMemo(() => {
@@ -371,6 +376,23 @@ export function AgendaPage() {
                               </button>
                             </>
                           )}
+                          {a.status === "completada" && (
+                            <button
+                              onClick={() => {
+                                setConsultationApp(a);
+                                setConsultationOpen(true);
+                              }}
+                              className={cn(
+                                "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
+                                a.has_consultation
+                                  ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
+                                  : "bg-mauve/15 text-mauve hover:bg-mauve/25"
+                              )}
+                            >
+                              <Stethoscope className="h-3.5 w-3.5" />
+                              {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
+                            </button>
+                          )}
                           <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -550,6 +572,24 @@ export function AgendaPage() {
                             <div className="flex items-center justify-between">
                               <span className="font-bold flex items-center gap-1 text-[10px]">
                                 <Clock className="h-2.5 w-2.5" /> {timeOnly(a.scheduled_at)}
+                                {a.status === "completada" && (
+                                  <span
+                                    title={a.has_consultation ? "Ver/Editar consulta" : "Registrar consulta"}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConsultationApp(a);
+                                      setConsultationOpen(true);
+                                    }}
+                                    className="cursor-pointer inline-flex items-center"
+                                  >
+                                    <Stethoscope
+                                      className={cn(
+                                        "h-2.5 w-2.5 ml-1 transition hover:scale-110",
+                                        a.has_consultation ? "text-sage-foreground font-bold" : "text-mauve"
+                                      )}
+                                    />
+                                  </span>
+                                )}
                               </span>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
@@ -660,6 +700,23 @@ export function AgendaPage() {
                                   </button>
                                 </>
                               )}
+                              {a.status === "completada" && (
+                                <button
+                                  onClick={() => {
+                                    setConsultationApp(a);
+                                    setConsultationOpen(true);
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
+                                    a.has_consultation
+                                      ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
+                                      : "bg-mauve/15 text-mauve hover:bg-mauve/25"
+                                  )}
+                                >
+                                  <Stethoscope className="h-3.5 w-3.5" />
+                                  {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
+                                </button>
+                              )}
                               <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -704,6 +761,13 @@ export function AgendaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Consultation form dialog */}
+      <ConsultationForm
+        open={consultationOpen}
+        onOpenChange={setConsultationOpen}
+        appointment={consultationApp}
+      />
     </div>
   );
 }

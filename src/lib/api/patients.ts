@@ -16,6 +16,54 @@ export interface Patient {
   created_at: string;
   updated_at: string;
   document_id: string | null;
+  historia_number: string | null;
+  first_visit_date: string | null;
+  marital_status: string | null;
+  birthplace: string | null;
+  education_level: string | null;
+  occupation: string | null;
+  ethnicity: string | null;
+  family_history: {
+    mother: string | null;
+    father: string | null;
+    siblings: string | null;
+    children: string | null;
+  } | null;
+  personal_history: {
+    alcohol: string | null;
+    drugs: string | null;
+    tobacco: string | null;
+    base_pathology: string | null;
+    surgical: string | null;
+    allergies: string | null;
+  } | null;
+  gynecological_data: {
+    menarche: number | string | null;
+    sexarche: number | string | null;
+    menstrual_cycle: string | null;
+    dysmenorrhea: string | null;
+    nps: number | string | null;
+    its: string | null;
+    cytology: string | null;
+    contraceptives: string | null;
+  } | null;
+  obstetric_data: {
+    g: number | string | null;
+    p: number | string | null;
+    c: number | string | null;
+    a: number | string | null;
+    pig: string | null;
+    em: number | string | null;
+    ee: number | string | null;
+    complications: string | null;
+    fum: string | null;
+    eg: string | null;
+    fpp: string | null;
+    num_consultations: number | string | null;
+    vaccines: string | null;
+  } | null;
+  consultation_reason: string | null;
+  current_illness: string | null;
 }
 
 export type PatientInput = Omit<Patient, "id" | "created_at" | "updated_at">;
@@ -29,7 +77,7 @@ export function usePatients() {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data ?? [];
+      return (data as any) as Patient[];
     },
   });
 }
@@ -45,7 +93,7 @@ export function useCreatePatient() {
         .select()
         .single();
       if (error) throw error;
-      return data;
+      return (data as any) as Patient;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
   });
@@ -57,7 +105,7 @@ export function useUpdatePatient() {
     mutationFn: async ({ id, ...patch }: Partial<PatientInput> & { id: string }) => {
       const { error, data } = await supabase.from("patients").update(patch).eq("id", id).select().single();
       if (error) throw error;
-      return data;
+      return (data as any) as Patient;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
   });

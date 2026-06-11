@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
-import { FileBarChart, Download, Calendar as CalIcon, Users, CalendarClock, TrendingUp, CheckCircle2 } from "lucide-react";
+import { FileBarChart, Download, Calendar as CalIcon, Users, CalendarClock, TrendingUp, CheckCircle2, Megaphone, DollarSign } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { usePatients } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
+import { useConsultations } from "@/lib/api/consultations";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const loadLogoBase64 = (url: string): Promise<string> => {
@@ -33,12 +36,18 @@ const loadLogoBase64 = (url: string): Promise<string> => {
 function todayISO() { return new Date().toISOString().slice(0, 10); }
 function daysAgoISO(n: number) { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString().slice(0, 10); }
 
+const MONTHS_ES = [
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+];
+
 export function ReportsPage() {
   const { data: patients = [] } = usePatients();
   const { data: appointments = [] } = useAppointments();
   const { data: doctors = [] } = useDoctors();
+  const { data: consultations = [] } = useConsultations();
 
-  const [from, setFrom] = useState(daysAgoISO(30));
+  const [from, setFrom] = useState(daysAgoISO(90));
   const [to, setTo] = useState(todayISO());
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
@@ -65,6 +74,44 @@ export function ReportsPage() {
       .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
   }, [appointments]);
+
+  // Financial statistics by Month/Year
+  const monthlyData = useMemo(() => {
+    const completed = appointments.filter((a) => a.status === "completada" && a.price);
+    const groups: Record<string, number> = {};
+    completed.forEach((a) => {
+      const date = new Date(a.scheduled_at);
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+      groups[key] = (groups[key] || 0) + (Number(a.price) || 0);
+    });
+    return Object.entries(groups)
+      .map(([month, amount]) => ({ month, amount }))
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .slice(-12); // Last 12 months
+  }, [appointments]);
+
+  const maxAmount = useMemo(() => {
+    return Math.max(...monthlyData.map(d => d.amount), 1);
+  }, [monthlyData]);
+
+  // Marketing acquisition statistics
+  const marketingData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    let totalConsultations = 0;
+    consultations.forEach((c) => {
+      if (c.contact_channel) {
+        counts[c.contact_channel] = (counts[c.contact_channel] || 0) + 1;
+        totalConsultations++;
+      }
+    });
+    return Object.entries(counts)
+      .map(([channel, count]) => ({
+        channel,
+        count,
+        percentage: totalConsultations > 0 ? ((count / totalConsultations) * 100).toFixed(1) : "0",
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [consultations]);
 
   const exportPDF = async () => {
     try {
@@ -102,69 +149,77 @@ export function ReportsPage() {
       doc.setFontSize(10.5);
       doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 40, 155, { align: "right" });
 
-      // Title (REPORTE EJECUTIVO, bold, centered, underlined)
+      // Title
       doc.setFont("times", "bold");
       doc.setFontSize(13);
-      doc.text("REPORTE EJECUTIVO", pageWidth / 2, 195, { align: "center" });
-      const titleWidth = doc.getTextWidth("REPORTE EJECUTIVO");
+      doc.text("REPORTE ANALÍTICO Y EJECUTIVO", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("REPORTE ANALÍTICO Y EJECUTIVO");
       doc.setDrawColor(0);
       doc.setLineWidth(0.5);
       doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
 
       // Date range & generation info
       doc.setFont("times", "normal");
-      doc.setFontSize(10.5);
+      doc.setFontSize(10);
       doc.setTextColor(40, 40, 50);
-      doc.text(`Rango: ${from}  →  ${to}`, 40, 225);
-      doc.setFontSize(9);
+      doc.text(`Rango del Reporte: ${from}  a  ${to}`, 40, 225);
+      doc.setFontSize(8.5);
       doc.setTextColor(120, 120, 130);
-      doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, 40, 239);
+      doc.text(`Generado: ${new Date().toLocaleString("es-ES")}`, 40, 238);
 
-      // KPIs table (Indicadores clave)
+      // Section 1: KPIs
       doc.setTextColor(40, 40, 50);
-      doc.setFontSize(12);
+      doc.setFontSize(11);
       doc.setFont("times", "bold");
-      doc.text("Indicadores clave", 40, 269);
+      doc.text("1. Resumen de Indicadores Clave (Período Seleccionado)", 40, 265);
 
       autoTable(doc, {
-        startY: 279,
-        head: [["Métrica", "Valor"]],
+        startY: 272,
+        head: [["Indicador", "Valor Registrado", "Contexto / Tipo"]],
         body: [
-          ["Citas en el período", String(stats.total)],
-          ["Completadas", String(stats.completed)],
-          ["Programadas", String(stats.scheduled)],
-          ["Canceladas", String(stats.cancelled)],
-          ["Ingresos estimados", `$${stats.income.toLocaleString("es-ES")}`],
-          ["Pacientes nuevos", String(stats.newPatients)],
-          ["Pacientes totales", String(patients.length)],
+          ["Ingresos Totales (Citas Completadas)", `$${stats.income.toLocaleString("es-ES")}`, "Financiero"],
+          ["Pacientes Nuevos Registrados", String(stats.newPatients), "Marketing"],
+          ["Citas Totales Agendadas", String(stats.total), "Operativo"],
+          ["Citas Completadas", String(stats.completed), "Operativo"],
+          ["Citas Programadas (Pendientes)", String(stats.scheduled), "Operativo"],
+          ["Citas Canceladas", String(stats.cancelled), "Operativo"],
         ],
         theme: "grid",
         headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
-        styles: { font: "times", fontSize: 10, cellPadding: 6 },
+        styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
 
-      // Upcoming appointments
-      const after = (doc as any).lastAutoTable.finalY + 25;
-      doc.setFontSize(12);
+      // Section 2: Marketing Channels
+      const yAcq = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(11);
       doc.setFont("times", "bold");
-      doc.text("Próximas citas", 40, after);
+      doc.text("2. Canales de Adquisición de Pacientes (Marketing)", 40, yAcq);
 
       autoTable(doc, {
-        startY: after + 10,
-        head: [["Fecha", "Hora", "Paciente", "Médico", "Motivo"]],
-        body: upcoming.slice(0, 50).map((a) => {
-          const dt = new Date(a.scheduled_at);
-          const pad = (n: number) => String(n).padStart(2, "0");
-          return [
-            dt.toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }),
-            `${pad(dt.getHours())}:${pad(dt.getMinutes())}`,
-            a.patient_name ?? "—",
-            doctorMap.get(a.doctor_id) ?? "—",
-            a.reason ?? "—",
-          ];
+        startY: yAcq + 6,
+        head: [["Canal de Contacto", "Consultas Registradas", "Porcentaje de Impacto"]],
+        body: marketingData.map(d => [d.channel, String(d.count), `${d.percentage}%`]),
+        theme: "grid",
+        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        styles: { font: "times", fontSize: 9, cellPadding: 5 },
+        margin: { left: 40, right: 40 },
+      });
+
+      // Section 3: Monthly Breakdown
+      const yMonthly = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(11);
+      doc.setFont("times", "bold");
+      doc.text("3. Desglose Histórico de Ingresos (Últimos 12 Meses)", 40, yMonthly);
+
+      autoTable(doc, {
+        startY: yMonthly + 6,
+        head: [["Mes / Año", "Monto Total Facturado"]],
+        body: monthlyData.map(d => {
+          const [yr, mn] = d.month.split("-");
+          return [`${MONTHS_ES[parseInt(mn) - 1]} ${yr}`, `$${d.amount.toLocaleString("es-ES")}`];
         }),
-        theme: "striped",
+        theme: "grid",
         headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
         styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
@@ -179,10 +234,10 @@ export function ReportsPage() {
         try {
           if (logoBase64) {
             doc.saveGraphicsState();
-            const gState = new (doc as any).GState({ opacity: 0.04 });
+            const gState = new (doc as any).GState({ opacity: 0.03 });
             doc.setGState(gState);
-            const imgWidth = 350;
-            const imgHeight = 350;
+            const imgWidth = 450;
+            const imgHeight = 450;
             const imgX = (pageWidth - imgWidth) / 2;
             const imgY = (pageHeight - imgHeight) / 2 - 20;
             doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
@@ -196,12 +251,12 @@ export function ReportsPage() {
         doc.setFont("times", "normal");
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
-        doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, pageHeight - 20);
+        doc.text(`FemeSalud — Reporte Ejecutivo de Gestión`, 40, pageHeight - 20);
         doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, pageHeight - 20, { align: "right" });
       }
 
-      doc.save(`femesalud-reporte-${from}-${to}.pdf`);
-      toast.success("Reporte exportado");
+      doc.save(`femesalud-reporte-ejecutivo-${from}-${to}.pdf`);
+      toast.success("Reporte analítico exportado");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error al exportar");
     }
@@ -211,7 +266,7 @@ export function ReportsPage() {
     { label: "Citas en rango", value: stats.total, icon: CalendarClock, tone: "text-mauve" },
     { label: "Completadas", value: stats.completed, icon: CheckCircle2, tone: "text-sage-foreground" },
     { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-blush-foreground" },
-    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: TrendingUp, tone: "text-mauve" },
+    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-mauve" },
   ];
 
   return (
@@ -219,15 +274,15 @@ export function ReportsPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="ml-14 md:ml-0">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Reportes</h1>
-          <p className="text-sm text-muted-foreground">Exporta KPIs y próximas citas a PDF</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Reportes y Control</h1>
+          <p className="text-sm text-muted-foreground">Estadísticas, ingresos financieros y canales de adquisición.</p>
         </div>
-        <Button onClick={exportPDF} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30">
-          <Download className="mr-1 h-4 w-4" /> Exportar PDF
+        <Button onClick={exportPDF} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 cursor-pointer">
+          <Download className="mr-1 h-4 w-4" /> Exportar Reporte Ejecutivo
         </Button>
       </header>
 
-      <div className="rounded-3xl glass-card p-5 shadow-sm">
+      <div className="rounded-3xl glass-card p-5 shadow-sm border border-border/40">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <CalIcon className="h-3.5 w-3.5" /> Rango de fechas
@@ -240,7 +295,7 @@ export function ReportsPage() {
               { l: "7 días", n: 7 }, { l: "30 días", n: 30 }, { l: "90 días", n: 90 },
             ].map((p) => (
               <button key={p.l} onClick={() => { setFrom(daysAgoISO(p.n)); setTo(todayISO()); }}
-                className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted">
+                className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted cursor-pointer transition">
                 {p.l}
               </button>
             ))}
@@ -248,62 +303,206 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {kpis.map((k) => {
-          const Icon = k.icon;
-          return (
-            <div key={k.label} className="rounded-3xl glass-card p-5 shadow-sm">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-muted ${k.tone}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">{k.label}</p>
-              <p className="font-display text-2xl font-semibold tracking-tight">{k.value}</p>
-            </div>
-          );
-        })}
-      </div>
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3 bg-muted/60 p-1 rounded-2xl">
+          <TabsTrigger value="overview" className="rounded-xl font-medium text-xs">Vista General</TabsTrigger>
+          <TabsTrigger value="financial" className="rounded-xl font-medium text-xs">Resumen Financiero</TabsTrigger>
+          <TabsTrigger value="marketing" className="rounded-xl font-medium text-xs">Canales de Marketing</TabsTrigger>
+        </TabsList>
 
-      <div className="rounded-3xl glass-card p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Vista previa</p>
-            <h3 className="mt-1 text-lg font-semibold flex items-center gap-2">
-              <FileBarChart className="h-5 w-5 text-mauve" /> Próximas citas ({upcoming.length})
-            </h3>
+        {/* TAB 1: OVERVIEW */}
+        <TabsContent value="overview" className="space-y-6 mt-0 outline-none">
+          <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {kpis.map((k) => {
+              const Icon = k.icon;
+              return (
+                <div key={k.label} className="rounded-3xl glass-card p-5 shadow-sm border border-border/40">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-muted ${k.tone}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <p className="mt-4 text-xs text-muted-foreground">{k.label}</p>
+                  <p className="font-display text-2xl font-semibold tracking-tight mt-1">{k.value}</p>
+                </div>
+              );
+            })}
           </div>
-        </div>
-        <div className="overflow-hidden rounded-2xl border border-border/60">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-2">Fecha</th>
-                <th className="px-4 py-2">Paciente</th>
-                <th className="px-4 py-2">Médico</th>
-                <th className="px-4 py-2">Motivo</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {upcoming.slice(0, 10).map((a) => {
-                const dt = new Date(a.scheduled_at);
-                const pad = (n: number) => String(n).padStart(2, "0");
-                return (
-                  <tr key={a.id} className="hover:bg-muted/30">
-                    <td className="px-4 py-2 text-xs">
-                      {dt.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {pad(dt.getHours())}:{pad(dt.getMinutes())}
-                    </td>
-                    <td className="px-4 py-2 font-medium">{a.patient_name}</td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground">{doctorMap.get(a.doctor_id) ?? "—"}</td>
-                    <td className="px-4 py-2 text-xs text-muted-foreground">{a.reason ?? "—"}</td>
+
+          <div className="rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Planificación</p>
+                <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
+                  <CalendarClock className="h-5 w-5 text-mauve" /> Próximas citas ({upcoming.length})
+                </h3>
+              </div>
+            </div>
+            <div className="overflow-hidden rounded-2xl border border-border/60">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-2.5">Fecha / Hora</th>
+                    <th className="px-4 py-2.5">Paciente</th>
+                    <th className="px-4 py-2.5">Médico</th>
+                    <th className="px-4 py-2.5">Motivo</th>
                   </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {upcoming.slice(0, 10).map((a) => {
+                    const dt = new Date(a.scheduled_at);
+                    const pad = (n: number) => String(n).padStart(2, "0");
+                    return (
+                      <tr key={a.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3 text-xs">
+                          {dt.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {pad(dt.getHours())}:{pad(dt.getMinutes())}
+                        </td>
+                        <td className="px-4 py-3 font-semibold">{a.patient_name}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{doctorMap.get(a.doctor_id) ?? "—"}</td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{a.reason ?? "—"}</td>
+                      </tr>
+                    );
+                  })}
+                  {upcoming.length === 0 && (
+                    <tr><td colSpan={4} className="px-4 py-6 text-center text-xs text-muted-foreground">No hay citas próximas programadas.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 2: FINANCIAL */}
+        <TabsContent value="financial" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-0 outline-none">
+          <div className="lg:col-span-2 rounded-3xl glass-card p-6 shadow-sm border border-border/40 flex flex-col justify-between">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Histórico de Ingresos</p>
+              <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-mauve" /> Evolución de Facturación (Últimos 12 meses)
+              </h3>
+            </div>
+
+            {monthlyData.length === 0 ? (
+              <p className="text-xs text-muted-foreground text-center py-20">No hay transacciones registradas.</p>
+            ) : (
+              <div className="flex h-56 items-end gap-3 pt-6 border-b border-border mt-4">
+                {monthlyData.map((d) => {
+                  const pct = (d.amount / maxAmount) * 100;
+                  const [yr, mn] = d.month.split("-");
+                  const label = `${MONTHS_ES[parseInt(mn) - 1].slice(0,3)} '${yr.slice(2)}`;
+                  return (
+                    <div key={d.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
+                      <div className="text-[9px] font-bold text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                        ${d.amount.toLocaleString("es-ES")}
+                      </div>
+                      <div
+                        style={{ height: `${pct}%` }}
+                        className="w-full bg-gradient-to-t from-mauve to-mauve-soft rounded-t-lg transition-all duration-500 hover:opacity-85 shadow-sm shadow-mauve/15"
+                      />
+                      <div className="text-[10px] text-muted-foreground font-semibold truncate w-full text-center">
+                        {label}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-1 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-4 flex items-center gap-1">
+              <DollarSign className="h-4 w-4" /> Desglose Mensual
+            </h3>
+            <div className="overflow-hidden rounded-2xl border border-border/40">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40 text-left uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Mes / Año</th>
+                    <th className="px-3 py-2 text-right">Monto ($)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {monthlyData.slice().reverse().map((d) => {
+                    const [yr, mn] = d.month.split("-");
+                    return (
+                      <tr key={d.month} className="hover:bg-muted/20">
+                        <td className="px-3 py-2.5 font-medium">{MONTHS_ES[parseInt(mn) - 1]} {yr}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-mauve">${d.amount.toLocaleString("es-ES")}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* TAB 3: MARKETING */}
+        <TabsContent value="marketing" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-0 outline-none">
+          <div className="lg:col-span-2 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Impacto por Canal de Contacto</p>
+              <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
+                <Megaphone className="h-5 w-5 text-mauve" /> Desempeño y Canales de Adquisición
+              </h3>
+            </div>
+
+            <div className="space-y-4 mt-6">
+              {marketingData.map((d, idx) => {
+                const colors = [
+                  "bg-mauve",
+                  "bg-blush-foreground",
+                  "bg-sage-foreground",
+                  "bg-sky-600",
+                  "bg-amber-600",
+                ];
+                const colorClass = colors[idx % colors.length];
+                return (
+                  <div key={d.channel} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>{d.channel}</span>
+                      <span className="text-muted-foreground">{d.count} consultas ({d.percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
+                      <div
+                        style={{ width: `${d.percentage}%` }}
+                        className={cn("h-full rounded-full transition-all duration-500", colorClass)}
+                      />
+                    </div>
+                  </div>
                 );
               })}
-              {upcoming.length === 0 && (
-                <tr><td colSpan={4} className="px-4 py-6 text-center text-xs text-muted-foreground">No hay citas próximas.</td></tr>
+              {marketingData.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-12">No hay datos de canales de marketing disponibles.</p>
               )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+            </div>
+          </div>
+
+          <div className="lg:col-span-1 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-4 flex items-center gap-1">
+              <Megaphone className="h-4 w-4" /> Tabla de Impacto
+            </h3>
+            <div className="overflow-hidden rounded-2xl border border-border/40">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40 text-left uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-2">Canal</th>
+                    <th className="px-3 py-2 text-center">Consultas</th>
+                    <th className="px-3 py-2 text-right">Porcentaje</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {marketingData.map((d) => (
+                    <tr key={d.channel} className="hover:bg-muted/20">
+                      <td className="px-3 py-2.5 font-medium">{d.channel}</td>
+                      <td className="px-3 py-2.5 text-center font-bold">{d.count}</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-mauve">{d.percentage}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
