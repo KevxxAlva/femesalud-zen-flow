@@ -54,9 +54,10 @@ export function useCreateClinicalNote() {
   return useMutation({
     mutationFn: async (input: ClinicalNoteInput) => {
       const { data: u } = await supabase.auth.getUser();
+      const { attachments, ...rest } = input;
       const { data, error } = await supabase
         .from("clinical_notes")
-        .insert({ ...input, author_id: u.user?.id })
+        .insert({ ...rest, attachments: (attachments ?? []) as any, author_id: u.user?.id })
         .select()
         .single();
       if (error) throw error;
