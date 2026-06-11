@@ -750,6 +750,9 @@ export function PatientsPage() {
                 {viewing.notes && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Notas generales</dt><dd>{viewing.notes}</dd></div>}
               </dl>
               <div className="mt-4 border-t border-border/60 pt-4">
+                <PatientTimeline patientId={viewing.id} />
+              </div>
+              <div className="mt-4 border-t border-border/60 pt-4">
                 <ClinicalNotesPanel patientId={viewing.id} />
               </div>
             </>
