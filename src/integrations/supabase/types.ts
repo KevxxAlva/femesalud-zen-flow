@@ -172,9 +172,9 @@ export type Database = {
           birth_date: string | null
           created_at: string
           created_by: string | null
+          document_id: string | null
           email: string | null
           full_name: string
-          gender: string | null
           id: string
           notes: string | null
           phone: string | null
@@ -187,9 +187,9 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           created_by?: string | null
+          document_id?: string | null
           email?: string | null
           full_name: string
-          gender?: string | null
           id?: string
           notes?: string | null
           phone?: string | null
@@ -202,9 +202,9 @@ export type Database = {
           birth_date?: string | null
           created_at?: string
           created_by?: string | null
+          document_id?: string | null
           email?: string | null
           full_name?: string
-          gender?: string | null
           id?: string
           notes?: string | null
           phone?: string | null
