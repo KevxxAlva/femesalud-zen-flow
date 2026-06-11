@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dialog";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
+import { PatientTimeline } from "@/components/PatientTimeline";
 import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
 import { useClinicalNotes } from "@/lib/api/clinical-notes";
@@ -749,6 +750,9 @@ export function PatientsPage() {
                 <div className="col-span-2"><dt className="text-xs text-muted-foreground">Médico</dt><dd>{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</dd></div>
                 {viewing.notes && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Notas generales</dt><dd>{viewing.notes}</dd></div>}
               </dl>
+              <div className="mt-4 border-t border-border/60 pt-4">
+                <PatientTimeline patientId={viewing.id} />
+              </div>
               <div className="mt-4 border-t border-border/60 pt-4">
                 <ClinicalNotesPanel patientId={viewing.id} />
               </div>
