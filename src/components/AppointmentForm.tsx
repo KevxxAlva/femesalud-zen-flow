@@ -8,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useCreateAppointment, useUpdateAppointment, type Appointment } from "@/lib/api/appointments";
 import { usePatients } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown } from "lucide-react";
 
 const STATUSES = ["programada", "completada", "cancelada"];
 
@@ -56,6 +58,32 @@ export function AppointmentForm({
   const [status, setStatus] = useState(appointment?.status ?? "programada");
   const [duration, setDuration] = useState(String(appointment?.duration_minutes ?? 30));
   const [price, setPrice] = useState(String(appointment?.price ?? 0));
+
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const selectedPatientName = useMemo(() => {
+    return patients.find((p) => p.id === patient_id)?.full_name || "Selecciona paciente...";
+  }, [patients, patient_id]);
+
+  const filteredPatients = useMemo(() => {
+    const query = searchTerm.toLowerCase().trim();
+    if (!query) {
+      const currentPatient = patients.find(p => p.id === patient_id);
+      const initial = patients.slice(0, 10);
+      if (currentPatient && !initial.some(p => p.id === patient_id)) {
+        initial.push(currentPatient);
+      }
+      return initial;
+    }
+    return patients
+      .filter((p) => 
+        p.full_name.toLowerCase().includes(query) ||
+        (p.document_id ?? "").toLowerCase().includes(query) ||
+        (p.historia_number ?? "").toLowerCase().includes(query)
+      )
+      .slice(0, 15);
+  }, [patients, searchTerm, patient_id]);
 
   const create = useCreateAppointment();
   const update = useUpdateAppointment();
@@ -113,13 +141,58 @@ export function AppointmentForm({
         <form onSubmit={submit} className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label>Paciente</Label>
-            <Select value={patient_id || undefined} onValueChange={setPatient}>
-              <SelectTrigger><SelectValue placeholder="Selecciona paciente" /></SelectTrigger>
-              <SelectContent>
-                {patients.length === 0 && <SelectItem value="__none" disabled>No hay pacientes</SelectItem>}
-                {patients.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  role="combobox"
+                  aria-expanded={popoverOpen}
+                  className="w-full justify-between rounded-xl font-normal text-xs h-10 border-border/30 bg-muted/40 hover:bg-muted/60 text-left px-3"
+                >
+                  <span className="truncate">{selectedPatientName}</span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 rounded-2xl border-border/40 shadow-lg" align="start">
+                <Command shouldFilter={false}>
+                  <CommandInput
+                    placeholder="Buscar paciente por nombre, cédula o historia..."
+                    value={searchTerm}
+                    onValueChange={setSearchTerm}
+                    className="text-xs h-9"
+                  />
+                  <CommandList className="max-h-[200px] overflow-y-auto">
+                    <CommandEmpty className="text-xs text-muted-foreground p-3 text-center">
+                      No se encontraron pacientes.
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredPatients.map((p) => (
+                        <CommandItem
+                          key={p.id}
+                          value={p.id}
+                          onSelect={() => {
+                            setPatient(p.id);
+                            setPopoverOpen(false);
+                            setSearchTerm("");
+                          }}
+                          className="text-xs rounded-xl flex items-center justify-between cursor-pointer p-2 hover:bg-mauve/10"
+                        >
+                          <div className="flex flex-col gap-0.5 min-w-0">
+                            <span className="font-semibold truncate">{p.full_name}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              C.I. {p.document_id || "—"} {p.historia_number && `· #${p.historia_number}`}
+                            </span>
+                          </div>
+                          {patient_id === p.id && (
+                            <Check className="h-4 w-4 text-mauve shrink-0 ml-2" />
+                          )}
+                        </CommandItem>
+                      ))}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
           {isAdmin && (
             <div className="grid gap-2">

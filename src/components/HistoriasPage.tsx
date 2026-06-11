@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
+import { generateRecipePDF } from "@/lib/utils/recipePdf";
 
 export function HistoriasPage() {
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
@@ -305,6 +306,26 @@ export function HistoriasPage() {
     }
   };
 
+  const handleExportRecipe = async (patient: Patient, consultation: Consultation) => {
+    const doctorObj = doctors.find((d) => d.id === consultation.doctor_id);
+    const doctorName = doctorObj?.full_name || doctorMap.get(consultation.doctor_id ?? "") || "Médico Tratante";
+    const doctorSpecialty = doctorObj?.specialty || undefined;
+
+    await generateRecipePDF(
+      {
+        full_name: patient.full_name,
+        document_id: patient.document_id,
+        birth_date: patient.birth_date,
+      },
+      {
+        created_at: consultation.created_at,
+        indications: consultation.indications,
+      },
+      doctorName,
+      doctorSpecialty
+    );
+  };
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col min-h-0">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -435,9 +456,10 @@ export function HistoriasPage() {
               </div>
 
               <Tabs defaultValue="timeline" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-2 bg-muted/60 p-1 rounded-2xl mb-4">
+                <TabsList className="grid w-full grid-cols-3 bg-muted/60 p-1 rounded-2xl mb-4">
                   <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Cronología de Consultas</TabsTrigger>
                   <TabsTrigger value="base" className="rounded-xl font-medium text-xs">Antecedentes Clínicos</TabsTrigger>
+                  <TabsTrigger value="info" className="rounded-xl font-medium text-xs">Ficha de Identificación</TabsTrigger>
                 </TabsList>
 
                 <ScrollArea className="flex-1 pr-1">
@@ -581,8 +603,22 @@ export function HistoriasPage() {
                                         <h4 className="font-bold text-[10px] uppercase text-muted-foreground mb-1 flex items-center gap-1"><Stethoscope className="h-3 w-3" /> Diagnóstico</h4>
                                         <p className="font-bold text-foreground leading-relaxed text-xs">{c.diagnosis || "Sin diagnóstico"}</p>
                                       </div>
-                                      <div className="bg-muted/10 p-3 rounded-2xl">
-                                        <h4 className="font-bold text-[10px] uppercase text-muted-foreground mb-1 flex items-center gap-1"><FileText className="h-3 w-3" /> Indicaciones y Receta</h4>
+                                      <div className="bg-muted/10 p-3 rounded-2xl flex flex-col justify-between">
+                                        <div className="flex items-center justify-between mb-1.5">
+                                          <h4 className="font-bold text-[10px] uppercase text-muted-foreground flex items-center gap-1">
+                                            <FileText className="h-3 w-3" /> Indicaciones y Receta
+                                          </h4>
+                                          {c.indications && (
+                                            <Button
+                                              variant="ghost"
+                                              size="sm"
+                                              onClick={() => handleExportRecipe(selectedPatient, c)}
+                                              className="h-6 px-2 text-[10px] rounded-lg text-mauve hover:text-mauve-foreground hover:bg-mauve/10 flex items-center gap-1 cursor-pointer"
+                                            >
+                                              <Printer className="h-3 w-3" /> Imprimir Récipe
+                                            </Button>
+                                          )}
+                                        </div>
                                         <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed text-xs">{c.indications || "Sin indicaciones"}</p>
                                       </div>
                                     </div>
@@ -680,6 +716,68 @@ export function HistoriasPage() {
                           <div className="col-span-2"><dt className="text-muted-foreground">Vacunas / Controles</dt><dd className="font-semibold text-foreground">Vacunas: {selectedPatient.obstetric_data?.vaccines || "—"} (Controles: {selectedPatient.obstetric_data?.num_consultations || 0})</dd></div>
                         </dl>
                       </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 3: IDENTIFICATION DATA */}
+                  <TabsContent value="info" className="space-y-6 mt-0 outline-none animate-fade-in">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3 col-span-1 md:col-span-2 border border-border/30">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-1">Datos Básicos</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                          <div><span className="text-muted-foreground block text-[10px] uppercase font-semibold">Nombre Completo</span><span className="font-bold text-foreground text-sm">{selectedPatient.full_name}</span></div>
+                          <div><span className="text-muted-foreground block text-[10px] uppercase font-semibold">Documento Cédula</span><span className="font-bold text-foreground text-sm">{selectedPatient.document_id || "—"}</span></div>
+                          <div><span className="text-muted-foreground block text-[10px] uppercase font-semibold">Número de Historia</span><span className="font-bold text-foreground text-sm">#{selectedPatient.historia_number || "—"}</span></div>
+                        </div>
+                      </div>
+
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3 border border-border/30">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-2">Información de Contacto y Personal</h3>
+                        <dl className="space-y-2">
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Teléfono</dt><dd className="font-semibold text-foreground">{selectedPatient.phone || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Correo Electrónico</dt><dd className="font-semibold text-foreground">{selectedPatient.email || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Estado Civil</dt><dd className="font-semibold text-foreground">{selectedPatient.marital_status || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Nivel de Instrucción</dt><dd className="font-semibold text-foreground">{selectedPatient.education_level || "—"}</dd></div>
+                          <div className="flex justify-between py-1"><dt className="text-muted-foreground">Ocupación</dt><dd className="font-semibold text-foreground">{selectedPatient.occupation || "—"}</dd></div>
+                        </dl>
+                      </div>
+
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3 border border-border/30">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-2">Información Clínica Inicial</h3>
+                        <dl className="space-y-2">
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Fecha de Nacimiento</dt><dd className="font-semibold text-foreground">{selectedPatient.birth_date || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Lugar de Nacimiento</dt><dd className="font-semibold text-foreground">{selectedPatient.birthplace || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Etnia / Raza</dt><dd className="font-semibold text-foreground">{selectedPatient.ethnicity || "—"}</dd></div>
+                          <div className="flex justify-between py-1 border-b border-border/30"><dt className="text-muted-foreground">Primera Cita</dt><dd className="font-semibold text-foreground">{selectedPatient.first_visit_date || "—"}</dd></div>
+                          <div className="flex justify-between py-1"><dt className="text-muted-foreground">Médico Asignado</dt><dd className="font-semibold text-foreground">{doctorMap.get(selectedPatient.assigned_doctor_id ?? "") || "Sin médico"}</dd></div>
+                        </dl>
+                      </div>
+
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-2 col-span-1 md:col-span-2 border border-border/30">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Consulta de Ingreso</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                          <div className="bg-card/50 p-3 rounded-xl border border-border/40">
+                            <span className="text-muted-foreground font-bold mb-1 block">Motivo de Consulta</span>
+                            <span className="font-medium whitespace-pre-wrap block text-xs">{selectedPatient.consultation_reason || "No registrado"}</span>
+                          </div>
+                          <div className="bg-card/50 p-3 rounded-xl border border-border/40">
+                            <span className="text-muted-foreground font-bold mb-1 block">Enfermedad Actual</span>
+                            <span className="font-medium whitespace-pre-wrap block text-xs">{selectedPatient.current_illness || "No registrado"}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-2 col-span-1 md:col-span-2 border border-border/30">
+                        <span className="text-xs font-bold uppercase tracking-wider text-mauve block">Dirección de Domicilio</span>
+                        <span className="font-semibold text-foreground bg-card/50 p-3 rounded-xl border border-border/40 mt-1 block">{selectedPatient.address || "No registrada"}</span>
+                      </div>
+                      
+                      {selectedPatient.notes && (
+                        <div className="bg-muted/30 p-4 rounded-2xl space-y-2 col-span-1 md:col-span-2 border border-border/30">
+                          <span className="text-xs font-bold uppercase tracking-wider text-mauve block">Notas Administrativas</span>
+                          <span className="font-semibold text-foreground bg-card/50 p-3 rounded-xl border border-border/40 mt-1 block whitespace-pre-wrap text-xs">{selectedPatient.notes}</span>
+                        </div>
+                      )}
                     </div>
                   </TabsContent>
                 </ScrollArea>

@@ -13,6 +13,8 @@ export interface Appointment {
   reason: string | null;
   notes: string | null;
   price: number | null;
+  payment_method: string | null;
+  payment_reference: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +33,8 @@ export type AppointmentInput = {
   reason?: string | null;
   notes?: string | null;
   price?: number | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
 };
 
 export function useAppointments() {

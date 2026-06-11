@@ -388,7 +388,7 @@ export function AgendaPage() {
                               </button>
                             </>
                           )}
-                          {a.status === "completada" && (
+                          {(a.status === "completada" || a.status === "programada") && (
                             <button
                               onClick={() => {
                                 setConsultationApp(a);
@@ -615,7 +615,7 @@ export function AgendaPage() {
                             <div className="flex items-center justify-between">
                               <span className="font-bold flex items-center gap-1 text-[10px]">
                                 <Clock className="h-2.5 w-2.5" /> {timeOnly(a.scheduled_at)}
-                                {a.status === "completada" && (
+                                {(a.status === "completada" || a.status === "programada") && (
                                   <span
                                     title={a.has_consultation ? "Ver/Editar consulta" : "Registrar consulta"}
                                     onClick={(e) => {
@@ -743,7 +743,7 @@ export function AgendaPage() {
                                   </button>
                                 </>
                               )}
-                              {a.status === "completada" && (
+                              {(a.status === "completada" || a.status === "programada") && (
                                 <button
                                   onClick={() => {
                                     setConsultationApp(a);

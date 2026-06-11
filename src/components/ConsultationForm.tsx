@@ -9,8 +9,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultation, type VisitType } from "@/lib/api/consultations";
+import { usePatients } from "@/lib/api/patients";
+import { useDoctors } from "@/lib/api/profiles";
+import { supabase } from "@/integrations/supabase/client";
+import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, ShieldAlert } from "lucide-react";
+import { useRouter } from "@tanstack/react-router";
+import { Loader2, Plus, Trash2, ShieldAlert, Printer } from "lucide-react";
 
 const CONTACT_CHANNELS = ["WhatsApp", "Instagram", "Facebook", "Radio", "Recomendado", "Prensa", "Volante", "Otro"];
 
@@ -43,6 +48,19 @@ export function ConsultationForm({
   const busy = create.isPending || update.isPending;
 
   const isEdit = !!existingConsultation;
+
+  const { data: patients = [] } = usePatients();
+  const { data: doctors = [] } = useDoctors();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user) {
+        setCurrentUserId(data.user.id);
+      }
+    });
+  }, []);
 
   // General States
   const [visitType, setVisitType] = useState<VisitType>("CONTROL");
@@ -236,8 +254,12 @@ export function ConsultationForm({
     setCommonQuantities({ ...commonQuantities, [name]: val });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    handleSave(false);
+  };
+
+  const handleSave = async (shouldPrint: boolean) => {
     if (!appointment) return;
 
     try {
@@ -323,10 +345,55 @@ export function ConsultationForm({
       if (isEdit && existingConsultation) {
         await update.mutateAsync({ id: existingConsultation.id, ...payload });
         toast.success("Consulta clínica actualizada");
+        onOpenChange(false);
       } else {
         await create.mutateAsync(payload);
         toast.success("Consulta clínica registrada con éxito");
+
+        // Set pending payment in localStorage
+        localStorage.setItem("pending_payment_appointment_id", appointment.id);
+
+        onOpenChange(false);
+        router.navigate({ to: "/facturacion" });
       }
+
+      if (shouldPrint && payload.indications) {
+        const patientData = patients.find((p) => p.id === appointment.patient_id);
+        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
+        const doctorName = doctorObj?.full_name || "Médico Tratante";
+        const doctorSpecialty = doctorObj?.specialty || undefined;
+        
+        if (patientData) {
+          await generateRecipePDF(
+            {
+              full_name: patientData.full_name,
+              document_id: patientData.document_id,
+              birth_date: patientData.birth_date,
+            },
+            {
+              created_at: new Date().toISOString(),
+              indications: payload.indications,
+            },
+            doctorName,
+            doctorSpecialty
+          );
+        } else {
+          await generateRecipePDF(
+            {
+              full_name: appointment.patient_name || "Paciente",
+              document_id: null,
+              birth_date: null,
+            },
+            {
+              created_at: new Date().toISOString(),
+              indications: payload.indications,
+            },
+            doctorName,
+            doctorSpecialty
+          );
+        }
+      }
+
       onOpenChange(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Error guardando la consulta");
@@ -889,21 +956,39 @@ export function ConsultationForm({
                 >
                   Cancelar
                 </Button>
-                <Button
-                  type="submit"
-                  disabled={busy}
-                  className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/25 hover:opacity-95 px-6"
-                >
-                  {busy ? (
-                    <span className="flex items-center gap-1.5">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Guardando...
-                    </span>
-                  ) : isEdit ? (
-                    "Guardar Cambios"
-                  ) : (
-                    "Registrar Consulta"
+                <div className="flex items-center gap-2">
+                  {indications.trim() && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => handleSave(true)}
+                      disabled={busy}
+                      className="rounded-xl border-mauve text-mauve hover:bg-mauve/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
+                    >
+                      {busy ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="h-3.5 w-3.5" />
+                      )}
+                      {isEdit ? "Guardar e Imprimir Récipe" : "Registrar e Imprimir Récipe"}
+                    </Button>
                   )}
-                </Button>
+                  <Button
+                    type="submit"
+                    disabled={busy}
+                    className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/25 hover:opacity-95 px-6 h-9 text-xs font-semibold"
+                  >
+                    {busy ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando...
+                      </span>
+                    ) : isEdit ? (
+                      "Guardar Cambios"
+                    ) : (
+                      "Registrar Consulta"
+                    )}
+                  </Button>
+                </div>
               </DialogFooter>
             </Tabs>
           </form>

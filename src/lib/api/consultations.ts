@@ -168,6 +168,37 @@ export function useCreateConsultation() {
         .update({ status: "completada" })
         .eq("id", consultationData.appointment_id);
 
+      // 4. Create next appointment if next_appointment_date is provided
+      if (consultationData.next_appointment_date) {
+        const { data: origApp } = await supabase
+          .from("appointments")
+          .select("scheduled_at, doctor_id, reason, price")
+          .eq("id", consultationData.appointment_id)
+          .maybeSingle();
+
+        let scheduledAt = `${consultationData.next_appointment_date}T09:00:00Z`;
+        if (origApp?.scheduled_at) {
+          try {
+            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
+            scheduledAt = `${consultationData.next_appointment_date}T${timePart}`;
+          } catch (e) {
+            console.error("Error parsing scheduled_at:", e);
+          }
+        }
+
+        await supabase
+          .from("appointments")
+          .insert({
+            patient_id: consultationData.patient_id,
+            doctor_id: origApp?.doctor_id || consultationData.doctor_id || user.user?.id || null,
+            scheduled_at: scheduledAt,
+            status: "programada",
+            reason: "Próxima Cita",
+            price: origApp?.price || 0,
+            created_by: user.user?.id || null,
+          });
+      }
+
       return consultation;
     },
     onSuccess: (_, variables) => {
@@ -184,7 +215,14 @@ export function useUpdateConsultation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, consumables, ...patch }: Partial<ConsultationInput> & { id: string }) => {
-      // 1. Update consultation details
+      // 1. Fetch current consultation data before update
+      const { data: oldConsultation } = await supabase
+        .from("consultations")
+        .select("next_appointment_date, patient_id, appointment_id, doctor_id")
+        .eq("id", id)
+        .maybeSingle();
+
+      // 2. Update consultation details
       const { data: consultation, error: cError } = await supabase
         .from("consultations")
         .update(patch)
@@ -212,6 +250,60 @@ export function useUpdateConsultation() {
             .from("consultation_consumables")
             .insert(newConsumables);
           if (insError) throw insError;
+        }
+      }
+
+      // 4. Handle next appointment date change
+      if (patch.next_appointment_date && patch.next_appointment_date !== oldConsultation?.next_appointment_date) {
+        const { data: user } = await supabase.auth.getUser();
+        
+        // Fetch original appointment to copy details
+        const { data: origApp } = await supabase
+          .from("appointments")
+          .select("scheduled_at, doctor_id, reason, price")
+          .eq("id", oldConsultation.appointment_id)
+          .maybeSingle();
+
+        let scheduledAt = `${patch.next_appointment_date}T09:00:00Z`;
+        if (origApp?.scheduled_at) {
+          try {
+            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
+            scheduledAt = `${patch.next_appointment_date}T${timePart}`;
+          } catch (e) {
+            console.error("Error parsing scheduled_at:", e);
+          }
+        }
+
+        // Check if there is already a scheduled next appointment created after the consultation's original appointment date
+        const { data: existingNextApp } = await supabase
+          .from("appointments")
+          .select("id")
+          .eq("patient_id", oldConsultation.patient_id)
+          .eq("status", "programada")
+          .gt("scheduled_at", origApp?.scheduled_at || new Date(0).toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingNextApp) {
+          // Update existing next appointment
+          await supabase
+            .from("appointments")
+            .update({ scheduled_at: scheduledAt })
+            .eq("id", existingNextApp.id);
+        } else {
+          // Create new next appointment
+          await supabase
+            .from("appointments")
+            .insert({
+              patient_id: oldConsultation.patient_id,
+              doctor_id: origApp?.doctor_id || oldConsultation.doctor_id || user.user?.id || null,
+              scheduled_at: scheduledAt,
+              status: "programada",
+              reason: "Próxima Cita",
+              price: origApp?.price || 0,
+              created_by: user.user?.id || null,
+            });
         }
       }
 
