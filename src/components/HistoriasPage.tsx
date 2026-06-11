@@ -15,11 +15,11 @@ import { generateRecipePDF } from "@/lib/utils/recipePdf";
 
 export function HistoriasPage() {
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
+  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { data: consultations = [], isLoading: loadingConsultations } = usePatientConsultations(selectedPatientId || undefined);
   const { data: doctors = [] } = useDoctors();
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [expandedConsultations, setExpandedConsultations] = useState<Record<string, boolean>>({});
   const [sidebarPage, setSidebarPage] = useState(1);
   const itemsPerPage = 15;
@@ -456,8 +456,9 @@ export function HistoriasPage() {
               </div>
 
               <Tabs defaultValue="timeline" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-3 bg-muted/60 p-1 rounded-2xl mb-4">
+                <TabsList className="grid w-full grid-cols-4 bg-muted/60 p-1 rounded-2xl mb-4">
                   <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Cronología de Consultas</TabsTrigger>
+                  <TabsTrigger value="gyn-obs" className="rounded-xl font-medium text-xs">Ginecología y Obstetricia</TabsTrigger>
                   <TabsTrigger value="base" className="rounded-xl font-medium text-xs">Antecedentes Clínicos</TabsTrigger>
                   <TabsTrigger value="info" className="rounded-xl font-medium text-xs">Ficha de Identificación</TabsTrigger>
                 </TabsList>
@@ -684,14 +685,19 @@ export function HistoriasPage() {
                           <div className="col-span-3"><dt className="text-muted-foreground text-destructive">Alérgicos</dt><dd className="font-bold text-destructive">{selectedPatient.personal_history?.allergies || "Niega"}</dd></div>
                         </dl>
                       </div>
+                    </div>
+                  </TabsContent>
 
+                  {/* TAB: GYN & OBS */}
+                  <TabsContent value="gyn-obs" className="space-y-6 mt-0 outline-none animate-fade-in">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {/* Datos Ginecológicos */}
-                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3">
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3 border border-border/30">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Datos Ginecológicos</h3>
                         <dl className="grid grid-cols-2 gap-3 text-xs">
                           <div><dt className="text-muted-foreground">Menarquía / Sexarquía</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.menarche || "—"} / {selectedPatient.gynecological_data?.sexarche || "—"} años</dd></div>
                           <div><dt className="text-muted-foreground">Ciclo Menstrual</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.menstrual_cycle || "—"}</dd></div>
-                          <div><dt className="text-muted-foreground">Dismenorrea / Parejas (NPS)</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.dysmenorrhea || "—"} / {selectedPatient.gynecological_data?.nps || "—"}</dd></div>
+                          <div><dt className="text-muted-foreground">Dismenorrea / NPS</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.dysmenorrhea || "—"} / {selectedPatient.gynecological_data?.nps || "—"}</dd></div>
                           <div><dt className="text-muted-foreground">ITS</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.its || "Ninguna"}</dd></div>
                           <div className="col-span-2 border-t border-border/30 pt-2"><dt className="text-muted-foreground">Última Citología</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.cytology || "—"}</dd></div>
                           <div className="col-span-2"><dt className="text-muted-foreground">Anticonceptivos</dt><dd className="font-semibold text-foreground">{selectedPatient.gynecological_data?.contraceptives || "—"}</dd></div>
@@ -699,7 +705,7 @@ export function HistoriasPage() {
                       </div>
 
                       {/* Datos Obstétricos */}
-                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3">
+                      <div className="bg-muted/30 p-4 rounded-2xl space-y-3 border border-border/30">
                         <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Antecedentes Obstétricos</h3>
                         <div className="grid grid-cols-4 gap-2 text-center bg-card p-2 rounded-xl border border-border/40 mb-2">
                           <div><span className="text-[10px] text-muted-foreground block">G</span><span className="font-bold">{selectedPatient.obstetric_data?.g ?? 0}</span></div>
