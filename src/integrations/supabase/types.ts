@@ -69,6 +69,7 @@ export type Database = {
       }
       clinical_notes: {
         Row: {
+          attachments: Json
           author_id: string | null
           content: string
           created_at: string
@@ -79,6 +80,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attachments?: Json
           author_id?: string | null
           content?: string
           created_at?: string
@@ -89,6 +91,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attachments?: Json
           author_id?: string | null
           content?: string
           created_at?: string
