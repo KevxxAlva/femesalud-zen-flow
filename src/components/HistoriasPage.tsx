@@ -1,8 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { usePatients, type Patient } from "@/lib/api/patients";
 import { usePatientConsultations, type Consultation } from "@/lib/api/consultations";
 import { useDoctors } from "@/lib/api/profiles";
-import { Search, FileText, HeartPulse, User, Calendar, Plus, Printer, Activity, Scissors, Stethoscope, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import { Search, FileText, HeartPulse, User, Calendar, Plus, Printer, Activity, Scissors, Stethoscope, ChevronDown, ChevronUp, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -20,6 +20,12 @@ export function HistoriasPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const [expandedConsultations, setExpandedConsultations] = useState<Record<string, boolean>>({});
+  const [sidebarPage, setSidebarPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setSidebarPage(1);
+  }, [searchQuery]);
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
 
@@ -33,6 +39,12 @@ export function HistoriasPage() {
       (p.historia_number ?? "").toLowerCase().includes(q)
     );
   }, [patients, searchQuery]);
+
+  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
+  const paginatedPatients = useMemo(() => {
+    const start = (sidebarPage - 1) * itemsPerPage;
+    return filteredPatients.slice(start, start + itemsPerPage);
+  }, [filteredPatients, sidebarPage]);
 
   const selectedPatient = useMemo(() => 
     patients.find(p => p.id === selectedPatientId) || null,
@@ -323,7 +335,7 @@ export function HistoriasPage() {
               <p className="text-xs text-muted-foreground text-center py-8">No se encontraron pacientes.</p>
             ) : (
               <div className="space-y-1.5">
-                {filteredPatients.map((p) => (
+                {paginatedPatients.map((p) => (
                   <button
                     key={p.id}
                     onClick={() => {
@@ -354,6 +366,32 @@ export function HistoriasPage() {
               </div>
             )}
           </ScrollArea>
+
+          {totalPages > 1 && (
+            <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/40 pt-2.5 animate-fade-in">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={sidebarPage === 1}
+                onClick={() => setSidebarPage((prev) => Math.max(1, prev - 1))}
+                className="h-8 w-8 p-0 rounded-xl hover:bg-mauve/10 cursor-pointer flex items-center justify-center"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="text-[10px] font-semibold text-muted-foreground">
+                Pág. {sidebarPage} de {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={sidebarPage === totalPages}
+                onClick={() => setSidebarPage((prev) => Math.min(totalPages, prev + 1))}
+                className="h-8 w-8 p-0 rounded-xl hover:bg-mauve/10 cursor-pointer flex items-center justify-center"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* RIGHT PANEL: Patient Detail & Clinical Timeline */}

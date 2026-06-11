@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Plus, FlaskConical, Loader2, Pencil, Trash2, CheckCircle2, Clock, Filter, ExternalLink } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Plus, FlaskConical, Loader2, Pencil, Trash2, CheckCircle2, Clock, Filter, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -36,6 +36,13 @@ export function LaboratoryPage() {
   const [editing, setEditing] = useState<LabResultWithMeta | null>(null);
   const [toDelete, setToDelete] = useState<LabResultWithMeta | null>(null);
 
+  const [labPage, setLabPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setLabPage(1);
+  }, [filter]);
+
   const [appointmentId, setAppointmentId] = useState("");
   const [testType, setTestType] = useState("");
   const [result, setResult] = useState("");
@@ -59,6 +66,12 @@ export function LaboratoryPage() {
   };
 
   const filtered = useMemo(() => labs.filter((l) => filter === "todos" || l.status === filter), [labs, filter]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedLabs = useMemo(() => {
+    const start = (labPage - 1) * itemsPerPage;
+    return filtered.slice(start, start + itemsPerPage);
+  }, [filtered, labPage]);
 
   const counts = useMemo(() => ({
     todos: labs.length,
@@ -148,57 +161,90 @@ export function LaboratoryPage() {
           <p className="mt-3 text-sm text-muted-foreground">Aún no hay resultados de laboratorio.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-3xl glass-card shadow-sm">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/40 text-left">
-              <tr className="text-xs uppercase tracking-wider text-muted-foreground">
-                <th className="px-5 py-3">Paciente</th>
-                <th className="px-5 py-3">Prueba</th>
-                <th className="px-5 py-3">Cita</th>
-                <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3">Resultado</th>
-                <th className="px-5 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/60">
-              {filtered.map((l) => (
-                <tr key={l.id} className="transition hover:bg-muted/30">
-                  <td className="px-5 py-3 font-medium">{l.patient_name}</td>
-                  <td className="px-5 py-3">{l.test_type}</td>
-                  <td className="px-5 py-3 text-xs text-muted-foreground">
-                    {l.scheduled_at ? new Date(l.scheduled_at).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[l.status] || "bg-muted")}>
-                      {l.status === "completado" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
-                      {l.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3 max-w-[260px] truncate text-xs text-muted-foreground">
-                    {l.result || "—"}
-                    {l.file_url && (
-                      <a href={l.file_url} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-mauve hover:underline">
-                        archivo <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </td>
-                  <td className="px-5 py-3">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => toggleStatus(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Cambiar estado">
-                        <CheckCircle2 className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => openEdit(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </button>
-                      <button onClick={() => setToDelete(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  </td>
+        <div className="space-y-6">
+          <div className="overflow-hidden rounded-3xl glass-card shadow-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40 text-left">
+                <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="px-5 py-3">Paciente</th>
+                  <th className="px-5 py-3">Prueba</th>
+                  <th className="px-5 py-3">Cita</th>
+                  <th className="px-5 py-3">Estado</th>
+                  <th className="px-5 py-3">Resultado</th>
+                  <th className="px-5 py-3 text-right">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {paginatedLabs.map((l) => (
+                  <tr key={l.id} className="transition hover:bg-muted/30">
+                    <td className="px-5 py-3 font-medium">{l.patient_name}</td>
+                    <td className="px-5 py-3">{l.test_type}</td>
+                    <td className="px-5 py-3 text-xs text-muted-foreground">
+                      {l.scheduled_at ? new Date(l.scheduled_at).toLocaleString("es-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={cn("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[l.status] || "bg-muted")}>
+                        {l.status === "completado" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3" />}
+                        {l.status}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 max-w-[260px] truncate text-xs text-muted-foreground">
+                      {l.result || "—"}
+                      {l.file_url && (
+                        <a href={l.file_url} target="_blank" rel="noreferrer" className="ml-2 inline-flex items-center gap-1 text-mauve hover:underline">
+                          archivo <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </td>
+                    <td className="px-5 py-3">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => toggleStatus(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Cambiar estado">
+                          <CheckCircle2 className="h-4 w-4" />
+                        </button>
+                        <button onClick={() => openEdit(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button onClick={() => setToDelete(l)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
+              <p className="text-xs text-muted-foreground">
+                Mostrando <span className="font-semibold text-foreground">{(labPage - 1) * itemsPerPage + 1} - {Math.min(filtered.length, labPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{filtered.length}</span> resultados
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={labPage === 1}
+                  onClick={() => setLabPage((prev) => Math.max(1, prev - 1))}
+                  className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <span className="text-xs font-semibold px-3 py-1 bg-muted/60 rounded-lg">
+                  {labPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={labPage === totalPages}
+                  onClick={() => setLabPage((prev) => Math.min(totalPages, prev + 1))}
+                  className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                >
+                  Siguiente <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

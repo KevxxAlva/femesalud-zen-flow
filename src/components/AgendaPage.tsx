@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,6 +101,12 @@ export function AgendaPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentWithPatient | null>(null);
   const [toDelete, setToDelete] = useState<AppointmentWithPatient | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setListPage(1);
+  }, [filter, scope, viewMode]);
 
   // Consultation states
   const [consultationOpen, setConsultationOpen] = useState(false);
@@ -143,6 +149,12 @@ export function AgendaPage() {
     }
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
   }, [filtered]);
+
+  const totalPages = Math.ceil(grouped.length / itemsPerPage);
+  const paginatedGrouped = useMemo(() => {
+    const start = (listPage - 1) * itemsPerPage;
+    return grouped.slice(start, start + itemsPerPage);
+  }, [grouped, listPage]);
 
   const counts = useMemo(() => ({
     todas: appointments.length,
@@ -334,7 +346,7 @@ export function AgendaPage() {
           </div>
         ) : (
           <div className="space-y-6 animate-fade-in">
-            {grouped.map(([date, items]) => {
+            {paginatedGrouped.map(([date, items]) => {
               const d = new Date(date + "T00:00:00");
               const isToday = date === today;
               return (
@@ -406,6 +418,37 @@ export function AgendaPage() {
                 </section>
               );
             })}
+
+            {totalPages > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Mostrando <span className="font-semibold text-foreground">{(listPage - 1) * itemsPerPage + 1} - {Math.min(grouped.length, listPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{grouped.length}</span> días con citas
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage === 1}
+                    onClick={() => setListPage((prev) => Math.max(1, prev - 1))}
+                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  </Button>
+                  <span className="text-xs font-semibold px-3 py-1 bg-muted/60 rounded-lg">
+                    {listPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage === totalPages}
+                    onClick={() => setListPage((prev) => Math.min(totalPages, prev + 1))}
+                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                  >
+                    Siguiente <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )
       ) : (
