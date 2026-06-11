@@ -39,18 +39,32 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold">Algo salió mal</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Intenta recargar la página.</p>
-        <button
-          onClick={() => {
-            router.invalidate();
-            reset();
-          }}
-          className="mt-6 rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm"
-        >
-          Reintentar
-        </button>
+      <div className="max-w-2xl text-center bg-card p-8 rounded-3xl border border-destructive/20 shadow-xl">
+        <h1 className="text-xl font-bold text-destructive">Algo salió mal</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Error detectado en la aplicación:</p>
+        
+        <div className="mt-4 p-4 bg-muted rounded-2xl text-left font-mono text-xs overflow-auto max-h-[300px] border border-border/60">
+          <p className="font-bold text-foreground mb-1">{error.message}</p>
+          <pre className="text-muted-foreground whitespace-pre-wrap">{error.stack}</pre>
+        </div>
+
+        <div className="mt-6 flex justify-center gap-3">
+          <button
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+            className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-95"
+          >
+            Reintentar
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-2xl border border-border px-4 py-2 text-sm font-medium text-foreground shadow-sm hover:bg-muted"
+          >
+            Forzar Recarga (F5)
+          </button>
+        </div>
       </div>
     </div>
   );

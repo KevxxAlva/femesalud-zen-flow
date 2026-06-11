@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -17,8 +17,13 @@ import { Loader2 } from "lucide-react";
 
 const STATUSES = ["programada", "completada", "cancelada"];
 
-function splitDateTime(iso: string | null | undefined) {
-  if (!iso) return { date: new Date().toISOString().slice(0, 10), time: "09:00" };
+function splitDateTime(iso: string | null | undefined, defaultDate?: string) {
+  if (!iso) {
+    return {
+      date: (defaultDate && defaultDate !== "") ? defaultDate : new Date().toISOString().slice(0, 10),
+      time: "09:00"
+    };
+  }
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return {
@@ -28,12 +33,13 @@ function splitDateTime(iso: string | null | undefined) {
 }
 
 export function AppointmentForm({
-  open, onOpenChange, appointment, defaultPatientId,
+  open, onOpenChange, appointment, defaultPatientId, defaultDate,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   appointment?: Appointment | null;
   defaultPatientId?: string;
+  defaultDate?: string;
 }) {
   const isEdit = !!appointment;
   const { user } = useAuthSession();
@@ -41,7 +47,7 @@ export function AppointmentForm({
   const { data: patients = [] } = usePatients();
   const { data: doctors = [] } = useDoctors();
 
-  const init = useMemo(() => splitDateTime(appointment?.scheduled_at), [appointment]);
+  const init = useMemo(() => splitDateTime(appointment?.scheduled_at, defaultDate), [appointment, defaultDate]);
   const [patient_id, setPatient] = useState(appointment?.patient_id ?? defaultPatientId ?? "");
   const [doctor_id, setDoctorId] = useState(appointment?.doctor_id ?? user?.id ?? "");
   const [date, setDate] = useState(init.date);
@@ -54,6 +60,20 @@ export function AppointmentForm({
   const create = useCreateAppointment();
   const update = useUpdateAppointment();
   const busy = create.isPending || update.isPending;
+
+  useEffect(() => {
+    if (open) {
+      const initData = splitDateTime(appointment?.scheduled_at, defaultDate);
+      setPatient(appointment?.patient_id ?? defaultPatientId ?? "");
+      setDoctorId(appointment?.doctor_id ?? user?.id ?? "");
+      setDate(initData.date);
+      setTime(initData.time);
+      setReason(appointment?.reason ?? "");
+      setStatus(appointment?.status ?? "programada");
+      setDuration(String(appointment?.duration_minutes ?? 30));
+      setPrice(String(appointment?.price ?? 0));
+    }
+  }, [open, appointment, defaultDate, defaultPatientId, user]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,7 +113,7 @@ export function AppointmentForm({
         <form onSubmit={submit} className="grid gap-4 py-2">
           <div className="grid gap-2">
             <Label>Paciente</Label>
-            <Select value={patient_id} onValueChange={setPatient}>
+            <Select value={patient_id || undefined} onValueChange={setPatient}>
               <SelectTrigger><SelectValue placeholder="Selecciona paciente" /></SelectTrigger>
               <SelectContent>
                 {patients.length === 0 && <SelectItem value="__none" disabled>No hay pacientes</SelectItem>}
@@ -104,7 +124,7 @@ export function AppointmentForm({
           {isAdmin && (
             <div className="grid gap-2">
               <Label>Médico</Label>
-              <Select value={doctor_id} onValueChange={setDoctorId}>
+              <Select value={doctor_id || undefined} onValueChange={setDoctorId}>
                 <SelectTrigger><SelectValue placeholder="Selecciona doctor" /></SelectTrigger>
                 <SelectContent>{doctors.map((d) => <SelectItem key={d.id} value={d.id}>{d.full_name || d.email}</SelectItem>)}</SelectContent>
               </Select>
@@ -131,7 +151,7 @@ export function AppointmentForm({
             </div>
             <div className="grid gap-2">
               <Label>Estado</Label>
-              <Select value={status} onValueChange={setStatus}>
+              <Select value={status || undefined} onValueChange={setStatus}>
                 <SelectTrigger className="capitalize"><SelectValue /></SelectTrigger>
                 <SelectContent>{STATUSES.map((s) => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}</SelectContent>
               </Select>
