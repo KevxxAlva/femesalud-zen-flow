@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
+import { PatientTimeline } from "@/components/PatientTimeline";
 import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
 import { useClinicalNotes } from "@/lib/api/clinical-notes";
@@ -865,11 +866,12 @@ export function PatientsPage() {
               </div>
 
               <Tabs defaultValue="general" className="mt-4 flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-5 bg-muted/60 p-1 rounded-2xl mb-4">
+                <TabsList className="grid w-full grid-cols-6 bg-muted/60 p-1 rounded-2xl mb-4">
                   <TabsTrigger value="general" className="rounded-xl font-medium text-xs">Identificación</TabsTrigger>
                   <TabsTrigger value="antecedentes" className="rounded-xl font-medium text-xs">Antecedentes</TabsTrigger>
                   <TabsTrigger value="ginecologia" className="rounded-xl font-medium text-xs">Ginecológico</TabsTrigger>
                   <TabsTrigger value="obstetricia" className="rounded-xl font-medium text-xs">Obstétrico</TabsTrigger>
+                  <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Timeline</TabsTrigger>
                   <TabsTrigger value="notas" className="rounded-xl font-medium text-xs">Notas Clínicas</TabsTrigger>
                 </TabsList>
 
@@ -1113,6 +1115,11 @@ export function PatientsPage() {
                   {/* TAB 5: NOTAS CLINICAS */}
                   <TabsContent value="notas" className="space-y-4 outline-none">
                     <ClinicalNotesPanel patientId={viewing.id} />
+                  </TabsContent>
+
+                  {/* TAB 6: TIMELINE */}
+                  <TabsContent value="timeline" className="space-y-4 outline-none">
+                    <PatientTimeline patientId={viewing.id} />
                   </TabsContent>
                 </div>
               </Tabs>
