@@ -11,7 +11,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useCreateAppointment, useUpdateAppointment, type Appointment } from "@/lib/api/appointments";
-import { usePatients } from "@/lib/api/patients";
+import { usePaginatedPatients, usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -46,7 +46,6 @@ export function AppointmentForm({
   const isEdit = !!appointment;
   const { user } = useAuthSession();
   const isAdmin = useIsAdmin();
-  const { data: patients = [] } = usePatients();
   const { data: doctors = [] } = useDoctors();
 
   const init = useMemo(() => splitDateTime(appointment?.scheduled_at, defaultDate), [appointment, defaultDate]);
@@ -62,28 +61,18 @@ export function AppointmentForm({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const selectedPatientName = useMemo(() => {
-    return patients.find((p) => p.id === patient_id)?.full_name || "Selecciona paciente...";
-  }, [patients, patient_id]);
+  const { data: selectedPatient } = usePatient(patient_id || undefined);
+  const { data: paginatedData } = usePaginatedPatients(1, 15, searchTerm || undefined);
+
+  const selectedPatientName = selectedPatient?.full_name || "Selecciona paciente...";
 
   const filteredPatients = useMemo(() => {
-    const query = searchTerm.toLowerCase().trim();
-    if (!query) {
-      const currentPatient = patients.find(p => p.id === patient_id);
-      const initial = patients.slice(0, 10);
-      if (currentPatient && !initial.some(p => p.id === patient_id)) {
-        initial.push(currentPatient);
-      }
-      return initial;
+    const list = paginatedData?.data || [];
+    if (!searchTerm && selectedPatient && !list.some(p => p.id === patient_id)) {
+      return [selectedPatient, ...list].slice(0, 15);
     }
-    return patients
-      .filter((p) => 
-        p.full_name.toLowerCase().includes(query) ||
-        (p.document_id ?? "").toLowerCase().includes(query) ||
-        (p.historia_number ?? "").toLowerCase().includes(query)
-      )
-      .slice(0, 15);
-  }, [patients, searchTerm, patient_id]);
+    return list;
+  }, [paginatedData, selectedPatient, searchTerm, patient_id]);
 
   const create = useCreateAppointment();
   const update = useUpdateAppointment();

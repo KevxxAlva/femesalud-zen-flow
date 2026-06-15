@@ -67,6 +67,15 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
     await ensureAdmin(context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Si el usuario no existe en Supabase Auth (ej. usuarios semilla insertados por SQL),
+      // eliminamos sus registros públicos directamente para limpiar la base de datos y la interfaz.
+      if (error.message.toLowerCase().includes("not found") || error.status === 404) {
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
+        await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+        return { ok: true };
+      }
+      throw new Error(error.message);
+    }
     return { ok: true };
   });

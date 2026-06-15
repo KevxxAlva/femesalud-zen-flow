@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { usePatients, usePatient, type Patient } from "@/lib/api/patients";
+import { usePaginatedPatients, usePatient, type Patient } from "@/lib/api/patients";
 import { usePatientConsultations, type Consultation } from "@/lib/api/consultations";
 import { useDoctors } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
 
 export function HistoriasPage() {
-  const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
   const { data: fullPatient } = usePatient(selectedPatientId);
   const { data: consultations = [], isLoading: loadingConsultations } = usePatientConsultations(selectedPatientId || undefined);
@@ -24,37 +23,32 @@ export function HistoriasPage() {
   const { data: clinic } = useClinicInfo();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [expandedConsultations, setExpandedConsultations] = useState<Record<string, boolean>>({});
   const [sidebarPage, setSidebarPage] = useState(1);
   const itemsPerPage = 15;
 
+  // Debounce search input by 350ms for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   useEffect(() => {
     setSidebarPage(1);
-  }, [searchQuery]);
+  }, [debouncedSearch]);
+
+  const { data: paginatedResult, isLoading: loadingPatients } = usePaginatedPatients(sidebarPage, itemsPerPage, debouncedSearch || undefined);
+  const patients = paginatedResult?.data ?? [];
+  const totalPatientCount = paginatedResult?.count ?? 0;
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
 
-  // Filter patients based on search
-  const filteredPatients = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) return patients;
-    return patients.filter((p) => 
-      p.full_name.toLowerCase().includes(q) ||
-      (p.document_id ?? "").toLowerCase().includes(q) ||
-      (p.historia_number ?? "").toLowerCase().includes(q)
-    );
-  }, [patients, searchQuery]);
+  // Server-side pagination - no client filtering needed
+  const totalPages = Math.ceil(totalPatientCount / itemsPerPage);
+  const paginatedPatients = patients;
 
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
-  const paginatedPatients = useMemo(() => {
-    const start = (sidebarPage - 1) * itemsPerPage;
-    return filteredPatients.slice(start, start + itemsPerPage);
-  }, [filteredPatients, sidebarPage]);
-
-  const selectedPatient = useMemo(() => 
-    fullPatient || patients.find(p => p.id === selectedPatientId) || null,
-    [fullPatient, patients, selectedPatientId]
-  );
+  const selectedPatient = fullPatient || null;
 
   // Get consultations for the selected patient
   const patientConsultations = consultations;
@@ -333,7 +327,10 @@ export function HistoriasPage() {
         indications: consultation.indications,
       },
       doctorName,
-      doctorSpecialty
+      doctorSpecialty,
+      doctorObj?.university || undefined,
+      doctorObj?.mpps || undefined,
+      doctorObj?.cmc || undefined
     );
   };
 

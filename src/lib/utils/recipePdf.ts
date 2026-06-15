@@ -50,7 +50,10 @@ export const generateRecipePDF = async (
   patient: RecipePatient,
   consultation: RecipeConsultation,
   doctorName: string,
-  doctorSpecialty?: string
+  doctorSpecialty?: string,
+  doctorUniversity?: string,
+  doctorMpps?: string,
+  doctorCmc?: string
 ) => {
   try {
     const indicationsText = consultation.indications?.trim();
@@ -92,18 +95,58 @@ export const generateRecipePDF = async (
     const topMonth = String(dateObj.getMonth() + 1).padStart(2, "0");
     const topYear = String(dateObj.getFullYear());
 
-    // Setup doctor credentials using the exact logic from Constancias
-    let docUni = "UC-CHET";
-    let docMpps = "102.927";
-    let docCmc = "11.619";
-    let finalSpecialty = doctorSpecialty || (doctorName.includes("Carli") || doctorName.includes("Solé") ? "Ginecóloga y Obstetra" : "Ginecólogo y Obstetra");
+    // Setup doctor credentials using parameters or database fetch as fallback
+    let docUni = doctorUniversity || "";
+    let docMpps = doctorMpps || "";
+    let docCmc = doctorCmc || "";
+    let finalSpecialty = doctorSpecialty || "";
 
-    // If it's not the default primary doctor, leave placeholders/blanks or adapt
-    if (doctorName && !doctorName.includes("Carli") && !doctorName.includes("Solé")) {
-      docUni = ""; // Blank if not specified
-      docMpps = "______";
-      docCmc = "______";
-      finalSpecialty = doctorSpecialty || "Médico Especialista";
+    // If any of the credentials are not provided, try to fetch them from database profiles
+    if (!docUni || !docMpps || !docCmc || !finalSpecialty) {
+      try {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("university, mpps, cmc, specialty")
+          .ilike("full_name", `%${doctorName}%`)
+          .maybeSingle();
+
+        if (profileData) {
+          if (!docUni) docUni = profileData.university || "";
+          if (!docMpps) docMpps = profileData.mpps || "";
+          if (!docCmc) docCmc = profileData.cmc || "";
+          if (!finalSpecialty) finalSpecialty = profileData.specialty || "";
+        }
+      } catch (e) {
+        console.error("Error fetching doctor profile for PDF:", e);
+      }
+    }
+
+    // Default fallbacks if they are still missing
+    if (!docUni) {
+      if (doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé")) {
+        docUni = "UC-CHET";
+      } else {
+        docUni = finalSpecialty ? "Ginecólogo Obstetra" : "UC-CHET";
+      }
+    }
+    if (!docMpps) {
+      if (doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé")) {
+        docMpps = "102.927";
+      } else {
+        docMpps = "______";
+      }
+    }
+    if (!docCmc) {
+      if (doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé")) {
+        docCmc = "11.619";
+      } else {
+        docCmc = "______";
+      }
+    }
+    if (!finalSpecialty) {
+      finalSpecialty = doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé") 
+        ? "Ginecóloga y Obstetra" 
+        : "Médico Especialista";
     }
 
     // Draw header on Page 1

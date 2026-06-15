@@ -91,7 +91,7 @@ export function useConsultations(filters?: ConsultationFilters) {
     queryFn: async (): Promise<Consultation[]> => {
       let query = supabase
         .from("consultations")
-        .select("*, patients(full_name)")
+        .select("id, appointment_id, patient_id, doctor_id, visit_type, is_first_visit, diagnosis, contact_channel, created_at, indications, patients(full_name)")
         .order("created_at", { ascending: false });
 
       if (filters?.from) {

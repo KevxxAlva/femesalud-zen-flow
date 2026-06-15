@@ -28,6 +28,9 @@ function ConfiguracionPage() {
   // Profile Form State
   const [profileName, setProfileName] = useState("");
   const [profileSpecialty, setProfileSpecialty] = useState("");
+  const [profileUniversity, setProfileUniversity] = useState("");
+  const [profileMpps, setProfileMpps] = useState("");
+  const [profileCmc, setProfileCmc] = useState("");
 
   // Clinic Form State
   const [clinicName, setClinicName] = useState("");
@@ -41,6 +44,9 @@ function ConfiguracionPage() {
     if (profile) {
       setProfileName(profile.full_name || "");
       setProfileSpecialty(profile.specialty || "");
+      setProfileUniversity(profile.university || "");
+      setProfileMpps(profile.mpps || "");
+      setProfileCmc(profile.cmc || "");
     }
   }, [profile]);
 
@@ -63,6 +69,9 @@ function ConfiguracionPage() {
         userId: user.id,
         fullName: profileName.trim(),
         specialty: profileSpecialty.trim() || null,
+        university: profileUniversity.trim() || null,
+        mpps: profileMpps.trim() || null,
+        cmc: profileCmc.trim() || null,
       });
       toast.success("Perfil actualizado correctamente");
     } catch (err) {
@@ -177,6 +186,50 @@ function ConfiguracionPage() {
                     placeholder="Ej. Ginecología y Obstetricia"
                     className="rounded-xl h-10 border-border/40 focus:border-mauve focus:ring-mauve/10"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="profile-university" className="text-xs font-bold text-muted-foreground uppercase">
+                    Universidad / Colegio (Ej. UC-CHET)
+                  </Label>
+                  <Input
+                    id="profile-university"
+                    value={profileUniversity}
+                    onChange={(e) => setProfileUniversity(e.target.value)}
+                    disabled={isProfileLoading}
+                    placeholder="Ej. UC-CHET"
+                    className="rounded-xl h-10 border-border/40 focus:border-mauve focus:ring-mauve/10"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-mpps" className="text-xs font-bold text-muted-foreground uppercase">
+                      MPPS
+                    </Label>
+                    <Input
+                      id="profile-mpps"
+                      value={profileMpps}
+                      onChange={(e) => setProfileMpps(e.target.value)}
+                      disabled={isProfileLoading}
+                      placeholder="Ej. 102.927"
+                      className="rounded-xl h-10 border-border/40 focus:border-mauve focus:ring-mauve/10"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="profile-cmc" className="text-xs font-bold text-muted-foreground uppercase">
+                      CMC
+                    </Label>
+                    <Input
+                      id="profile-cmc"
+                      value={profileCmc}
+                      onChange={(e) => setProfileCmc(e.target.value)}
+                      disabled={isProfileLoading}
+                      placeholder="Ej. 11.619"
+                      className="rounded-xl h-10 border-border/40 focus:border-mauve focus:ring-mauve/10"
+                    />
+                  </div>
                 </div>
               </div>
 

@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { usePatients } from "@/lib/api/patients";
+import { usePatientsCountByDateRange } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
@@ -46,7 +46,7 @@ export function ReportsPage() {
   const [from, setFrom] = useState(daysAgoISO(90));
   const [to, setTo] = useState(todayISO());
 
-  const { data: patients = [] } = usePatients();
+  const { data: newPatientsCount = 0 } = usePatientsCountByDateRange(from, to);
   const { data: appointments = [] } = useAppointments({ from, to });
   const { data: doctors = [] } = useDoctors();
   const { data: clinic } = useClinicInfo();
@@ -70,9 +70,9 @@ export function ReportsPage() {
     const scheduled = filtered.filter((a) => a.status === "programada");
     const cancelled = filtered.filter((a) => a.status === "cancelada");
     const income = completed.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
-    const newPatients = patients.filter((p) => p.created_at.slice(0, 10) >= from && p.created_at.slice(0, 10) <= to).length;
+    const newPatients = newPatientsCount;
     return { total: filtered.length, completed: completed.length, scheduled: scheduled.length, cancelled: cancelled.length, income, newPatients };
-  }, [filtered, patients, from, to]);
+  }, [filtered, newPatientsCount]);
 
   const upcoming = useMemo(() => {
     return upcomingAppointments

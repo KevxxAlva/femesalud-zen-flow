@@ -51,7 +51,7 @@ export function useAppointments(filters?: AppointmentFilters) {
     queryFn: async (): Promise<AppointmentWithPatient[]> => {
       let query = supabase
         .from("appointments")
-        .select("*, patients(full_name), consultations(id)")
+        .select("id, patient_id, doctor_id, scheduled_at, duration_minutes, status, reason, price, payment_method, created_at, patients(full_name), consultations(id)")
         .order("scheduled_at", { ascending: false });
 
       if (filters?.from) {

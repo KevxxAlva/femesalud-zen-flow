@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultation, type VisitType } from "@/lib/api/consultations";
-import { usePatients } from "@/lib/api/patients";
+import { usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
@@ -49,7 +49,7 @@ export function ConsultationForm({
 
   const isEdit = !!existingConsultation;
 
-  const { data: patients = [] } = usePatients();
+  const { data: patient } = usePatient(appointment?.patient_id);
   const { data: doctors = [] } = useDoctors();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
@@ -358,7 +358,7 @@ export function ConsultationForm({
       }
 
       if (shouldPrint && payload.indications) {
-        const patientData = patients.find((p) => p.id === appointment.patient_id);
+        const patientData = patient;
         const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
         const doctorName = doctorObj?.full_name || "Médico Tratante";
         const doctorSpecialty = doctorObj?.specialty || undefined;
@@ -375,7 +375,10 @@ export function ConsultationForm({
               indications: payload.indications,
             },
             doctorName,
-            doctorSpecialty
+            doctorSpecialty,
+            doctorObj?.university || undefined,
+            doctorObj?.mpps || undefined,
+            doctorObj?.cmc || undefined
           );
         } else {
           await generateRecipePDF(
@@ -389,7 +392,10 @@ export function ConsultationForm({
               indications: payload.indications,
             },
             doctorName,
-            doctorSpecialty
+            doctorSpecialty,
+            doctorObj?.university || undefined,
+            doctorObj?.mpps || undefined,
+            doctorObj?.cmc || undefined
           );
         }
       }

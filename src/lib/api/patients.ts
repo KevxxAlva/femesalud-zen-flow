@@ -82,6 +82,105 @@ export function usePatients() {
   });
 }
 
+export function usePatientCount() {
+  return useQuery({
+    queryKey: ["patients_count"],
+    queryFn: async (): Promise<number> => {
+      const { count, error } = await supabase
+        .from("patients")
+        .select("id", { count: "exact", head: true });
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
+export function usePatientsGrowth() {
+  return useQuery({
+    queryKey: ["patients_growth"],
+    queryFn: async (): Promise<{ created_at: string }[]> => {
+      const fourteenDaysAgo = new Date();
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+      const { data, error } = await supabase
+        .from("patients")
+        .select("created_at")
+        .gte("created_at", fourteenDaysAgo.toISOString());
+      if (error) throw error;
+      return (data as any) || [];
+    },
+  });
+}
+
+export function usePatientsCountByDateRange(from?: string, to?: string) {
+  return useQuery({
+    queryKey: ["patients_count_range", from, to],
+    queryFn: async (): Promise<number> => {
+      let query = supabase
+        .from("patients")
+        .select("id", { count: "exact", head: true });
+      if (from) {
+        query = query.gte("created_at", from);
+      }
+      if (to) {
+        query = query.lte("created_at", to + "T23:59:59.999Z");
+      }
+      const { count, error } = await query;
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+}
+
+export function useRecentPatients(limit: number = 5) {
+  return useQuery({
+    queryKey: ["patients_recent", limit],
+    queryFn: async (): Promise<Patient[]> => {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number")
+        .order("updated_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data as any) as Patient[];
+    },
+  });
+}
+
+export function usePaginatedPatients(
+  page: number = 1,
+  pageSize: number = 10,
+  search?: string,
+  status?: PatientStatus
+) {
+  return useQuery({
+    queryKey: ["patients_paginated", page, pageSize, search, status],
+    queryFn: async (): Promise<{ data: Patient[]; count: number }> => {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = supabase
+        .from("patients")
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number", { count: "exact" })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (search) {
+        query = query.or(
+          `full_name.ilike.%${search}%,email.ilike.%${search}%,document_id.ilike.%${search}%`
+        );
+      }
+
+      if (status) {
+        query = query.eq("status", status);
+      }
+
+      const { data, error, count } = await query;
+      if (error) throw error;
+      return { data: (data as any) as Patient[], count: count ?? 0 };
+    },
+  });
+}
+
 export function usePatient(id: string | undefined | null) {
   return useQuery({
     queryKey: ["patient", id],
@@ -112,7 +211,12 @@ export function useCreatePatient() {
       if (error) throw error;
       return (data as any) as Patient;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patients_count"] });
+      qc.invalidateQueries({ queryKey: ["patients_paginated"] });
+      qc.invalidateQueries({ queryKey: ["patients_recent"] });
+    },
   });
 }
 
@@ -124,7 +228,12 @@ export function useUpdatePatient() {
       if (error) throw error;
       return (data as any) as Patient;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["patients"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patients_count"] });
+      qc.invalidateQueries({ queryKey: ["patients_paginated"] });
+      qc.invalidateQueries({ queryKey: ["patients_recent"] });
+    },
   });
 }
 
@@ -137,6 +246,9 @@ export function useDeletePatient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patients_count"] });
+      qc.invalidateQueries({ queryKey: ["patients_paginated"] });
+      qc.invalidateQueries({ queryKey: ["patients_recent"] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
     },
   });

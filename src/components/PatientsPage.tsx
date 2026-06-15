@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { PatientTimeline } from "@/components/PatientTimeline";
-import { usePatients, usePatient, useDeletePatient, type Patient } from "@/lib/api/patients";
+import { usePaginatedPatients, usePatient, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { useClinicalNotes } from "@/lib/api/clinical-notes";
@@ -63,11 +63,11 @@ const tagBg: Record<string, string> = {
 const initials = (n: string) => (n || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function PatientsPage() {
-  const { data: patients = [], isLoading, error } = usePatients();
   const { data: doctors = [] } = useDoctors();
   const del = useDeletePatient();
 
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState("Todos");
   const [doctorFilter, setDoctorFilter] = useState("Todos");
   const [formOpen, setFormOpen] = useState(false);
@@ -79,9 +79,20 @@ export function PatientsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  // Debounce search input by 350ms for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [q]);
+
   useEffect(() => {
     setCurrentPage(1);
-  }, [q, status, doctorFilter]);
+  }, [debouncedQ, status, doctorFilter]);
+
+  const serverStatus = status === "Todos" ? undefined : status;
+  const { data: paginatedResult, isLoading, error } = usePaginatedPatients(currentPage, itemsPerPage, debouncedQ || undefined, serverStatus);
+  const patients = paginatedResult?.data ?? [];
+  const totalCount = paginatedResult?.count ?? 0;
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
 
@@ -109,10 +120,14 @@ export function PatientsPage() {
   const [doctorCmc, setDoctorCmc] = useState("11.619");
 
   const handleOpenReposoDialog = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
-    const docName = docObj?.full_name || myProfile?.full_name || "";
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const docName = docObj?.full_name || "";
 
-    if (docName.toLowerCase().includes("carli")) {
+    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
+      setDoctorUni(docObj.university || "");
+      setDoctorMpps(docObj.mpps || "");
+      setDoctorCmc(docObj.cmc || "");
+    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
       setDoctorUni("UC-CHET");
       setDoctorMpps("102.927");
       setDoctorCmc("11.619");
@@ -126,10 +141,14 @@ export function PatientsPage() {
   };
 
   const handleOpenAtencionDialog = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
-    const docName = docObj?.full_name || myProfile?.full_name || "";
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const docName = docObj?.full_name || "";
 
-    if (docName.toLowerCase().includes("carli")) {
+    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
+      setDoctorUni(docObj.university || "");
+      setDoctorMpps(docObj.mpps || "");
+      setDoctorCmc(docObj.cmc || "");
+    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
       setDoctorUni("UC-CHET");
       setDoctorMpps("102.927");
       setDoctorCmc("11.619");
@@ -700,21 +719,10 @@ export function PatientsPage() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const term = q.toLowerCase().trim();
-    return patients.filter((p) => {
-      if (term && !p.full_name.toLowerCase().includes(term) && !(p.email ?? "").toLowerCase().includes(term)) return false;
-      if (status !== "Todos" && p.status !== status) return false;
-      if (doctorFilter !== "Todos" && p.assigned_doctor_id !== doctorFilter) return false;
-      return true;
-    });
-  }, [patients, q, status, doctorFilter]);
-
-  const totalPages = Math.ceil(filtered.length / itemsPerPage);
-  const paginatedPatients = useMemo(() => {
-    const start = (currentPage - 1) * itemsPerPage;
-    return filtered.slice(start, start + itemsPerPage);
-  }, [filtered, currentPage]);
+  // Server-side pagination - no need for client-side filtering
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const filteredByDoctor = doctorFilter === "Todos" ? patients : patients.filter((p) => p.assigned_doctor_id === doctorFilter);
+  const paginatedPatients = filteredByDoctor;
 
   const handleDelete = async () => {
     if (!toDelete) return;
@@ -729,7 +737,7 @@ export function PatientsPage() {
         <div className="ml-14 md:ml-0">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Pacientes</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} de {patients.length} pacientes</p>
+          <p className="text-sm text-muted-foreground">{totalCount} pacientes</p>
         </div>
         <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95">
           <Plus className="mr-1 h-4 w-4" /> Nuevo paciente
@@ -766,7 +774,7 @@ export function PatientsPage() {
         <div className="rounded-3xl glass-card p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : error ? (
         <div className="rounded-3xl glass-card p-12 text-center text-sm text-destructive">Error al cargar pacientes</div>
-      ) : filtered.length === 0 ? (
+      ) : patients.length === 0 ? (
         <div className="rounded-3xl glass-card p-12 text-center shadow-sm">
           <Users className="mx-auto h-10 w-10 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">No se encontraron pacientes.</p>
@@ -810,7 +818,7 @@ export function PatientsPage() {
           {totalPages > 1 && (
             <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
               <p className="text-xs text-muted-foreground">
-                Mostrando <span className="font-semibold text-foreground">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(filtered.length, currentPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{filtered.length}</span> pacientes
+                Mostrando <span className="font-semibold text-foreground">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(totalCount, currentPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{totalCount}</span> pacientes
               </p>
               <div className="flex items-center gap-2">
                 <Button

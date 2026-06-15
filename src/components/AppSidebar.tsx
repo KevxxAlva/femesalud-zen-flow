@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
-  Home, Calendar, Users, FileText, FlaskConical, Receipt, FileBarChart,
+  Home, Calendar, Users, FileText, Receipt, FileBarChart,
   Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
   Sun, Moon,
 } from "lucide-react";
@@ -17,7 +17,6 @@ const baseModules = [
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Pacientes", url: "/pacientes", icon: Users },
   { title: "Historias Clínicas", url: "/historias", icon: FileText },
-  { title: "Laboratorio", url: "/laboratorio", icon: FlaskConical },
   { title: "Reportes", url: "/reportes", icon: FileBarChart },
   { title: "Facturación", url: "/facturacion", icon: Receipt },
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
