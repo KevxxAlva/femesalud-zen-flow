@@ -97,10 +97,8 @@ export function AgendaPage() {
   // Compute query range dynamically based on active navigation and scope
   const queryRange = useMemo(() => {
     if (viewMode === "list" && scope === "todas") {
-      const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 6);
-      const toDate = new Date();
-      toDate.setMonth(toDate.getMonth() + 12);
+      const fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 6, 1);
+      const toDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 12, 0);
       return {
         from: fromDate.toISOString().slice(0, 10),
         to: toDate.toISOString().slice(0, 10),
@@ -304,38 +302,57 @@ export function AgendaPage() {
         </div>
       </div>
 
-      {/* CALENDAR NAVIGATION - Only in Calendar Mode */}
-      {viewMode === "calendar" && (
-        <div className="rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handlePrev} className="rounded-xl hover:bg-muted/80 h-9 w-9">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleToday} className="rounded-xl px-4 font-semibold text-xs border-border/50 h-9 hover:bg-muted/20">
-                Hoy
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleNext} className="rounded-xl hover:bg-muted/80 h-9 w-9">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              
-              <h3 className="font-display font-bold text-sm md:text-base tracking-tight ml-2 capitalize">
-                {calendarView === "month" && (
-                  <span>{MONTHS_ES[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
-                )}
-                {calendarView === "week" && (
-                  <span>
-                    Semana del {weekDays[0].getDate()} al {weekDays[6].getDate()} de {MONTHS_ES[weekDays[6].getMonth()]} {weekDays[6].getFullYear()}
-                  </span>
-                )}
-                {calendarView === "day" && (
-                  <span>
-                    {currentDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric" })} de {MONTHS_ES[currentDate.getMonth()]}
-                  </span>
-                )}
-              </h3>
-            </div>
+      {/* CALENDAR NAVIGATION - Visible in both Calendar and List Modes */}
+      <div className="rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={handlePrev} className="rounded-xl hover:bg-muted/80 h-9 w-9">
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleToday} className="rounded-xl px-4 font-semibold text-xs border-border/50 h-9 hover:bg-muted/20">
+              Hoy
+            </Button>
+            <Button variant="ghost" size="icon" onClick={handleNext} className="rounded-xl hover:bg-muted/80 h-9 w-9">
+              <ChevronRight className="h-4 w-4" />
+            </Button>
             
+            <div className="flex flex-wrap items-center gap-1.5 font-display font-bold text-sm md:text-base tracking-tight ml-2">
+              <select
+                value={currentDate.getMonth()}
+                onChange={(e) => setCurrentDate(new Date(currentDate.getFullYear(), Number(e.target.value), 1))}
+                className="bg-muted hover:bg-muted-soft text-foreground font-bold px-3 py-1.5 rounded-2xl text-xs md:text-sm cursor-pointer outline-none border border-border/30 capitalize transition duration-200"
+              >
+                {MONTHS_ES.map((m, idx) => (
+                  <option key={m} value={idx} className="bg-card text-foreground font-semibold text-sm">
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={currentDate.getFullYear()}
+                onChange={(e) => setCurrentDate(new Date(Number(e.target.value), currentDate.getMonth(), 1))}
+                className="bg-muted hover:bg-muted-soft text-foreground font-bold px-3 py-1.5 rounded-2xl text-xs md:text-sm cursor-pointer outline-none border border-border/30 transition duration-200"
+              >
+                {Array.from({ length: 11 }, (_, i) => 2018 + i).map((y) => (
+                  <option key={y} value={y} className="bg-card text-foreground font-semibold text-sm">
+                    {y}
+                  </option>
+                ))}
+              </select>
+              {viewMode === "calendar" && calendarView === "week" && (
+                <span className="text-xs text-muted-foreground font-normal ml-2">
+                  (Semana del {weekDays[0].getDate()} al {weekDays[6].getDate()})
+                </span>
+              )}
+              {viewMode === "calendar" && calendarView === "day" && (
+                <span className="text-xs text-muted-foreground font-normal ml-2">
+                  ({currentDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric" })})
+                </span>
+              )}
+            </div>
+          </div>
+          
+          {viewMode === "calendar" && (
             <div className="flex gap-1 bg-muted/60 p-1 rounded-2xl border border-border/30 shadow-sm">
               {(["day", "week", "month"] as const).map((v) => (
                 <button
@@ -350,9 +367,9 @@ export function AgendaPage() {
                 </button>
               ))}
             </div>
-          </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* RENDER VIEWS */}
       {isLoading ? (
