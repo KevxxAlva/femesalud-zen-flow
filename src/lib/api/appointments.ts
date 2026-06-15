@@ -13,12 +13,15 @@ export interface Appointment {
   reason: string | null;
   notes: string | null;
   price: number | null;
+  payment_method: string | null;
+  payment_reference: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export interface AppointmentWithPatient extends Appointment {
   patient_name?: string;
+  has_consultation?: boolean;
 }
 
 export type AppointmentInput = {
@@ -30,20 +33,46 @@ export type AppointmentInput = {
   reason?: string | null;
   notes?: string | null;
   price?: number | null;
+  payment_method?: string | null;
+  payment_reference?: string | null;
 };
 
-export function useAppointments() {
+export interface AppointmentFilters {
+  from?: string;
+  to?: string;
+  status?: string;
+  limit?: number;
+}
+
+export function useAppointments(filters?: AppointmentFilters) {
+  const queryKey = filters ? ["appointments", filters] : ["appointments"];
   return useQuery({
-    queryKey: ["appointments"],
+    queryKey,
     queryFn: async (): Promise<AppointmentWithPatient[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("appointments")
-        .select("*, patients(full_name)")
+        .select("id, patient_id, doctor_id, scheduled_at, duration_minutes, status, reason, price, payment_method, created_at, patients(full_name), consultations(id)")
         .order("scheduled_at", { ascending: false });
+
+      if (filters?.from) {
+        query = query.gte("scheduled_at", filters.from);
+      }
+      if (filters?.to) {
+        query = query.lte("scheduled_at", filters.to + "T23:59:59.999Z");
+      }
+      if (filters?.status) {
+        query = query.eq("status", filters.status);
+      }
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []).map((a: any) => ({
         ...a,
         patient_name: a.patients?.full_name ?? "—",
+        has_consultation: !!a.consultations && a.consultations.length > 0,
       }));
     },
   });

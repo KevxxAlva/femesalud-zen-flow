@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
-import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { AppointmentForm } from "@/components/AppointmentForm";
+import { ConsultationForm } from "@/components/ConsultationForm";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment, type AppointmentWithPatient } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
 import { cn } from "@/lib/utils";
@@ -84,11 +85,6 @@ const WEEKDAYS_ES = [
 ];
 
 export function AgendaPage() {
-  const { data: appointments = [], isLoading } = useAppointments();
-  const { data: doctors = [] } = useDoctors();
-  const update = useUpdateAppointment();
-  const del = useDeleteAppointment();
-
   // Navigation states & modes
   const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month");
@@ -97,9 +93,44 @@ export function AgendaPage() {
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("todas");
   const [scope, setScope] = useState<"hoy" | "semana" | "todas">("todas");
+
+  // Compute query range dynamically based on active navigation and scope
+  const queryRange = useMemo(() => {
+    if (viewMode === "list" && scope === "todas") {
+      const fromDate = new Date();
+      fromDate.setMonth(fromDate.getMonth() - 6);
+      const toDate = new Date();
+      toDate.setMonth(toDate.getMonth() + 12);
+      return {
+        from: fromDate.toISOString().slice(0, 10),
+        to: toDate.toISOString().slice(0, 10),
+      };
+    }
+    const fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    const toDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
+    return {
+      from: fromDate.toISOString().slice(0, 10),
+      to: toDate.toISOString().slice(0, 10),
+    };
+  }, [currentDate.getFullYear(), currentDate.getMonth(), viewMode, scope]);
+
+  const { data: appointments = [], isLoading } = useAppointments(queryRange);
+  const { data: doctors = [] } = useDoctors();
+  const update = useUpdateAppointment();
+  const del = useDeleteAppointment();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentWithPatient | null>(null);
   const [toDelete, setToDelete] = useState<AppointmentWithPatient | null>(null);
+  const [listPage, setListPage] = useState(1);
+  const itemsPerPage = 15;
+
+  useEffect(() => {
+    setListPage(1);
+  }, [filter, scope, viewMode]);
+
+  // Consultation states
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const [consultationApp, setConsultationApp] = useState<AppointmentWithPatient | null>(null);
 
   const today = new Date().toISOString().slice(0, 10);
   const weekEnd = useMemo(() => {
@@ -138,6 +169,12 @@ export function AgendaPage() {
     }
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
   }, [filtered]);
+
+  const totalPages = Math.ceil(grouped.length / itemsPerPage);
+  const paginatedGrouped = useMemo(() => {
+    const start = (listPage - 1) * itemsPerPage;
+    return grouped.slice(start, start + itemsPerPage);
+  }, [grouped, listPage]);
 
   const counts = useMemo(() => ({
     todas: appointments.length,
@@ -329,7 +366,7 @@ export function AgendaPage() {
           </div>
         ) : (
           <div className="space-y-6 animate-fade-in">
-            {grouped.map(([date, items]) => {
+            {paginatedGrouped.map(([date, items]) => {
               const d = new Date(date + "T00:00:00");
               const isToday = date === today;
               return (
@@ -371,6 +408,23 @@ export function AgendaPage() {
                               </button>
                             </>
                           )}
+                          {(a.status === "completada" || a.status === "programada") && (
+                            <button
+                              onClick={() => {
+                                setConsultationApp(a);
+                                setConsultationOpen(true);
+                              }}
+                              className={cn(
+                                "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
+                                a.has_consultation
+                                  ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
+                                  : "bg-mauve/15 text-mauve hover:bg-mauve/25"
+                              )}
+                            >
+                              <Stethoscope className="h-3.5 w-3.5" />
+                              {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
+                            </button>
+                          )}
                           <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
@@ -384,6 +438,37 @@ export function AgendaPage() {
                 </section>
               );
             })}
+
+            {totalPages > 1 && (
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in mt-4">
+                <p className="text-xs text-muted-foreground">
+                  Mostrando <span className="font-semibold text-foreground">{(listPage - 1) * itemsPerPage + 1} - {Math.min(grouped.length, listPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{grouped.length}</span> días con citas
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage === 1}
+                    onClick={() => setListPage((prev) => Math.max(1, prev - 1))}
+                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                  >
+                    <ChevronLeft className="h-4 w-4" /> Anterior
+                  </Button>
+                  <span className="text-xs font-semibold px-3 py-1 bg-muted/60 rounded-lg">
+                    {listPage} / {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={listPage === totalPages}
+                    onClick={() => setListPage((prev) => Math.min(totalPages, prev + 1))}
+                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                  >
+                    Siguiente <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         )
       ) : (
@@ -550,6 +635,24 @@ export function AgendaPage() {
                             <div className="flex items-center justify-between">
                               <span className="font-bold flex items-center gap-1 text-[10px]">
                                 <Clock className="h-2.5 w-2.5" /> {timeOnly(a.scheduled_at)}
+                                {(a.status === "completada" || a.status === "programada") && (
+                                  <span
+                                    title={a.has_consultation ? "Ver/Editar consulta" : "Registrar consulta"}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setConsultationApp(a);
+                                      setConsultationOpen(true);
+                                    }}
+                                    className="cursor-pointer inline-flex items-center"
+                                  >
+                                    <Stethoscope
+                                      className={cn(
+                                        "h-2.5 w-2.5 ml-1 transition hover:scale-110",
+                                        a.has_consultation ? "text-sage-foreground font-bold" : "text-mauve"
+                                      )}
+                                    />
+                                  </span>
+                                )}
                               </span>
                               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <button
@@ -660,6 +763,23 @@ export function AgendaPage() {
                                   </button>
                                 </>
                               )}
+                              {(a.status === "completada" || a.status === "programada") && (
+                                <button
+                                  onClick={() => {
+                                    setConsultationApp(a);
+                                    setConsultationOpen(true);
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
+                                    a.has_consultation
+                                      ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
+                                      : "bg-mauve/15 text-mauve hover:bg-mauve/25"
+                                  )}
+                                >
+                                  <Stethoscope className="h-3.5 w-3.5" />
+                                  {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
+                                </button>
+                              )}
                               <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -704,6 +824,13 @@ export function AgendaPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Consultation form dialog */}
+      <ConsultationForm
+        open={consultationOpen}
+        onOpenChange={setConsultationOpen}
+        appointment={consultationApp}
+      />
     </div>
   );
 }

@@ -23,6 +23,8 @@ export type Database = {
           id: string
           notes: string | null
           patient_id: string
+          payment_method: string | null
+          payment_reference: string | null
           price: number | null
           reason: string | null
           scheduled_at: string
@@ -37,6 +39,8 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id: string
+          payment_method?: string | null
+          payment_reference?: string | null
           price?: number | null
           reason?: string | null
           scheduled_at: string
@@ -51,6 +55,8 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id?: string
+          payment_method?: string | null
+          payment_reference?: string | null
           price?: number | null
           reason?: string | null
           scheduled_at?: string
@@ -104,6 +110,197 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "clinical_notes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultation_consumables: {
+        Row: {
+          consultation_id: string
+          created_at: string
+          id: string
+          item_name: string
+          quantity: number
+          unit: string | null
+        }
+        Insert: {
+          consultation_id: string
+          created_at?: string
+          id?: string
+          item_name: string
+          quantity?: number
+          unit?: string | null
+        }
+        Update: {
+          consultation_id?: string
+          created_at?: string
+          id?: string
+          item_name?: string
+          quantity?: number
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultation_consumables_consultation_id_fkey"
+            columns: ["consultation_id"]
+            isOneToOne: false
+            referencedRelation: "consultations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consultations: {
+        Row: {
+          abdomen: string | null
+          acetic_acid_test: string | null
+          acetic_clock_position: string | null
+          acetic_relative_position: string | null
+          alarm_signs: string | null
+          appointment_id: string
+          blood_pressure: string | null
+          bmi: number | null
+          breasts: string | null
+          complementary_exams: string | null
+          contact_channel: string | null
+          created_at: string
+          diagnosis: string | null
+          doctor_id: string | null
+          edema: string | null
+          extremities: string | null
+          fetal_heart_rate: number | null
+          fetal_movements: string | null
+          fetal_weight: number | null
+          gestational_age: string | null
+          gynecological: string | null
+          head_neck: string | null
+          heart_rate: number | null
+          height_cm: number | null
+          id: string
+          indications: string | null
+          is_first_visit: boolean
+          lugol_clock_position: string | null
+          lugol_relative_position: string | null
+          lugol_test: string | null
+          neurological: string | null
+          next_appointment_date: string | null
+          obstetric_bp: string | null
+          patient_id: string
+          plan: string | null
+          presentation: string | null
+          respiratory_rate: number | null
+          skin: string | null
+          subjective_exam: string | null
+          temperature: number | null
+          updated_at: string
+          uterine_height: number | null
+          visit_type: Database["public"]["Enums"]["visit_type_enum"]
+          weight_kg: number | null
+        }
+        Insert: {
+          abdomen?: string | null
+          acetic_acid_test?: string | null
+          acetic_clock_position?: string | null
+          acetic_relative_position?: string | null
+          alarm_signs?: string | null
+          appointment_id: string
+          blood_pressure?: string | null
+          bmi?: number | null
+          breasts?: string | null
+          complementary_exams?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id?: string | null
+          edema?: string | null
+          extremities?: string | null
+          fetal_heart_rate?: number | null
+          fetal_movements?: string | null
+          fetal_weight?: number | null
+          gestational_age?: string | null
+          gynecological?: string | null
+          head_neck?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          indications?: string | null
+          is_first_visit?: boolean
+          lugol_clock_position?: string | null
+          lugol_relative_position?: string | null
+          lugol_test?: string | null
+          neurological?: string | null
+          next_appointment_date?: string | null
+          obstetric_bp?: string | null
+          patient_id: string
+          plan?: string | null
+          presentation?: string | null
+          respiratory_rate?: number | null
+          skin?: string | null
+          subjective_exam?: string | null
+          temperature?: number | null
+          updated_at?: string
+          uterine_height?: number | null
+          visit_type?: Database["public"]["Enums"]["visit_type_enum"]
+          weight_kg?: number | null
+        }
+        Update: {
+          abdomen?: string | null
+          acetic_acid_test?: string | null
+          acetic_clock_position?: string | null
+          acetic_relative_position?: string | null
+          alarm_signs?: string | null
+          appointment_id?: string
+          blood_pressure?: string | null
+          bmi?: number | null
+          breasts?: string | null
+          complementary_exams?: string | null
+          contact_channel?: string | null
+          created_at?: string
+          diagnosis?: string | null
+          doctor_id?: string | null
+          edema?: string | null
+          extremities?: string | null
+          fetal_heart_rate?: number | null
+          fetal_movements?: string | null
+          fetal_weight?: number | null
+          gestational_age?: string | null
+          gynecological?: string | null
+          head_neck?: string | null
+          heart_rate?: number | null
+          height_cm?: number | null
+          id?: string
+          indications?: string | null
+          is_first_visit?: boolean
+          lugol_clock_position?: string | null
+          lugol_relative_position?: string | null
+          lugol_test?: string | null
+          neurological?: string | null
+          next_appointment_date?: string | null
+          obstetric_bp?: string | null
+          patient_id?: string
+          plan?: string | null
+          presentation?: string | null
+          respiratory_rate?: number | null
+          skin?: string | null
+          subjective_exam?: string | null
+          temperature?: number | null
+          updated_at?: string
+          uterine_height?: number | null
+          visit_type?: Database["public"]["Enums"]["visit_type_enum"]
+          weight_kg?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consultations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "consultations_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -173,13 +370,26 @@ export type Database = {
           address: string | null
           assigned_doctor_id: string | null
           birth_date: string | null
+          birthplace: string | null
+          consultation_reason: string | null
           created_at: string
           created_by: string | null
+          current_illness: string | null
           document_id: string | null
+          education_level: string | null
           email: string | null
+          ethnicity: string | null
+          family_history: Json | null
+          first_visit_date: string | null
           full_name: string
+          gynecological_data: Json | null
+          historia_number: string | null
           id: string
+          marital_status: string | null
           notes: string | null
+          obstetric_data: Json | null
+          occupation: string | null
+          personal_history: Json | null
           phone: string | null
           status: string
           updated_at: string
@@ -188,13 +398,26 @@ export type Database = {
           address?: string | null
           assigned_doctor_id?: string | null
           birth_date?: string | null
+          birthplace?: string | null
+          consultation_reason?: string | null
           created_at?: string
           created_by?: string | null
+          current_illness?: string | null
           document_id?: string | null
+          education_level?: string | null
           email?: string | null
+          ethnicity?: string | null
+          family_history?: Json | null
+          first_visit_date?: string | null
           full_name: string
+          gynecological_data?: Json | null
+          historia_number?: string | null
           id?: string
+          marital_status?: string | null
           notes?: string | null
+          obstetric_data?: Json | null
+          occupation?: string | null
+          personal_history?: Json | null
           phone?: string | null
           status?: string
           updated_at?: string
@@ -203,13 +426,26 @@ export type Database = {
           address?: string | null
           assigned_doctor_id?: string | null
           birth_date?: string | null
+          birthplace?: string | null
+          consultation_reason?: string | null
           created_at?: string
           created_by?: string | null
+          current_illness?: string | null
           document_id?: string | null
+          education_level?: string | null
           email?: string | null
+          ethnicity?: string | null
+          family_history?: Json | null
+          first_visit_date?: string | null
           full_name?: string
+          gynecological_data?: Json | null
+          historia_number?: string | null
           id?: string
+          marital_status?: string | null
           notes?: string | null
+          obstetric_data?: Json | null
+          occupation?: string | null
+          personal_history?: Json | null
           phone?: string | null
           status?: string
           updated_at?: string
@@ -283,6 +519,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "doctor"
+      visit_type_enum:
+        | "CONTROL"
+        | "EMERGENCIA"
+        | "CONSULTA_NUEVA"
+        | "POST_TRATAMIENTO"
+        | "OTRO"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -411,6 +653,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "doctor"],
+      visit_type_enum: [
+        "CONTROL",
+        "EMERGENCIA",
+        "CONSULTA_NUEVA",
+        "POST_TRATAMIENTO",
+        "OTRO",
+      ],
     },
   },
 } as const

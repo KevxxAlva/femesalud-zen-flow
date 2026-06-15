@@ -5,7 +5,7 @@ import {
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
-import { usePatients } from "@/lib/api/patients";
+import { usePatientCount, useRecentPatients, usePatientsGrowth } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
@@ -44,8 +44,15 @@ export function Dashboard() {
   const { user } = useAuthSession();
   const isAdmin = useIsAdmin();
   const { data: profile } = useMyProfile(user?.id);
-  const { data: patients = [] } = usePatients();
-  const { data: appointments = [] } = useAppointments();
+  const { data: patientsCount = 0 } = usePatientCount();
+  const { data: recentPatients = [] } = useRecentPatients(5);
+  const { data: patientsGrowth = [] } = usePatientsGrowth();
+  const startOfLastMonthStr = useMemo(() => {
+    const now = new Date();
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return startOfLastMonth.toISOString().slice(0, 10);
+  }, []);
+  const { data: appointments = [] } = useAppointments({ from: startOfLastMonthStr });
   const { data: doctors = [] } = useDoctors();
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
@@ -73,8 +80,8 @@ export function Dashboard() {
     const sevenDaysAgo = new Date(now.getTime() - 7 * msInDay);
     const fourteenDaysAgo = new Date(now.getTime() - 14 * msInDay);
 
-    const patientsLast7Days = patients.filter((p) => new Date(p.created_at) >= sevenDaysAgo);
-    const patientsPrev7Days = patients.filter((p) => {
+    const patientsLast7Days = patientsGrowth.filter((p) => new Date(p.created_at) >= sevenDaysAgo);
+    const patientsPrev7Days = patientsGrowth.filter((p) => {
       const pDate = new Date(p.created_at);
       return pDate >= fourteenDaysAgo && pDate < sevenDaysAgo;
     });
@@ -121,9 +128,7 @@ export function Dashboard() {
       .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
       .slice(0, 5);
-    const recent = [...patients]
-      .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
-      .slice(0, 4);
+    const recent = recentPatients.slice(0, 4);
 
     const consultSpark = Array.from({ length: 10 }).map((_, i) => {
       const d = new Date();
@@ -131,7 +136,7 @@ export function Dashboard() {
       const iso = d.toISOString().slice(0, 10);
       return appointments.filter((a) => a.scheduled_at.slice(0, 10) === iso).length;
     });
-    const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patients.length - (9 - i)));
+    const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patientsCount - (9 - i)));
     const incomeSpark = consultSpark.map((v) => 10 + v * 4);
     
     return { 
@@ -147,7 +152,7 @@ export function Dashboard() {
       patientDelta,
       incomeDelta
     };
-  }, [appointments, patients, today]);
+  }, [appointments, patientsCount, patientsGrowth, recentPatients, today]);
 
   const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Doctor";
   const [searchQuery, setSearchQuery] = useState("");
@@ -171,7 +176,7 @@ export function Dashboard() {
     });
 
     // Patients registered recently
-    const sortedPatients = [...patients]
+    const sortedPatients = [...recentPatients]
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
       .slice(0, 3);
 
@@ -187,7 +192,7 @@ export function Dashboard() {
 
     // Sort combined list by created_at DESC
     return list.sort((a, b) => b.rawDate.localeCompare(a.rawDate)).slice(0, 5);
-  }, [appointments, patients]);
+  }, [appointments, recentPatients]);
 
   // Notification read tracking
   const [lastReadTime, setLastReadTime] = useState<string>(() => {
@@ -326,9 +331,9 @@ export function Dashboard() {
             </h2>
             <p className="mt-2 text-sm text-primary-foreground/85">
               Hoy hay {stats.todays.length === 1 ? "1 cita" : `${stats.todays.length} citas`},{" "}
-              {patients.length === 1 
+              {patientsCount === 1 
                 ? `1 paciente ${isAdmin ? "en total" : "asignado"}` 
-                : `${patients.length} pacientes ${isAdmin ? "en total" : "asignados"}`}{" "}
+                : `${patientsCount} pacientes ${isAdmin ? "en total" : "asignados"}`}{" "}
               y {stats.completed === 1 ? "1 consulta completada" : `${stats.completed} consultas completadas`}.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
@@ -369,7 +374,7 @@ export function Dashboard() {
 
         {[
           { label: "Consultas hoy", value: stats.todays.length.toString(), delta: stats.consultDelta, icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
-          { label: "Pacientes totales", value: patients.length.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
+          { label: "Pacientes totales", value: patientsCount.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
           { label: "Ingresos del mes", value: `$${(stats.income / 1000).toFixed(1)}k`, delta: stats.incomeDelta, icon: TrendingUp, tone: "text-sage-foreground", spark: stats.incomeSpark },
         ].map((k) => {
           const Icon = k.icon;

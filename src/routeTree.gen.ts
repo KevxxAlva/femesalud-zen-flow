@@ -15,7 +15,6 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
 import { Route as AuthenticatedPacientesRouteImport } from './routes/_authenticated/pacientes'
-import { Route as AuthenticatedLaboratorioRouteImport } from './routes/_authenticated/laboratorio'
 import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
 import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
@@ -51,12 +50,6 @@ const AuthenticatedPacientesRoute = AuthenticatedPacientesRouteImport.update({
   path: '/pacientes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedLaboratorioRoute =
-  AuthenticatedLaboratorioRouteImport.update({
-    id: '/laboratorio',
-    path: '/laboratorio',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedHistoriasRoute = AuthenticatedHistoriasRouteImport.update({
   id: '/historias',
   path: '/historias',
@@ -93,7 +86,6 @@ export interface FileRoutesByFullPath {
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
@@ -105,7 +97,6 @@ export interface FileRoutesByTo {
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/pacientes': typeof AuthenticatedPacientesRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
@@ -120,7 +111,6 @@ export interface FileRoutesById {
   '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
   '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
-  '/_authenticated/laboratorio': typeof AuthenticatedLaboratorioRoute
   '/_authenticated/pacientes': typeof AuthenticatedPacientesRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
@@ -136,7 +126,6 @@ export interface FileRouteTypes {
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/laboratorio'
     | '/pacientes'
     | '/reportes'
     | '/servicios'
@@ -148,7 +137,6 @@ export interface FileRouteTypes {
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/laboratorio'
     | '/pacientes'
     | '/reportes'
     | '/servicios'
@@ -162,7 +150,6 @@ export interface FileRouteTypes {
     | '/_authenticated/doctores'
     | '/_authenticated/facturacion'
     | '/_authenticated/historias'
-    | '/_authenticated/laboratorio'
     | '/_authenticated/pacientes'
     | '/_authenticated/reportes'
     | '/_authenticated/servicios'
@@ -218,13 +205,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPacientesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/laboratorio': {
-      id: '/_authenticated/laboratorio'
-      path: '/laboratorio'
-      fullPath: '/laboratorio'
-      preLoaderRoute: typeof AuthenticatedLaboratorioRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/historias': {
       id: '/_authenticated/historias'
       path: '/historias'
@@ -269,7 +249,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
   AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
-  AuthenticatedLaboratorioRoute: typeof AuthenticatedLaboratorioRoute
   AuthenticatedPacientesRoute: typeof AuthenticatedPacientesRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
@@ -282,7 +261,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
   AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
-  AuthenticatedLaboratorioRoute: AuthenticatedLaboratorioRoute,
   AuthenticatedPacientesRoute: AuthenticatedPacientesRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,

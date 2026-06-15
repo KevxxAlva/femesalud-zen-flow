@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2, FileDown, Printer, FileText } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2, FileDown, Printer, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -9,13 +9,15 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { PatientTimeline } from "@/components/PatientTimeline";
-import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
+import { usePaginatedPatients, usePatient, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { useClinicalNotes } from "@/lib/api/clinical-notes";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -61,23 +63,43 @@ const tagBg: Record<string, string> = {
 const initials = (n: string) => (n || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
 export function PatientsPage() {
-  const { data: patients = [], isLoading, error } = usePatients();
   const { data: doctors = [] } = useDoctors();
   const del = useDeletePatient();
 
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [status, setStatus] = useState("Todos");
   const [doctorFilter, setDoctorFilter] = useState("Todos");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
-  const [viewing, setViewing] = useState<Patient | null>(null);
+  const [viewingLightweight, setViewing] = useState<Patient | null>(null);
+  const { data: fullViewingPatient, isLoading: isViewingPatientLoading } = usePatient(viewingLightweight?.id);
+  const viewing = fullViewingPatient || viewingLightweight;
   const [toDelete, setToDelete] = useState<Patient | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
+
+  // Debounce search input by 350ms for server-side search
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQ(q.trim()), 350);
+    return () => clearTimeout(timer);
+  }, [q]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedQ, status, doctorFilter]);
+
+  const serverStatus = status === "Todos" ? undefined : status;
+  const { data: paginatedResult, isLoading, error } = usePaginatedPatients(currentPage, itemsPerPage, debouncedQ || undefined, serverStatus);
+  const patients = paginatedResult?.data ?? [];
+  const totalCount = paginatedResult?.count ?? 0;
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
 
   const { user: me } = useAuthSession();
   const { data: myProfile } = useMyProfile(me?.id);
-  const { data: patientNotes = [] } = useClinicalNotes(viewing?.id);
+  const { data: clinic } = useClinicInfo();
+  const { data: patientNotes = [] } = useClinicalNotes(viewingLightweight?.id);
 
   // Document export states
   const [openReposo, setOpenReposo] = useState(false);
@@ -98,10 +120,14 @@ export function PatientsPage() {
   const [doctorCmc, setDoctorCmc] = useState("11.619");
 
   const handleOpenReposoDialog = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
-    const docName = docObj?.full_name || myProfile?.full_name || "";
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const docName = docObj?.full_name || "";
 
-    if (docName.toLowerCase().includes("carli")) {
+    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
+      setDoctorUni(docObj.university || "");
+      setDoctorMpps(docObj.mpps || "");
+      setDoctorCmc(docObj.cmc || "");
+    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
       setDoctorUni("UC-CHET");
       setDoctorMpps("102.927");
       setDoctorCmc("11.619");
@@ -115,10 +141,14 @@ export function PatientsPage() {
   };
 
   const handleOpenAtencionDialog = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
-    const docName = docObj?.full_name || myProfile?.full_name || "";
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const docName = docObj?.full_name || "";
 
-    if (docName.toLowerCase().includes("carli")) {
+    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
+      setDoctorUni(docObj.university || "");
+      setDoctorMpps(docObj.mpps || "");
+      setDoctorCmc(docObj.cmc || "");
+    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
       setDoctorUni("UC-CHET");
       setDoctorMpps("102.927");
       setDoctorCmc("11.619");
@@ -144,10 +174,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -156,7 +193,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();
@@ -167,7 +204,6 @@ export function PatientsPage() {
       doc.setFontSize(10.5);
       doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 40, 155, { align: "right" });
 
-      // Title (FICHA DE HISTORIAL CLÍNICO, bold, centered, underlined)
       doc.setFont("times", "bold");
       doc.setFontSize(13);
       doc.text("FICHA DE HISTORIAL CLÍNICO", pageWidth / 2, 195, { align: "center" });
@@ -178,27 +214,91 @@ export function PatientsPage() {
 
       doc.setFont("times", "bold");
       doc.setFontSize(11);
-      doc.text("Datos del Paciente", 40, 225);
+      doc.text("Datos de Identificación y Consulta", 40, 225);
 
       autoTable(doc, {
         startY: 235,
-        head: [["Campo", "Información"]],
         body: [
-          ["Nombre Completo", patient.full_name || "—"],
-          ["Cédula / Identificación", patient.document_id || "—"],
-          ["Fecha de Nacimiento", patient.birth_date || "—"],
-          ["Correo Electrónico", patient.email || "—"],
-          ["Teléfono", patient.phone || "—"],
-          ["Médico Asignado", doctorMap.get(patient.assigned_doctor_id ?? "") || "Sin asignar"],
-          ["Notas Generales", patient.notes || "—"],
+          ["Nº Historia", patient.historia_number || "—", "Fecha 1ª Cita", patient.first_visit_date || "—"],
+          ["Nombre Completo", patient.full_name || "—", "Cédula / ID", patient.document_id || "—"],
+          ["F. Nacimiento", patient.birth_date || "—", "Estado Civil", patient.marital_status || "—"],
+          ["Lugar Nacimiento", patient.birthplace || "—", "Teléfono", patient.phone || "—"],
+          ["Grado Instrucción", patient.education_level || "—", "Ocupación", patient.occupation || "—"],
+          ["Etnia / Raza", patient.ethnicity || "—", "Correo Electrónico", patient.email || "—"],
+          ["Dirección", patient.address || "—", "Médico Asignado", doctorMap.get(patient.assigned_doctor_id ?? "") || "Sin asignar"],
+          ["Motivo de Consulta", { content: patient.consultation_reason || "—", colSpan: 3 }],
+          ["Enfermedad Actual", { content: patient.current_illness || "—", colSpan: 3 }],
+          ["Notas Generales", { content: patient.notes || "—", colSpan: 3 }]
         ],
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
-        styles: { font: "times", fontSize: 10, cellPadding: 5 },
+        styles: { font: "times", fontSize: 9, cellPadding: 4 },
+        columnStyles: {
+          0: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          1: { cellWidth: 162 },
+          2: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          3: { cellWidth: 163 }
+        },
         margin: { left: 40, right: 40 },
       });
 
-      const after = (doc as any).lastAutoTable.finalY + 25;
+      const y2 = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("Antecedentes Médicos", 40, y2);
+
+      autoTable(doc, {
+        startY: y2 + 5,
+        body: [
+          ["A.F. Madre", patient.family_history?.mother || "Niega / Sano", "A.F. Padre", patient.family_history?.father || "Niega / Sano"],
+          ["A.F. Hermanos", patient.family_history?.siblings || "Niega / Sano", "A.F. Hijos", patient.family_history?.children || "Niega / Sano"],
+          ["A.P. Tabaco", patient.personal_history?.tobacco || "NIEGA", "A.P. Alcohol", patient.personal_history?.alcohol || "NIEGA"],
+          ["A.P. Drogas", patient.personal_history?.drugs || "NIEGA", "A.P. Patología Base", patient.personal_history?.base_pathology || "Niega"],
+          ["A.P. Quirúrgicos", { content: patient.personal_history?.surgical || "Niega", colSpan: 3 }],
+          ["A.P. Alérgicos", { content: patient.personal_history?.allergies || "Niega", colSpan: 3 }]
+        ],
+        theme: "grid",
+        styles: { font: "times", fontSize: 9, cellPadding: 4 },
+        columnStyles: {
+          0: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          1: { cellWidth: 162 },
+          2: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          3: { cellWidth: 163 }
+        },
+        margin: { left: 40, right: 40 },
+      });
+
+      const y3 = (doc as any).lastAutoTable.finalY + 15;
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("Datos Gineco-Obstétricos", 40, y3);
+
+      autoTable(doc, {
+        startY: y3 + 5,
+        body: [
+          ["Menarquía", patient.gynecological_data?.menarche || "—", "Sexarquía", patient.gynecological_data?.sexarche || "—"],
+          ["Ciclo Menstrual", patient.gynecological_data?.menstrual_cycle || "—", "Dismenorrea", patient.gynecological_data?.dysmenorrhea || "—"],
+          ["NPS", patient.gynecological_data?.nps || "—", "ITS", patient.gynecological_data?.its || "—"],
+          ["Última Citología", patient.gynecological_data?.cytology || "—", "Anticonceptivos", patient.gynecological_data?.contraceptives || "—"],
+          ["Gestas (G)", patient.obstetric_data?.g ?? 0, "Partos (P)", patient.obstetric_data?.p ?? 0],
+          ["Cesáreas (C)", patient.obstetric_data?.c ?? 0, "Abortos (A)", patient.obstetric_data?.a ?? 0],
+          ["Período Intergenésico (PIG)", patient.obstetric_data?.pig || "—", "Emb. Múltiples", patient.obstetric_data?.em ?? 0],
+          ["Emb. Ectópicos", patient.obstetric_data?.ee ?? 0, "Nº Consultas Control", patient.obstetric_data?.num_consultations || "—"],
+          ["FUM", patient.obstetric_data?.fum || "—", "EG", patient.obstetric_data?.eg || "—"],
+          ["FPP", patient.obstetric_data?.fpp || "—", "Vacunas", patient.obstetric_data?.vaccines || "—"],
+          ["Complicaciones", { content: patient.obstetric_data?.complications || "Ninguna", colSpan: 3 }]
+        ],
+        theme: "grid",
+        styles: { font: "times", fontSize: 9, cellPadding: 4 },
+        columnStyles: {
+          0: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          1: { cellWidth: 162 },
+          2: { fontStyle: "bold", fillColor: [245, 242, 247], cellWidth: 95 },
+          3: { cellWidth: 163 }
+        },
+        margin: { left: 40, right: 40 },
+      });
+
+      const after = (doc as any).lastAutoTable.finalY + 20;
       doc.setFont("times", "bold");
       doc.setFontSize(11);
       doc.text("Historial de Consultas", 40, after);
@@ -210,7 +310,7 @@ export function PatientsPage() {
         doc.text("No se registran notas clínicas en el historial de este paciente.", 40, after + 15);
       } else {
         autoTable(doc, {
-          startY: after + 10,
+          startY: after + 8,
           head: [["Fecha", "Título", "Detalle / Indicaciones"]],
           body: patientNotes.map((n) => [
             new Date(n.note_date).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" }),
@@ -223,7 +323,7 @@ export function PatientsPage() {
           columnStyles: {
             0: { cellWidth: 70 },
             1: { cellWidth: 120 },
-            2: { cellWidth: 320 },
+            2: { cellWidth: 325 },
           },
           margin: { left: 40, right: 40 },
         });
@@ -299,10 +399,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -311,7 +418,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();
@@ -471,10 +578,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -483,7 +597,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();
@@ -605,15 +719,10 @@ export function PatientsPage() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const term = q.toLowerCase().trim();
-    return patients.filter((p) => {
-      if (term && !p.full_name.toLowerCase().includes(term) && !(p.email ?? "").toLowerCase().includes(term)) return false;
-      if (status !== "Todos" && p.status !== status) return false;
-      if (doctorFilter !== "Todos" && p.assigned_doctor_id !== doctorFilter) return false;
-      return true;
-    });
-  }, [patients, q, status, doctorFilter]);
+  // Server-side pagination - no need for client-side filtering
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  const filteredByDoctor = doctorFilter === "Todos" ? patients : patients.filter((p) => p.assigned_doctor_id === doctorFilter);
+  const paginatedPatients = filteredByDoctor;
 
   const handleDelete = async () => {
     if (!toDelete) return;
@@ -628,7 +737,7 @@ export function PatientsPage() {
         <div className="ml-14 md:ml-0">
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Pacientes</h1>
-          <p className="text-sm text-muted-foreground">{filtered.length} de {patients.length} pacientes</p>
+          <p className="text-sm text-muted-foreground">{totalCount} pacientes</p>
         </div>
         <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95">
           <Plus className="mr-1 h-4 w-4" /> Nuevo paciente
@@ -665,55 +774,93 @@ export function PatientsPage() {
         <div className="rounded-3xl glass-card p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : error ? (
         <div className="rounded-3xl glass-card p-12 text-center text-sm text-destructive">Error al cargar pacientes</div>
-      ) : filtered.length === 0 ? (
+      ) : patients.length === 0 ? (
         <div className="rounded-3xl glass-card p-12 text-center shadow-sm">
           <Users className="mx-auto h-10 w-10 text-muted-foreground" />
           <p className="mt-3 text-sm text-muted-foreground">No se encontraron pacientes.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((p) => (
-            <div key={p.id} className="group rounded-3xl glass-card p-5 shadow-sm transition-all duration-300 hover:shadow-md">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground shadow-sm">
-                    {initials(p.full_name)}
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {paginatedPatients.map((p) => (
+              <div key={p.id} className="group rounded-3xl glass-card p-5 shadow-sm transition-all duration-300 hover:shadow-md">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground shadow-sm">
+                      {initials(p.full_name)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold leading-tight">{p.full_name}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-semibold leading-tight">{p.full_name}</p>
+                  <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status] || "bg-muted text-muted-foreground")}>{statusLabel(p.status)}</span>
+                </div>
+                <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
+                  <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {p.email || "—"}</p>
+                  <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {p.phone || "—"}</p>
+                  <p className="flex items-center gap-2"><Stethoscope className="h-3.5 w-3.5" /> {doctorMap.get(p.assigned_doctor_id ?? "") || "Sin asignar"}</p>
+                </div>
+                <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
+                  <button onClick={() => setViewing(p)} className="text-xs font-medium text-mauve hover:underline">Ver detalle →</button>
+                  <div className="flex gap-1">
+                    <button onClick={() => { setEditing(p); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => setToDelete(p)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status] || "bg-muted text-muted-foreground")}>{statusLabel(p.status)}</span>
               </div>
-              <div className="mt-4 space-y-1.5 text-xs text-muted-foreground">
-                <p className="flex items-center gap-2"><Mail className="h-3.5 w-3.5" /> {p.email || "—"}</p>
-                <p className="flex items-center gap-2"><Phone className="h-3.5 w-3.5" /> {p.phone || "—"}</p>
-                <p className="flex items-center gap-2"><Stethoscope className="h-3.5 w-3.5" /> {doctorMap.get(p.assigned_doctor_id ?? "") || "Sin asignar"}</p>
-              </div>
-              <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
-                <button onClick={() => setViewing(p)} className="text-xs font-medium text-mauve hover:underline">Ver detalle →</button>
-                <div className="flex gap-1">
-                  <button onClick={() => { setEditing(p); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </button>
-                  <button onClick={() => setToDelete(p)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
+              <p className="text-xs text-muted-foreground">
+                Mostrando <span className="font-semibold text-foreground">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(totalCount, currentPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{totalCount}</span> pacientes
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                >
+                  <ChevronLeft className="h-4 w-4" /> Anterior
+                </Button>
+                <span className="text-xs font-semibold px-3 py-1 bg-muted/60 rounded-lg">
+                  {currentPage} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
+                >
+                  Siguiente <ChevronRight className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          ))}
+          )}
         </div>
       )}
 
       <PatientForm open={formOpen} onOpenChange={setFormOpen} patient={editing} />
 
       <Dialog open={!!viewing} onOpenChange={(o) => !o && setViewing(null)}>
-        <DialogContent className="sm:max-w-2xl rounded-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-4xl rounded-3xl max-h-[90vh] flex flex-col p-6">
           {viewing && (
             <>
               <DialogHeader className="flex flex-row items-center justify-between pr-6">
-                <DialogTitle>Detalle del paciente</DialogTitle>
+                <div>
+                  <DialogTitle>Detalle de Historia Clínica</DialogTitle>
+                  <DialogDescription className="text-xs text-muted-foreground mt-0.5">
+                    Visualización de datos generales, antecedentes y registro de consultas.
+                  </DialogDescription>
+                </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="rounded-xl flex items-center gap-1.5 h-8 cursor-pointer">
@@ -733,29 +880,281 @@ export function PatientsPage() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               </DialogHeader>
-              <div className="flex items-center gap-3">
+
+              <div className="flex items-center gap-3 mt-4">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve to-blush text-base font-semibold text-primary-foreground">
                   {initials(viewing.full_name)}
                 </div>
                 <div>
                   <p className="text-base font-semibold">{viewing.full_name}</p>
-                  <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[viewing.status] || "bg-muted")}>{statusLabel(viewing.status)}</span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[viewing.status] || "bg-muted")}>{statusLabel(viewing.status)}</span>
+                    {viewing.historia_number && (
+                      <span className="text-xs bg-muted/80 text-muted-foreground px-2 py-0.5 rounded-md font-semibold">
+                        Historia: #{viewing.historia_number}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <dl className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Cédula / Identificación</dt><dd>{viewing.document_id || "—"}</dd></div>
-                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Nacimiento</dt><dd>{viewing.birth_date || "—"}</dd></div>
-                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Email</dt><dd>{viewing.email || "—"}</dd></div>
-                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Teléfono</dt><dd>{viewing.phone || "—"}</dd></div>
-                <div className="col-span-2"><dt className="text-xs text-muted-foreground">Médico</dt><dd>{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</dd></div>
-                {viewing.notes && <div className="col-span-2"><dt className="text-xs text-muted-foreground">Notas generales</dt><dd>{viewing.notes}</dd></div>}
-              </dl>
-              <div className="mt-4 border-t border-border/60 pt-4">
-                <PatientTimeline patientId={viewing.id} />
-              </div>
-              <div className="mt-4 border-t border-border/60 pt-4">
-                <ClinicalNotesPanel patientId={viewing.id} />
-              </div>
+              <Tabs defaultValue="general" className="mt-4 flex-1 flex flex-col min-h-0">
+                <TabsList className="grid w-full grid-cols-6 bg-muted/60 p-1 rounded-2xl mb-4">
+                  <TabsTrigger value="general" className="rounded-xl font-medium text-xs">Identificación</TabsTrigger>
+                  <TabsTrigger value="antecedentes" className="rounded-xl font-medium text-xs">Antecedentes</TabsTrigger>
+                  <TabsTrigger value="ginecologia" className="rounded-xl font-medium text-xs">Ginecológico</TabsTrigger>
+                  <TabsTrigger value="obstetricia" className="rounded-xl font-medium text-xs">Obstétrico</TabsTrigger>
+                  <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Timeline</TabsTrigger>
+                  <TabsTrigger value="notas" className="rounded-xl font-medium text-xs">Notas Clínicas</TabsTrigger>
+                </TabsList>
+
+                <div className="flex-1 overflow-y-auto pr-1">
+                  {/* TAB 1: GENERAL */}
+                  <TabsContent value="general" className="space-y-4 outline-none">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Nombre Completo</span>
+                        <span className="font-medium">{viewing.full_name}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Cédula / Identificación</span>
+                        <span className="font-medium">{viewing.document_id || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Fecha de Nacimiento</span>
+                        <span className="font-medium">{viewing.birth_date || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Edad</span>
+                        <span className="font-medium">
+                          {viewing.birth_date ? `${new Date().getFullYear() - new Date(viewing.birth_date).getFullYear()} años` : "—"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Teléfono</span>
+                        <span className="font-medium">{viewing.phone || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Correo Electrónico</span>
+                        <span className="font-medium">{viewing.email || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Lugar de Nacimiento</span>
+                        <span className="font-medium">{viewing.birthplace || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Estado Civil</span>
+                        <span className="font-medium">{viewing.marital_status || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Grado de Instrucción</span>
+                        <span className="font-medium">{viewing.education_level || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Ocupación</span>
+                        <span className="font-medium">{viewing.occupation || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Etnia</span>
+                        <span className="font-medium">{viewing.ethnicity || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Fecha Primera Cita</span>
+                        <span className="font-medium">{viewing.first_visit_date || "—"}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-xs text-muted-foreground block">Dirección</span>
+                        <span className="font-medium">{viewing.address || "—"}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-xs text-muted-foreground block">Médico Asignado</span>
+                        <span className="font-medium">{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</span>
+                      </div>
+                      {viewing.consultation_reason && (
+                        <div className="col-span-2 bg-muted/30 p-3 rounded-2xl">
+                          <span className="text-xs text-muted-foreground block">Motivo de Consulta</span>
+                          <span className="font-medium text-xs whitespace-pre-wrap">{viewing.consultation_reason}</span>
+                        </div>
+                      )}
+                      {viewing.current_illness && (
+                        <div className="col-span-2 bg-muted/30 p-3 rounded-2xl">
+                          <span className="text-xs text-muted-foreground block">Enfermedad Actual</span>
+                          <span className="font-medium text-xs whitespace-pre-wrap">{viewing.current_illness}</span>
+                        </div>
+                      )}
+                      {viewing.notes && (
+                        <div className="col-span-2">
+                          <span className="text-xs text-muted-foreground block">Notas generales</span>
+                          <span className="font-medium text-xs whitespace-pre-wrap">{viewing.notes}</span>
+                        </div>
+                      )}
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 2: ANTECEDENTES */}
+                  <TabsContent value="antecedentes" className="space-y-4 outline-none">
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Antecedentes Familiares</h3>
+                      <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 p-3.5 rounded-2xl">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Madre</span>
+                          <span className="font-medium">{viewing.family_history?.mother || "Niega / Sano"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Padre</span>
+                          <span className="font-medium">{viewing.family_history?.father || "Niega / Sano"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Hermanos</span>
+                          <span className="font-medium">{viewing.family_history?.siblings || "Niega / Sano"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Hijos</span>
+                          <span className="font-medium">{viewing.family_history?.children || "Niega / Sano"}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3 mt-4">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Antecedentes Personales Patológicos y Hábitos</h3>
+                      <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 p-3.5 rounded-2xl">
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Tabaco</span>
+                          <span className="font-medium">{viewing.personal_history?.tobacco || "NIEGA"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Alcohol</span>
+                          <span className="font-medium">{viewing.personal_history?.alcohol || "NIEGA"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Drogas</span>
+                          <span className="font-medium">{viewing.personal_history?.drugs || "NIEGA"}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-muted-foreground block">Patología de Base</span>
+                          <span className="font-medium">{viewing.personal_history?.base_pathology || "Niega"}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-xs text-muted-foreground block">Quirúrgicos / Operaciones</span>
+                          <span className="font-medium">{viewing.personal_history?.surgical || "Niega"}</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-xs text-muted-foreground block">Alérgicos</span>
+                          <span className="font-medium text-destructive">{viewing.personal_history?.allergies || "Niega"}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 3: GINECOLOGICO */}
+                  <TabsContent value="ginecologia" className="space-y-4 outline-none">
+                    <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 p-3.5 rounded-2xl">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Menarquía (Edad primera menstruación)</span>
+                        <span className="font-medium">{viewing.gynecological_data?.menarche || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Sexarquía (Edad inicio relaciones sexuales)</span>
+                        <span className="font-medium">{viewing.gynecological_data?.sexarche || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Ciclo Menstrual</span>
+                        <span className="font-medium">{viewing.gynecological_data?.menstrual_cycle || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Dismenorrea (Menstruación dolorosa)</span>
+                        <span className="font-medium">{viewing.gynecological_data?.dysmenorrhea || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">NPS (Número parejas sexuales)</span>
+                        <span className="font-medium">{viewing.gynecological_data?.nps || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">ITS (Infecciones de Transmisión Sexual)</span>
+                        <span className="font-medium">{viewing.gynecological_data?.its || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Última Citología</span>
+                        <span className="font-medium">{viewing.gynecological_data?.cytology || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Anticonceptivos</span>
+                        <span className="font-medium">{viewing.gynecological_data?.contraceptives || "—"}</span>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 4: OBSTETRICO */}
+                  <TabsContent value="obstetricia" className="space-y-4 outline-none">
+                    <div className="grid grid-cols-4 gap-3 text-sm bg-muted/30 p-3.5 rounded-2xl">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">G (Gestas)</span>
+                        <span className="font-bold text-base">{viewing.obstetric_data?.g ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">P (Partos)</span>
+                        <span className="font-bold text-base">{viewing.obstetric_data?.p ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">C (Cesáreas)</span>
+                        <span className="font-bold text-base">{viewing.obstetric_data?.c ?? 0}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">A (Abortos)</span>
+                        <span className="font-bold text-base">{viewing.obstetric_data?.a ?? 0}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 text-sm bg-muted/30 p-3.5 rounded-2xl mt-4">
+                      <div>
+                        <span className="text-xs text-muted-foreground block">PIG (Período Intergenésico)</span>
+                        <span className="font-medium">{viewing.obstetric_data?.pig || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Embarazos Múltiples</span>
+                        <span className="font-medium">{viewing.obstetric_data?.em ?? "0"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Embarazos Ectópicos</span>
+                        <span className="font-medium">{viewing.obstetric_data?.ee ?? "0"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Complicaciones Obstétricas</span>
+                        <span className="font-medium">{viewing.obstetric_data?.complications || "Ninguna"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">FUM (Fecha Última Menstruación)</span>
+                        <span className="font-medium">{viewing.obstetric_data?.fum || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">EG (Edad Gestacional)</span>
+                        <span className="font-medium">{viewing.obstetric_data?.eg || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">FPP (Fecha Probable de Parto)</span>
+                        <span className="font-medium text-mauve font-semibold">{viewing.obstetric_data?.fpp || "—"}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Número de Consultas Control</span>
+                        <span className="font-medium">{viewing.obstetric_data?.num_consultations || "—"}</span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className="text-xs text-muted-foreground block">Vacunas</span>
+                        <span className="font-medium">{viewing.obstetric_data?.vaccines || "—"}</span>
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* TAB 5: NOTAS CLINICAS */}
+                  <TabsContent value="notas" className="space-y-4 outline-none">
+                    <ClinicalNotesPanel patientId={viewing.id} />
+                  </TabsContent>
+
+                  {/* TAB 6: TIMELINE */}
+                  <TabsContent value="timeline" className="space-y-4 outline-none">
+                    <PatientTimeline patientId={viewing.id} />
+                  </TabsContent>
+                </div>
+              </Tabs>
             </>
           )}
         </DialogContent>
