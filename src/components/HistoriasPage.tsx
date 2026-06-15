@@ -360,7 +360,7 @@ export function HistoriasPage() {
           <ScrollArea className="flex-1 pr-1.5">
             {loadingPatients ? (
               <div className="flex items-center justify-center py-12"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
-            ) : filteredPatients.length === 0 ? (
+            ) : paginatedPatients.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-8">No se encontraron pacientes.</p>
             ) : (
               <div className="space-y-1.5">
