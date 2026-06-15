@@ -104,6 +104,7 @@ export function PatientsPage() {
   // Document export states
   const [openReposo, setOpenReposo] = useState(false);
   const [openAtencion, setOpenAtencion] = useState(false);
+  const [openJustificativo, setOpenJustificativo] = useState(false);
 
   // Form states for certificates
   const [reposoDays, setReposoDays] = useState("3");
@@ -113,6 +114,10 @@ export function PatientsPage() {
   const [atencionDate, setAtencionDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [atencionTime, setAtencionTime] = useState("10:00");
   const [atencionReason, setAtencionReason] = useState("");
+
+  const [justificativoDate, setJustificativoDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [justificativoReason, setJustificativoReason] = useState("");
+  const [justificativoDays, setJustificativoDays] = useState("1");
 
   // Doctor credentials
   const [doctorUni, setDoctorUni] = useState("UC-CHET");
@@ -159,6 +164,28 @@ export function PatientsPage() {
     }
     setAtencionReason("");
     setOpenAtencion(true);
+  };
+
+  const handleOpenJustificativoDialog = (patient: Patient) => {
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const docName = docObj?.full_name || "";
+
+    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
+      setDoctorUni(docObj.university || "");
+      setDoctorMpps(docObj.mpps || "");
+      setDoctorCmc(docObj.cmc || "");
+    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
+      setDoctorUni("UC-CHET");
+      setDoctorMpps("102.927");
+      setDoctorCmc("11.619");
+    } else {
+      setDoctorUni(docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET");
+      setDoctorMpps("");
+      setDoctorCmc("");
+    }
+    setJustificativoReason("");
+    setJustificativoDays("1");
+    setOpenJustificativo(true);
   };
 
   const handleExportFicha = async (patient: Patient) => {
@@ -719,6 +746,182 @@ export function PatientsPage() {
     }
   };
 
+  const handleExportJustificativo = async (patient: Patient) => {
+    try {
+      const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+      const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
+      const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+
+      // Draw Watermark Logo in center
+      try {
+        const logoBase64 = await loadLogoBase64("/logo.png");
+        if (logoBase64) {
+          doc.saveGraphicsState();
+          const gState = new (doc as any).GState({ opacity: 0.04 });
+          doc.setGState(gState);
+          const imgWidth = 550;
+          const imgHeight = 550;
+          const imgX = (pageWidth - imgWidth) / 2;
+          const imgY = (pageHeight - imgHeight) / 2 - 20;
+          doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+          doc.restoreGraphicsState();
+        }
+      } catch (watermarkErr) {
+        console.error("Error drawing watermark:", watermarkErr);
+      }
+
+      // Font Setup
+      doc.setFont("times", "normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(60, 60, 60);
+
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
+      // Top Header
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
+
+      // Consultorio Header
+      doc.setFont("times", "normal");
+      doc.setFontSize(12.5);
+      doc.setTextColor(0);
+      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+      doc.setFont("times", "italic");
+      doc.setFontSize(17.5);
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
+
+      // Date Format: Valle de la Pascua, DD / MM / AAAA
+      const today = new Date();
+      const topDay = String(today.getDate()).padStart(2, "0");
+      const topMonth = String(today.getMonth() + 1).padStart(2, "0");
+      const topYear = String(today.getFullYear());
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 70, 155, { align: "right" });
+
+      // Title (JUSTIFICATIVO MEDICO, bold, centered, underlined)
+      doc.setFont("times", "bold");
+      doc.setFontSize(13);
+      doc.text("JUSTIFICATIVO MEDICO", pageWidth / 2, 195, { align: "center" });
+      const titleWidth = doc.getTextWidth("JUSTIFICATIVO MEDICO");
+      doc.setDrawColor(0);
+      doc.setLineWidth(0.5);
+      doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
+
+      // Salutation
+      doc.setFont("times", "bold");
+      doc.setFontSize(11);
+      doc.text("A quien pueda interesar", 70, 235);
+
+      // Body text start
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text("Quien suscribe, médico tratante, certifica que examinó a:", 70, 265);
+
+      // Patient Name and C.I. line
+      doc.line(70, 300, 310, 300);
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(patient.full_name, 190, 296, { align: "center" });
+
+      let ciLabel = "C.I. ";
+      let displayCI = patient.document_id || "";
+      if (displayCI.startsWith("V-")) {
+         ciLabel = "C.I. V-";
+         displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("E-")) {
+         ciLabel = "C.I. E-";
+         displayCI = displayCI.slice(2);
+      } else if (displayCI.startsWith("P-")) {
+         ciLabel = "P-";
+         displayCI = displayCI.slice(2);
+      }
+
+      doc.text(ciLabel, 315, 300);
+      const labelWidth = doc.getTextWidth(ciLabel);
+      const lineStartX = 315 + labelWidth + 5;
+      const lineEndX = 460;
+
+      doc.line(lineStartX, 300, lineEndX, 300);
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(displayCI, (lineStartX + lineEndX) / 2, 296, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(", quien", 465, 300);
+
+      // Diagnosis lines
+      const splitReason = doc.splitTextToSize(justificativoReason || "", pageWidth - 140);
+
+      doc.text("presenta:", 70, 335);
+      doc.line(120, 335, pageWidth - 70, 335);
+      if (splitReason[0]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[0], (pageWidth + 50) / 2, 331, { align: "center" });
+      }
+
+      doc.line(70, 370, pageWidth - 70, 370);
+      if (splitReason[1]) {
+        doc.setFont("times", "bold");
+        doc.setFontSize(11.5);
+        doc.text(splitReason[1], pageWidth / 2, 366, { align: "center" });
+      }
+
+      // Justificativo details
+      const [aYear, aMonth, aDay] = justificativoDate.split("-");
+      const dateFormatted = `${aDay} / ${aMonth} / ${aYear}`;
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      
+      doc.text(`Acudió a consulta médica el día de hoy: (   ${dateFormatted}   ), indicándole tratamiento`, 70, 405);
+      doc.text(`y reposo de (   ${justificativoDays}   ) días, por lo cual se justifica su inasistencia a sus labores`, 70, 430);
+      doc.text(`y/o actividades cotidianas habituales.`, 70, 455);
+
+      doc.text("Constancia que se expide a petición de la persona interesada.", 70, 495);
+
+      // Signature line
+      const sigY = 570;
+      doc.setDrawColor(120);
+      doc.setLineWidth(0.5);
+      doc.setLineDashPattern([2, 2], 0);
+      doc.line(pageWidth / 2 - 100, sigY, pageWidth / 2 + 100, sigY);
+      doc.setLineDashPattern([], 0); // Restore solid line
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(11.5);
+      doc.text(doctorName, pageWidth / 2, sigY + 16, { align: "center" });
+
+      doc.setFont("times", "normal");
+      doc.setFontSize(10.5);
+      doc.text(doctorSpecialty, pageWidth / 2, sigY + 29, { align: "center" });
+
+      if (doctorUni) {
+        doc.text(doctorUni, pageWidth / 2, sigY + 42, { align: "center" });
+      }
+
+      const regText = `MPPS ${doctorMpps || "______"}   CMC ${doctorCmc || "______"}`;
+      doc.text(regText, pageWidth / 2, sigY + 55, { align: "center" });
+
+      doc.save(`Justificativo_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
+      setOpenJustificativo(false);
+      toast.success("Justificativo médico generado");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Error al exportar");
+    }
+  };
+
   // Server-side pagination - no need for client-side filtering
   const totalPages = Math.ceil(totalCount / itemsPerPage);
   const filteredByDoctor = doctorFilter === "Todos" ? patients : patients.filter((p) => p.assigned_doctor_id === doctorFilter);
@@ -876,6 +1079,9 @@ export function PatientsPage() {
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleOpenAtencionDialog(viewing)} className="rounded-xl cursor-pointer text-xs flex items-center gap-1.5 px-3 py-2 hover:bg-muted">
                       <Printer className="h-3.5 w-3.5 text-mauve" /> Constancia de Atención
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleOpenJustificativoDialog(viewing)} className="rounded-xl cursor-pointer text-xs flex items-center gap-1.5 px-3 py-2 hover:bg-muted">
+                      <Printer className="h-3.5 w-3.5 text-mauve" /> Justificativo Médico
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -1322,6 +1528,91 @@ export function PatientsPage() {
           <div className="flex justify-end gap-2 border-t border-border/60 pt-3 mt-2">
             <Button variant="ghost" onClick={() => setOpenAtencion(false)} className="rounded-xl">Cancelar</Button>
             <Button onClick={() => viewing && handleExportAtencion(viewing)} className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30">
+              Generar PDF
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Constancia de Justificativo Médico */}
+      <Dialog open={openJustificativo} onOpenChange={setOpenJustificativo}>
+        <DialogContent className="rounded-3xl sm:max-w-md bg-card p-6 border border-muted/50 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-1.5"><Printer className="h-5 w-5 text-mauve" /> Justificativo Médico</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3 py-2 text-sm">
+            <div className="grid gap-1">
+              <Label htmlFor="jm-date">Fecha de consulta</Label>
+              <Input
+                id="jm-date"
+                type="date"
+                value={justificativoDate}
+                onChange={(e) => setJustificativoDate(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="jm-days">Días de reposo/justificación</Label>
+              <Input
+                id="jm-days"
+                type="number"
+                min="1"
+                max="90"
+                value={justificativoDays}
+                onChange={(e) => setJustificativoDays(e.target.value)}
+                className="rounded-xl"
+              />
+            </div>
+            <div className="grid gap-1">
+              <Label htmlFor="jm-reason">Diagnóstico / Síntomas (Justificación)</Label>
+              <Textarea
+                id="jm-reason"
+                value={justificativoReason}
+                onChange={(e) => setJustificativoReason(e.target.value)}
+                placeholder="Escribe el diagnóstico o los síntomas..."
+                className="rounded-xl min-h-[70px]"
+              />
+            </div>
+
+            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
+              <div className="grid gap-1">
+                <Label htmlFor="jm-doc-uni">Universidad / Título Adicional</Label>
+                <Input
+                  id="jm-doc-uni"
+                  placeholder="Ej. UC-CHET"
+                  value={doctorUni}
+                  onChange={(e) => setDoctorUni(e.target.value)}
+                  className="rounded-xl text-xs h-9"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="grid gap-1">
+                  <Label htmlFor="jm-doc-mpps">Registro MPPS</Label>
+                  <Input
+                    id="jm-doc-mpps"
+                    placeholder="Ej. 102.927"
+                    value={doctorMpps}
+                    onChange={(e) => setDoctorMpps(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+                <div className="grid gap-1">
+                  <Label htmlFor="jm-doc-cmc">Registro CMC</Label>
+                  <Input
+                    id="jm-doc-cmc"
+                    placeholder="Ej. 11.619"
+                    value={doctorCmc}
+                    onChange={(e) => setDoctorCmc(e.target.value)}
+                    className="rounded-xl text-xs h-9"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 border-t border-border/60 pt-3 mt-2">
+            <Button variant="ghost" onClick={() => setOpenJustificativo(false)} className="rounded-xl">Cancelar</Button>
+            <Button onClick={() => viewing && handleExportJustificativo(viewing)} className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30">
               Generar PDF
             </Button>
           </div>
