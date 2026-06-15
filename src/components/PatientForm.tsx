@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { useCreatePatient, useUpdatePatient, type Patient } from "@/lib/api/patients";
+import { useCreatePatient, useUpdatePatient, usePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -21,13 +21,15 @@ const STATUSES = ["nuevo", "activo", "en_tratamiento", "alta"];
 const statusLabel = (s: string) => ({ nuevo: "Nuevo", activo: "Activo", en_tratamiento: "En tratamiento", alta: "Alta" } as Record<string, string>)[s] ?? s;
 
 export function PatientForm({
-  open, onOpenChange, patient,
+  open, onOpenChange, patient: initialPatient,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   patient?: Patient | null;
 }) {
-  const isEdit = !!patient;
+  const isEdit = !!initialPatient;
+  const { data: fullPatient, isLoading: isPatientDetailLoading } = usePatient(initialPatient?.id);
+  const patient = isEdit ? fullPatient : null;
   const { user } = useAuthSession();
   const isAdmin = useIsAdmin();
   const { data: doctors = [] } = useDoctors();
@@ -110,7 +112,7 @@ export function PatientForm({
   };
 
   useEffect(() => {
-    if (open) {
+    if (open && (!isEdit || patient)) {
       setName(patient?.full_name ?? "");
       setEmail(patient?.email ?? "");
       setPhone(patient?.phone ?? "");
@@ -174,11 +176,11 @@ export function PatientForm({
       setObsNumConsultations(patient?.obstetric_data?.num_consultations !== undefined && patient?.obstetric_data?.num_consultations !== null ? String(patient.obstetric_data.num_consultations) : "");
       setObsVaccines(patient?.obstetric_data?.vaccines ?? "");
     }
-  }, [open, patient, defaultDoctor]);
+  }, [open, patient, defaultDoctor, isEdit]);
 
   const create = useCreatePatient();
   const update = useUpdatePatient();
-  const busy = create.isPending || update.isPending;
+  const busy = create.isPending || update.isPending || (isEdit && isPatientDetailLoading);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

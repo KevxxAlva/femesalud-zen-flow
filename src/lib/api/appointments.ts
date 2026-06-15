@@ -37,14 +37,37 @@ export type AppointmentInput = {
   payment_reference?: string | null;
 };
 
-export function useAppointments() {
+export interface AppointmentFilters {
+  from?: string;
+  to?: string;
+  status?: string;
+  limit?: number;
+}
+
+export function useAppointments(filters?: AppointmentFilters) {
+  const queryKey = filters ? ["appointments", filters] : ["appointments"];
   return useQuery({
-    queryKey: ["appointments"],
+    queryKey,
     queryFn: async (): Promise<AppointmentWithPatient[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("appointments")
         .select("*, patients(full_name), consultations(id)")
         .order("scheduled_at", { ascending: false });
+
+      if (filters?.from) {
+        query = query.gte("scheduled_at", filters.from);
+      }
+      if (filters?.to) {
+        query = query.lte("scheduled_at", filters.to + "T23:59:59.999Z");
+      }
+      if (filters?.status) {
+        query = query.eq("status", filters.status);
+      }
+      if (filters?.limit) {
+        query = query.limit(filters.limit);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []).map((a: any) => ({
         ...a,

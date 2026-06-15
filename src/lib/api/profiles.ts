@@ -87,3 +87,21 @@ export function useToggleRole() {
     },
   });
 }
+
+export function useUpdateProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, fullName, specialty }: { userId: string; fullName: string; specialty: string | null }) => {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName, specialty: specialty || null })
+        .eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: (_, variables) => {
+      qc.invalidateQueries({ queryKey: ["profile", variables.userId] });
+      qc.invalidateQueries({ queryKey: ["profiles_with_roles"] });
+      qc.invalidateQueries({ queryKey: ["doctors"] });
+    },
+  });
+}

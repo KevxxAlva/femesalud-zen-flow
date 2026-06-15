@@ -15,8 +15,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { PatientTimeline } from "@/components/PatientTimeline";
-import { usePatients, useDeletePatient, type Patient } from "@/lib/api/patients";
+import { usePatients, usePatient, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { useClinicalNotes } from "@/lib/api/clinical-notes";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
@@ -71,7 +72,9 @@ export function PatientsPage() {
   const [doctorFilter, setDoctorFilter] = useState("Todos");
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Patient | null>(null);
-  const [viewing, setViewing] = useState<Patient | null>(null);
+  const [viewingLightweight, setViewing] = useState<Patient | null>(null);
+  const { data: fullViewingPatient, isLoading: isViewingPatientLoading } = usePatient(viewingLightweight?.id);
+  const viewing = fullViewingPatient || viewingLightweight;
   const [toDelete, setToDelete] = useState<Patient | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
@@ -84,7 +87,8 @@ export function PatientsPage() {
 
   const { user: me } = useAuthSession();
   const { data: myProfile } = useMyProfile(me?.id);
-  const { data: patientNotes = [] } = useClinicalNotes(viewing?.id);
+  const { data: clinic } = useClinicInfo();
+  const { data: patientNotes = [] } = useClinicalNotes(viewingLightweight?.id);
 
   // Document export states
   const [openReposo, setOpenReposo] = useState(false);
@@ -151,10 +155,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -163,7 +174,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();
@@ -369,10 +380,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -381,7 +399,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();
@@ -541,10 +559,17 @@ export function PatientsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -553,7 +578,7 @@ export function PatientsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();

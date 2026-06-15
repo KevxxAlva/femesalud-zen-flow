@@ -79,14 +79,29 @@ export type ConsultationInput = Omit<Consultation, "id" | "created_at" | "update
   consumables?: Omit<ConsultationConsumable, "id" | "consultation_id">[];
 };
 
-export function useConsultations() {
+export interface ConsultationFilters {
+  from?: string;
+  to?: string;
+}
+
+export function useConsultations(filters?: ConsultationFilters) {
+  const queryKey = filters ? ["consultations", filters] : ["consultations"];
   return useQuery({
-    queryKey: ["consultations"],
+    queryKey,
     queryFn: async (): Promise<Consultation[]> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("consultations")
         .select("*, patients(full_name)")
         .order("created_at", { ascending: false });
+
+      if (filters?.from) {
+        query = query.gte("created_at", filters.from);
+      }
+      if (filters?.to) {
+        query = query.lte("created_at", filters.to + "T23:59:59.999Z");
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return (data ?? []).map((c: any) => ({
         ...c,

@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import { usePatients, type Patient } from "@/lib/api/patients";
+import { usePatients, usePatient, type Patient } from "@/lib/api/patients";
 import { usePatientConsultations, type Consultation } from "@/lib/api/consultations";
 import { useDoctors } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { Search, FileText, HeartPulse, User, Calendar, Plus, Printer, Activity, Scissors, Stethoscope, ChevronDown, ChevronUp, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -16,8 +18,10 @@ import { generateRecipePDF } from "@/lib/utils/recipePdf";
 export function HistoriasPage() {
   const { data: patients = [], isLoading: loadingPatients } = usePatients();
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
+  const { data: fullPatient } = usePatient(selectedPatientId);
   const { data: consultations = [], isLoading: loadingConsultations } = usePatientConsultations(selectedPatientId || undefined);
   const { data: doctors = [] } = useDoctors();
+  const { data: clinic } = useClinicInfo();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedConsultations, setExpandedConsultations] = useState<Record<string, boolean>>({});
@@ -48,8 +52,8 @@ export function HistoriasPage() {
   }, [filteredPatients, sidebarPage]);
 
   const selectedPatient = useMemo(() => 
-    patients.find(p => p.id === selectedPatientId) || null,
-    [patients, selectedPatientId]
+    fullPatient || patients.find(p => p.id === selectedPatientId) || null,
+    [fullPatient, patients, selectedPatientId]
   );
 
   // Get consultations for the selected patient
@@ -94,10 +98,17 @@ export function HistoriasPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Draw top header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -106,7 +117,7 @@ export function HistoriasPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       const today = new Date();
       doc.setFont("times", "normal");

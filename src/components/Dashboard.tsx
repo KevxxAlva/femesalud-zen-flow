@@ -45,7 +45,12 @@ export function Dashboard() {
   const isAdmin = useIsAdmin();
   const { data: profile } = useMyProfile(user?.id);
   const { data: patients = [] } = usePatients();
-  const { data: appointments = [] } = useAppointments();
+  const startOfLastMonthStr = useMemo(() => {
+    const now = new Date();
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return startOfLastMonth.toISOString().slice(0, 10);
+  }, []);
+  const { data: appointments = [] } = useAppointments({ from: startOfLastMonthStr });
   const { data: doctors = [] } = useDoctors();
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);

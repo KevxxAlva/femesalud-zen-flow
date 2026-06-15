@@ -8,6 +8,7 @@ import autoTable from "jspdf-autotable";
 import { usePatients } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { useConsultations } from "@/lib/api/consultations";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -42,13 +43,18 @@ const MONTHS_ES = [
 ];
 
 export function ReportsPage() {
-  const { data: patients = [] } = usePatients();
-  const { data: appointments = [] } = useAppointments();
-  const { data: doctors = [] } = useDoctors();
-  const { data: consultations = [] } = useConsultations();
-
   const [from, setFrom] = useState(daysAgoISO(90));
   const [to, setTo] = useState(todayISO());
+
+  const { data: patients = [] } = usePatients();
+  const { data: appointments = [] } = useAppointments({ from, to });
+  const { data: doctors = [] } = useDoctors();
+  const { data: clinic } = useClinicInfo();
+  const { data: consultations = [] } = useConsultations({ from, to });
+
+  // Query upcoming appointments separately to keep them lightweight
+  const today = todayISO();
+  const { data: upcomingAppointments = [] } = useAppointments({ from: today, status: "programada", limit: 15 });
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
 
@@ -69,11 +75,9 @@ export function ReportsPage() {
   }, [filtered, patients, from, to]);
 
   const upcoming = useMemo(() => {
-    const today = todayISO();
-    return appointments
-      .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
+    return upcomingAppointments
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-  }, [appointments]);
+  }, [upcomingAppointments]);
 
   // Financial statistics by Month/Year
   const monthlyData = useMemo(() => {
@@ -126,10 +130,17 @@ export function ReportsPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Top Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -138,7 +149,7 @@ export function ReportsPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       const today = new Date();

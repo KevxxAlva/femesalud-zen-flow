@@ -1,5 +1,6 @@
 import jsPDF from "jspdf";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface RecipePatient {
   full_name: string;
@@ -66,6 +67,26 @@ export const generateRecipePDF = async (
 
     const logoBase64 = await loadLogoBase64("/logo.png");
 
+    // Query clinic info
+    let clinicAddress1 = "Calle las Flores entre González Padrón y Shettino, Número 16.";
+    let clinicAddress2 = "Valle de la Pascua, Estado Guárico.";
+    let clinicPhone = "0412/8299890 0424/4609387";
+    let clinicName = "Femesalud";
+    let clinicRif = "";
+
+    try {
+      const { data } = await supabase.from("clinic_info").select("*").eq("id", 1).maybeSingle();
+      if (data) {
+        clinicAddress1 = data.address_line1;
+        clinicAddress2 = data.address_line2;
+        clinicPhone = data.phone;
+        clinicName = data.name;
+        clinicRif = data.rif;
+      }
+    } catch (e) {
+      console.error("Error fetching clinic info for PDF:", e);
+    }
+
     const dateObj = new Date(consultation.created_at);
     const topDay = String(dateObj.getDate()).padStart(2, "0");
     const topMonth = String(dateObj.getMonth() + 1).padStart(2, "0");
@@ -75,7 +96,7 @@ export const generateRecipePDF = async (
     let docUni = "UC-CHET";
     let docMpps = "102.927";
     let docCmc = "11.619";
-    let finalSpecialty = doctorSpecialty || "Ginecólogo Obstetra";
+    let finalSpecialty = doctorSpecialty || (doctorName.includes("Carli") || doctorName.includes("Solé") ? "Ginecóloga y Obstetra" : "Ginecólogo y Obstetra");
 
     // If it's not the default primary doctor, leave placeholders/blanks or adapt
     if (doctorName && !doctorName.includes("Carli") && !doctorName.includes("Solé")) {
@@ -93,9 +114,10 @@ export const generateRecipePDF = async (
       doc.setTextColor(60, 60, 60);
 
       // Top Header Info
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       // Consultorio Header
       doc.setFont("times", "normal");
@@ -104,7 +126,7 @@ export const generateRecipePDF = async (
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
       doc.setFont("times", "normal");

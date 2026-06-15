@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useAppointments, useUpdateAppointment, type AppointmentWithPatient } from "@/lib/api/appointments";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -48,6 +49,7 @@ const statusBg: Record<string, string> = {
 export function FacturacionPage() {
   const { data: appointments = [], isLoading } = useAppointments();
   const { data: doctors = [] } = useDoctors();
+  const { data: clinic } = useClinicInfo();
   const updateAppointment = useUpdateAppointment();
 
   const { user: me } = useAuthSession();
@@ -215,10 +217,17 @@ export function FacturacionPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 45, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 57, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 69, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
 
       doc.setFont("times", "normal");
       doc.setFontSize(12.5);
@@ -226,7 +235,7 @@ export function FacturacionPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(17.5);
-      doc.text("Femesalud", pageWidth / 2, 122, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
 
       // Invoice metadata
       const today = new Date(app.scheduled_at);
@@ -339,10 +348,17 @@ export function FacturacionPage() {
       doc.setFontSize(8.5);
       doc.setTextColor(60, 60, 60);
 
+      const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
+      const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
+      const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
+      const clinicName = clinic?.name || "Femesalud";
+      const clinicRif = clinic?.rif || "";
+
       // Header
-      doc.text("Calle las Flores entre González Padrón y Shettino, Número 16.", pageWidth / 2, 40, { align: "center" });
-      doc.text("Valle de la Pascua, Estado Guárico.", pageWidth / 2, 52, { align: "center" });
-      doc.text("0412/8299890 0424/4609387", pageWidth / 2, 64, { align: "center" });
+      doc.text(clinicAddress1, pageWidth / 2, 40, { align: "center" });
+      doc.text(clinicAddress2, pageWidth / 2, 52, { align: "center" });
+      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+      doc.text(headerLine3, pageWidth / 2, 64, { align: "center" });
 
       doc.setFont("times", "normal");
       doc.setFontSize(12);
@@ -350,7 +366,7 @@ export function FacturacionPage() {
       doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 95, { align: "center" });
       doc.setFont("times", "italic");
       doc.setFontSize(16);
-      doc.text("Femesalud", pageWidth / 2, 110, { align: "center" });
+      doc.text(clinicName, pageWidth / 2, 110, { align: "center" });
 
       // Title
       doc.setFont("times", "bold");

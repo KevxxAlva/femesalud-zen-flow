@@ -74,11 +74,28 @@ export function usePatients() {
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
         .from("patients")
-        .select("*")
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as any) as Patient[];
     },
+  });
+}
+
+export function usePatient(id: string | undefined | null) {
+  return useQuery({
+    queryKey: ["patient", id],
+    queryFn: async (): Promise<Patient> => {
+      if (!id) throw new Error("No patient ID provided");
+      const { data, error } = await supabase
+        .from("patients")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+      return (data as any) as Patient;
+    },
+    enabled: !!id,
   });
 }
 

@@ -85,11 +85,6 @@ const WEEKDAYS_ES = [
 ];
 
 export function AgendaPage() {
-  const { data: appointments = [], isLoading } = useAppointments();
-  const { data: doctors = [] } = useDoctors();
-  const update = useUpdateAppointment();
-  const del = useDeleteAppointment();
-
   // Navigation states & modes
   const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
   const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month");
@@ -98,6 +93,31 @@ export function AgendaPage() {
 
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("todas");
   const [scope, setScope] = useState<"hoy" | "semana" | "todas">("todas");
+
+  // Compute query range dynamically based on active navigation and scope
+  const queryRange = useMemo(() => {
+    if (viewMode === "list" && scope === "todas") {
+      const fromDate = new Date();
+      fromDate.setMonth(fromDate.getMonth() - 6);
+      const toDate = new Date();
+      toDate.setMonth(toDate.getMonth() + 12);
+      return {
+        from: fromDate.toISOString().slice(0, 10),
+        to: toDate.toISOString().slice(0, 10),
+      };
+    }
+    const fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    const toDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
+    return {
+      from: fromDate.toISOString().slice(0, 10),
+      to: toDate.toISOString().slice(0, 10),
+    };
+  }, [currentDate.getFullYear(), currentDate.getMonth(), viewMode, scope]);
+
+  const { data: appointments = [], isLoading } = useAppointments(queryRange);
+  const { data: doctors = [] } = useDoctors();
+  const update = useUpdateAppointment();
+  const del = useDeleteAppointment();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<AppointmentWithPatient | null>(null);
   const [toDelete, setToDelete] = useState<AppointmentWithPatient | null>(null);
