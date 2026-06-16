@@ -69,11 +69,32 @@ export function useAppointments(filters?: AppointmentFilters) {
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map((a: any) => ({
-        ...a,
-        patient_name: a.patients?.full_name ?? "—",
-        has_consultation: !!a.consultations && a.consultations.length > 0,
-      }));
+
+      const now = new Date();
+      return (data ?? []).map((a: any) => {
+        const scheduledTime = new Date(a.scheduled_at);
+        const diffMinutes = (now.getTime() - scheduledTime.getTime()) / (1000 * 60);
+
+        let currentStatus = a.status;
+        if (a.status === "programada" && diffMinutes > 15) {
+          currentStatus = "cancelada";
+          // Background update to keep DB in sync
+          supabase
+            .from("appointments")
+            .update({ status: "cancelada" })
+            .eq("id", a.id)
+            .then(({ error }) => {
+              if (error) console.error("Error auto-cancelling overdue appointment:", error);
+            });
+        }
+
+        return {
+          ...a,
+          status: currentStatus,
+          patient_name: a.patients?.full_name ?? "—",
+          has_consultation: !!a.consultations && a.consultations.length > 0,
+        };
+      });
     },
   });
 }
