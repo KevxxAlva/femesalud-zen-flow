@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2, FileDown, Printer, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Users, Pencil, Trash2, X, Mail, Phone, Stethoscope, Loader2, FileDown, Printer, FileText, ChevronLeft, ChevronRight, FileSpreadsheet } from "lucide-react";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PatientForm } from "@/components/PatientForm";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { PatientTimeline } from "@/components/PatientTimeline";
+import { PatientAttachmentsGallery } from "@/components/PatientAttachmentsGallery";
 import { usePaginatedPatients, usePatient, useDeletePatient, type Patient } from "@/lib/api/patients";
 import { useDoctors, useMyProfile } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
@@ -30,6 +31,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
+import * as XLSX from "xlsx";
 
 const loadLogoBase64 = (url: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -927,6 +930,65 @@ export function PatientsPage() {
   const filteredByDoctor = doctorFilter === "Todos" ? patients : patients.filter((p) => p.assigned_doctor_id === doctorFilter);
   const paginatedPatients = filteredByDoctor;
 
+  const [isExportingExcel, setIsExportingExcel] = useState(false);
+  const handleExportExcel = async () => {
+    try {
+      setIsExportingExcel(true);
+      let query = supabase
+        .from("patients")
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, document_id, historia_number")
+        .order("created_at", { ascending: false });
+
+      if (debouncedQ) {
+        query = query.or(
+          `full_name.ilike.%${debouncedQ}%,email.ilike.%${debouncedQ}%,document_id.ilike.%${debouncedQ}%`
+        );
+      }
+      if (status !== "Todos") {
+        query = query.eq("status", status);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast.warning("No hay pacientes para exportar con los filtros seleccionados");
+        return;
+      }
+
+      const excelData = data.map((p) => ({
+        "Nº Historia": p.historia_number || "—",
+        "Nombre Completo": p.full_name,
+        "Cédula / ID": p.document_id || "—",
+        "Email": p.email || "—",
+        "Teléfono": p.phone || "—",
+        "Estado": statusLabel(p.status),
+        "Médico Asignado": doctorMap.get(p.assigned_doctor_id || "") || "Sin asignar",
+        "Fecha de Registro": new Date(p.created_at).toLocaleDateString("es-ES"),
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Pacientes");
+
+      const maxLens = Object.keys(excelData[0] || {}).map((key) => {
+        return Math.max(
+          key.length,
+          ...excelData.map((row) => String(row[key as keyof typeof row] || "").length)
+        );
+      });
+      ws["!cols"] = maxLens.map((len) => ({ wch: len + 3 }));
+
+      XLSX.writeFile(wb, `femesalud-pacientes-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(`${data.length} pacientes exportados a Excel`);
+    } catch (err) {
+      toast.error("Error al exportar a Excel");
+      console.error(err);
+    } finally {
+      setIsExportingExcel(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!toDelete) return;
     try { await del.mutateAsync(toDelete.id); toast.success("Paciente eliminado"); }
@@ -942,9 +1004,24 @@ export function PatientsPage() {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Pacientes</h1>
           <p className="text-sm text-muted-foreground">{totalCount} pacientes</p>
         </div>
-        <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95">
-          <Plus className="mr-1 h-4 w-4" /> Nuevo paciente
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportExcel}
+            disabled={isExportingExcel}
+            variant="outline"
+            className="rounded-2xl border-border/80 text-foreground hover:bg-muted cursor-pointer"
+          >
+            {isExportingExcel ? (
+              <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="mr-1 h-4 w-4 text-emerald-600" />
+            )}
+            Exportar Excel
+          </Button>
+          <Button onClick={() => { setEditing(null); setFormOpen(true); }} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95 cursor-pointer">
+            <Plus className="mr-1 h-4 w-4" /> Nuevo paciente
+          </Button>
+        </div>
       </header>
 
       <div className="rounded-3xl glass-card p-4 shadow-sm">
@@ -1104,13 +1181,14 @@ export function PatientsPage() {
                 </div>
               </div>
               <Tabs defaultValue="general" className="mt-4 flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-6 bg-muted/60 p-1 rounded-2xl mb-4">
+                <TabsList className="grid w-full grid-cols-7 bg-muted/60 p-1 rounded-2xl mb-4">
                   <TabsTrigger value="general" className="rounded-xl font-medium text-xs">Identificación</TabsTrigger>
                   <TabsTrigger value="antecedentes" className="rounded-xl font-medium text-xs">Antecedentes</TabsTrigger>
                   <TabsTrigger value="ginecologia" className="rounded-xl font-medium text-xs">Ginecológico</TabsTrigger>
                   <TabsTrigger value="obstetricia" className="rounded-xl font-medium text-xs">Obstétrico</TabsTrigger>
                   <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Timeline</TabsTrigger>
                   <TabsTrigger value="notas" className="rounded-xl font-medium text-xs">Notas Clínicas</TabsTrigger>
+                  <TabsTrigger value="adjuntos" className="rounded-xl font-medium text-xs">Galería/Adjuntos</TabsTrigger>
                 </TabsList>
 
                 <div className="flex-1 overflow-y-auto pr-1">
@@ -1358,6 +1436,11 @@ export function PatientsPage() {
                   {/* TAB 6: TIMELINE */}
                   <TabsContent value="timeline" className="space-y-4 outline-none">
                     <PatientTimeline patientId={viewing.id} />
+                  </TabsContent>
+
+                  {/* TAB 7: GALERIA / ADJUNTOS */}
+                  <TabsContent value="adjuntos" className="space-y-4 outline-none">
+                    <PatientAttachmentsGallery patientId={viewing.id} />
                   </TabsContent>
                 </div>
               </Tabs>

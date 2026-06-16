@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Search, Receipt, Pencil, CreditCard, ChevronLeft, ChevronRight, FileDown, Loader2, X, Plus, Filter } from "lucide-react";
+import { Search, Receipt, Pencil, CreditCard, ChevronLeft, ChevronRight, FileDown, Loader2, X, Plus, Filter, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
 
 const MONTHS_ES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -314,6 +315,44 @@ export function FacturacionPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    try {
+      if (filtered.length === 0) {
+        toast.warning("No hay datos de facturación para exportar");
+        return;
+      }
+
+      const excelData = filtered.map((a) => ({
+        "Fecha / Hora": new Date(a.scheduled_at).toLocaleDateString("es-ES") + " " + new Date(a.scheduled_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+        "Paciente": a.patient_name || "—",
+        "Médico": doctorMap.get(a.doctor_id) || "Sin asignar",
+        "Motivo": a.reason || "—",
+        "Monto ($)": a.price || 0,
+        "Estado de Cita": a.status === "completada" ? "Completada" : a.status === "programada" ? "Programada" : "Cancelada",
+        "Método de Pago": a.payment_method || "No pagado",
+        "Referencia de Pago": a.payment_reference || "—",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(excelData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Facturación");
+
+      const maxLens = Object.keys(excelData[0] || {}).map((key) => {
+        return Math.max(
+          key.length,
+          ...excelData.map((row) => String(row[key as keyof typeof row] || "").length)
+        );
+      });
+      ws["!cols"] = maxLens.map((len) => ({ wch: len + 3 }));
+
+      XLSX.writeFile(wb, `femesalud-facturacion-${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast.success(`${filtered.length} registros de facturación exportados`);
+    } catch (err) {
+      toast.error("Error al exportar a Excel");
+      console.error(err);
+    }
+  };
+
   const handleExportMonthlyReport = async () => {
     try {
       const selectedMonthObj = monthOptions.find((m) => m.key === monthFilter);
@@ -464,12 +503,21 @@ export function FacturacionPage() {
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Facturación y Recibos</h1>
           <p className="text-sm text-muted-foreground">Control de caja, cobros de consultas y estados de pago.</p>
         </div>
-        <Button
-          onClick={handleExportMonthlyReport}
-          className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95 transition-all duration-300 hover:scale-[1.02] flex items-center gap-1.5 h-10 px-4 text-xs font-semibold cursor-pointer"
-        >
-          <FileDown className="h-4 w-4" /> Exportar Reporte
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            onClick={handleExportExcel}
+            variant="outline"
+            className="rounded-2xl border-border/80 text-foreground hover:bg-muted cursor-pointer flex items-center gap-1.5 h-10 px-4 text-xs font-semibold"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Exportar Excel
+          </Button>
+          <Button
+            onClick={handleExportMonthlyReport}
+            className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95 transition-all duration-300 hover:scale-[1.02] flex items-center gap-1.5 h-10 px-4 text-xs font-semibold cursor-pointer"
+          >
+            <FileDown className="h-4 w-4" /> Exportar Reporte
+          </Button>
+        </div>
       </header>
 
       {/* Financial KPIs */}

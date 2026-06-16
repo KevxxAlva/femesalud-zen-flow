@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Activity, CalendarClock, TrendingUp, Users, Sparkles, ArrowUpRight, ArrowDownRight,
-  Clock, Plus, Search, Bell, X,
+  Clock, Plus, Search, Bell, X, MessageCircle
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { cn } from "@/lib/utils";
@@ -10,18 +10,44 @@ import { useAppointments } from "@/lib/api/appointments";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
-  const w = 120, h = 36;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => `${(i / Math.max(data.length - 1, 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+function Sparkline({ data, tone }: { data: number[]; tone?: string }) {
+  const chartData = data.map((val, idx) => ({ id: idx, value: val }));
+  let strokeColor = "#8b5caf";
+  let fillColor = "#8b5caf";
+  if (tone?.includes("sage")) {
+    strokeColor = "#87988a";
+    fillColor = "#87988a";
+  } else if (tone?.includes("blush")) {
+    strokeColor = "#e8c5c8";
+    fillColor = "#e8c5c8";
+  }
+
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={cn("h-9 w-full", className)} preserveAspectRatio="none">
-      <polygon points={`0,${h} ${pts} ${w},${h}`} fill="currentColor" opacity="0.15" />
-      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <div className="h-9 w-24">
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 2, right: 2, left: 2, bottom: 2 }}>
+          <defs>
+            <linearGradient id={`grad-${tone}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={fillColor} stopOpacity={0.4}/>
+              <stop offset="95%" stopColor={fillColor} stopOpacity={0.0}/>
+            </linearGradient>
+          </defs>
+          <Area
+            type="monotone"
+            dataKey="value"
+            stroke={strokeColor}
+            strokeWidth={1.5}
+            fillOpacity={1}
+            fill={`url(#grad-${tone})`}
+            dot={false}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
@@ -136,8 +162,19 @@ export function Dashboard() {
       const iso = d.toISOString().slice(0, 10);
       return appointments.filter((a) => a.scheduled_at.slice(0, 10) === iso).length;
     });
-    const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patientsCount - (9 - i)));
-    const incomeSpark = consultSpark.map((v) => 10 + v * 4);
+    const patientSpark = Array.from({ length: 10 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (9 - i));
+      const iso = d.toISOString().slice(0, 10);
+      return patientsGrowth.filter((p) => p.created_at.slice(0, 10) === iso).length;
+    });
+    const incomeSpark = Array.from({ length: 10 }).map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (9 - i));
+      const iso = d.toISOString().slice(0, 10);
+      const completedOnDay = appointments.filter((a) => a.status === "completada" && a.scheduled_at.slice(0, 10) === iso);
+      return completedOnDay.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+    });
     
     return { 
       todays, 
@@ -206,6 +243,41 @@ export function Dashboard() {
     if (!lastReadTime) return notifications.length;
     return notifications.filter((n) => n.rawDate > lastReadTime).length;
   }, [notifications, lastReadTime]);
+
+  const handleSendWhatsAppReminder = async (appointment: any) => {
+    try {
+      const { data: patient, error } = await supabase
+        .from("patients")
+        .select("phone, full_name")
+        .eq("id", appointment.patient_id)
+        .single();
+
+      if (error || !patient || !patient.phone) {
+        toast.error("El paciente no tiene un número de teléfono registrado.");
+        return;
+      }
+
+      const cleanPhone = patient.phone.replace(/\D/g, "");
+      if (!cleanPhone) {
+        toast.error("El número de teléfono registrado no es válido.");
+        return;
+      }
+
+      const dt = new Date(appointment.scheduled_at);
+      const dateStr = dt.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const timeStr = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+      const doctorName = doctorMap.get(appointment.doctor_id) || "el especialista";
+      const text = `Hola *${patient.full_name}*, le escribimos de *FemeSalud* para recordarle su cita médica el día *${dateStr}* a las *${timeStr}* con *${doctorName}*. Por favor, confirme su asistencia respondiendo a este mensaje. ¡Que tenga un excelente día!`;
+
+      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      toast.error("Error al generar el recordatorio");
+      console.error(e);
+    }
+  };
 
   const handleOpenChange = (open: boolean) => {
     if (open && notifications.length > 0) {
@@ -401,7 +473,7 @@ export function Dashboard() {
                   <p className="text-xs text-muted-foreground">{k.label}</p>
                   <p className="font-display text-2xl font-semibold tracking-tight">{k.value}</p>
                 </div>
-                <div className={cn("w-24", k.tone)}><Sparkline data={k.spark} /></div>
+                <Sparkline data={k.spark} tone={k.tone} />
               </div>
             </div>
           );
@@ -440,9 +512,21 @@ export function Dashboard() {
                         <p className="text-xs text-muted-foreground">{a.reason || "—"} · {doctorMap.get(a.doctor_id) || "Doctor"}</p>
                       </div>
                     </div>
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>
-                      {a.status}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {a.status === "programada" && (
+                        <button
+                          onClick={() => handleSendWhatsAppReminder(a)}
+                          className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-emerald-500/15 hover:text-emerald-600 cursor-pointer"
+                          title="Enviar recordatorio de WhatsApp"
+                          aria-label="WhatsApp"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                        </button>
+                      )}
+                      <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>
+                        {a.status}
+                      </span>
+                    </div>
                   </div>
                 </div>
               );

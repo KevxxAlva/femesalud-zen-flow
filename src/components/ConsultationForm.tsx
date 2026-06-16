@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultation, type VisitType } from "@/lib/api/consultations";
+import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultation, type VisitType, usePrescriptionTemplates, useCreatePrescriptionTemplate, useDeletePrescriptionTemplate } from "@/lib/api/consultations";
 import { usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { supabase } from "@/integrations/supabase/client";
@@ -114,6 +114,46 @@ export function ConsultationForm({
   // Consumables States
   const [commonQuantities, setCommonQuantities] = useState<Record<string, string>>({});
   const [customConsumables, setCustomConsumables] = useState<{ item_name: string; quantity: string; unit: string }[]>([]);
+
+  // Prescription Templates hooks and states
+  const { data: templates = [] } = usePrescriptionTemplates();
+  const createTemplate = useCreatePrescriptionTemplate();
+  const deleteTemplate = useDeletePrescriptionTemplate();
+  const [newTemplateTitle, setNewTemplateTitle] = useState("");
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+
+  const handleSaveAsTemplate = async () => {
+    if (!newTemplateTitle.trim()) {
+      toast.error("El nombre de la plantilla es obligatorio");
+      return;
+    }
+    if (!indications.trim()) {
+      toast.error("Las indicaciones de la receta están vacías");
+      return;
+    }
+    try {
+      await createTemplate.mutateAsync({
+        title: newTemplateTitle.trim(),
+        indications: indications.trim(),
+      });
+      toast.success("Plantilla guardada con éxito");
+      setNewTemplateTitle("");
+      setIsSavingTemplate(false);
+    } catch (err) {
+      toast.error("Error al guardar la plantilla");
+    }
+  };
+
+  const handleDeleteTemplate = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    try {
+      await deleteTemplate.mutateAsync(id);
+      toast.success("Plantilla eliminada");
+    } catch (err) {
+      toast.error("Error al eliminar la plantilla");
+    }
+  };
 
   // IMC Calculation
   const bmi = useMemo(() => {
@@ -800,7 +840,87 @@ export function ConsultationForm({
                     </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="c-indications">Indicaciones / Receta</Label>
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <Label htmlFor="c-indications">Indicaciones / Receta</Label>
+                        <div className="flex items-center gap-2">
+                          {/* Template Selector */}
+                          {templates.length > 0 && (
+                            <Select
+                              value=""
+                              onValueChange={(val) => {
+                                const selected = templates.find((t) => t.id === val);
+                                if (selected) {
+                                  setIndications((prev) => (prev ? prev + "\n" + selected.indications : selected.indications));
+                                  toast.success("Plantilla aplicada");
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="h-7 rounded-xl text-xs w-[180px] bg-muted/50 border-none flex items-center justify-between">
+                                <SelectValue placeholder="Usar plantilla rápida..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {templates.map((t) => (
+                                  <SelectItem key={t.id} value={t.id} className="text-xs flex items-center justify-between">
+                                    <span className="truncate max-w-[130px]">{t.title}</span>
+                                    <button
+                                      onClick={(e) => handleDeleteTemplate(e, t.id)}
+                                      className="ml-2 h-4 w-4 rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive inline-flex items-center justify-center cursor-pointer"
+                                    >
+                                      <Trash2 className="h-2.5 w-2.5" />
+                                    </button>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+
+                          {/* Save Template Button */}
+                          {indications.trim() && !isSavingTemplate && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              onClick={() => setIsSavingTemplate(true)}
+                              className="h-7 text-[10px] font-bold rounded-xl text-mauve hover:bg-mauve/10 cursor-pointer"
+                            >
+                              + Guardar como plantilla
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Inline Input to Save Template */}
+                      {isSavingTemplate && (
+                        <div className="flex items-center gap-2 bg-muted/40 p-2 rounded-xl animate-fade-in">
+                          <Input
+                            placeholder="Nombre de la plantilla (ej. Suplementación prenatal)..."
+                            value={newTemplateTitle}
+                            onChange={(e) => setNewTemplateTitle(e.target.value)}
+                            className="h-8 text-xs rounded-lg flex-1"
+                          />
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={handleSaveAsTemplate}
+                            disabled={createTemplate.isPending}
+                            className="h-8 text-xs bg-mauve text-primary-foreground rounded-lg cursor-pointer"
+                          >
+                            {createTemplate.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : "Guardar"}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              setIsSavingTemplate(false);
+                              setNewTemplateTitle("");
+                            }}
+                            className="h-8 text-xs rounded-lg cursor-pointer"
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                      )}
+
                       <Textarea
                         id="c-indications"
                         value={indications}

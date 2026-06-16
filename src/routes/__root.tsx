@@ -122,13 +122,22 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+
+function RealtimeSyncWrapper({ children }: { children: ReactNode }) {
+  useRealtimeSync();
+  return <>{children}</>;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster richColors position="top-right" />
+      <RealtimeSyncWrapper>
+        <Outlet />
+        <Toaster richColors position="top-right" />
+      </RealtimeSyncWrapper>
     </QueryClientProvider>
   );
 }

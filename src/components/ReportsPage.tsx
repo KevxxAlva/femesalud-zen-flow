@@ -12,6 +12,7 @@ import { useClinicInfo } from "@/lib/api/clinic";
 import { useConsultations } from "@/lib/api/consultations";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 
 const loadLogoBase64 = (url: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -96,6 +97,18 @@ export function ReportsPage() {
 
   const maxAmount = useMemo(() => {
     return Math.max(...monthlyData.map(d => d.amount), 1);
+  }, [monthlyData]);
+
+  const formattedMonthlyData = useMemo(() => {
+    return monthlyData.map((d) => {
+      const [yr, mn] = d.month.split("-");
+      const label = `${MONTHS_ES[parseInt(mn) - 1].slice(0, 3)} '${yr.slice(2)}`;
+      return {
+        ...d,
+        name: label,
+        monto: d.amount,
+      };
+    });
   }, [monthlyData]);
 
   // Marketing acquisition statistics
@@ -394,26 +407,21 @@ export function ReportsPage() {
             {monthlyData.length === 0 ? (
               <p className="text-xs text-muted-foreground text-center py-20">No hay transacciones registradas.</p>
             ) : (
-              <div className="flex h-56 items-end gap-3 pt-6 border-b border-border mt-4">
-                {monthlyData.map((d) => {
-                  const pct = (d.amount / maxAmount) * 100;
-                  const [yr, mn] = d.month.split("-");
-                  const label = `${MONTHS_ES[parseInt(mn) - 1].slice(0,3)} '${yr.slice(2)}`;
-                  return (
-                    <div key={d.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                      <div className="text-[9px] font-bold text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                        ${d.amount.toLocaleString("es-ES")}
-                      </div>
-                      <div
-                        style={{ height: `${pct}%` }}
-                        className="w-full bg-gradient-to-t from-mauve to-mauve-soft rounded-t-lg transition-all duration-500 hover:opacity-85 shadow-sm shadow-mauve/15"
-                      />
-                      <div className="text-[10px] text-muted-foreground font-semibold truncate w-full text-center">
-                        {label}
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="h-60 w-full mt-6">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={formattedMonthlyData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#888888' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fill: '#888888' }} axisLine={false} tickLine={false} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip formatter={(value) => [`$${value.toLocaleString("es-ES")}`, "Ingresos"]} contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0" }} />
+                    <Bar dataKey="monto" fill="url(#colorIncome)" radius={[4, 4, 0, 0]} />
+                    <defs>
+                      <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8b5caf" stopOpacity="0.85"/>
+                        <stop offset="95%" stopColor="#8b5caf" stopOpacity="0.35"/>
+                      </linearGradient>
+                    </defs>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
             )}
           </div>
@@ -456,33 +464,59 @@ export function ReportsPage() {
               </h3>
             </div>
 
-            <div className="space-y-4 mt-6">
-              {marketingData.map((d, idx) => {
-                const colors = [
-                  "bg-mauve",
-                  "bg-blush-foreground",
-                  "bg-sage-foreground",
-                  "bg-sky-600",
-                  "bg-amber-600",
-                ];
-                const colorClass = colors[idx % colors.length];
-                return (
-                  <div key={d.channel} className="space-y-1">
-                    <div className="flex justify-between text-xs font-semibold">
-                      <span>{d.channel}</span>
-                      <span className="text-muted-foreground">{d.count} consultas ({d.percentage}%)</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="space-y-4">
+                {marketingData.map((d, idx) => {
+                  const colors = [
+                    "bg-mauve",
+                    "bg-blush-foreground",
+                    "bg-sage-foreground",
+                    "bg-sky-600",
+                    "bg-amber-600",
+                  ];
+                  const colorClass = colors[idx % colors.length];
+                  return (
+                    <div key={d.channel} className="space-y-1">
+                      <div className="flex justify-between text-xs font-semibold">
+                        <span>{d.channel}</span>
+                        <span className="text-muted-foreground">{d.count} consultas ({d.percentage}%)</span>
+                      </div>
+                      <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
+                        <div
+                          style={{ width: `${d.percentage}%` }}
+                          className={cn("h-full rounded-full transition-all duration-500", colorClass)}
+                        />
+                      </div>
                     </div>
-                    <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
-                      <div
-                        style={{ width: `${d.percentage}%` }}
-                        className={cn("h-full rounded-full transition-all duration-500", colorClass)}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-              {marketingData.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-12">No hay datos de canales de marketing disponibles.</p>
+                  );
+                })}
+                {marketingData.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-12">No hay datos de canales de marketing disponibles.</p>
+                )}
+              </div>
+
+              {marketingData.length > 0 && (
+                <div className="h-48 flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={marketingData.map((d) => ({ name: d.channel, value: d.count }))}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={45}
+                        outerRadius={70}
+                        paddingAngle={4}
+                        dataKey="value"
+                      >
+                        {marketingData.map((entry, index) => {
+                          const colors = ["#8b5caf", "#e8c5c8", "#87988a", "#0284c7", "#d97706"];
+                          return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                        })}
+                      </Pie>
+                      <Tooltip formatter={(value) => [`${value} consultas`]} contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0" }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </div>
           </div>

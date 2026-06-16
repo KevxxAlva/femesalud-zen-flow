@@ -193,7 +193,7 @@ export function PatientForm({
     try {
       const combinedDocId = idNumber.trim() ? `${idPrefix === "none" ? "" : idPrefix}${idNumber.trim()}` : null;
       
-      const payload = {
+      const payload: any = {
         full_name: full_name.trim(),
         email: email || null,
         phone: phone || null,
@@ -205,7 +205,6 @@ export function PatientForm({
         document_id: combinedDocId,
         
         // Extended clinical columns
-        historia_number: historia_number || null,
         first_visit_date: first_visit_date || null,
         marital_status: marital_status || null,
         birthplace: birthplace || null,
@@ -255,6 +254,12 @@ export function PatientForm({
           vaccines: obsVaccines || null,
         },
       };
+
+      if (historia_number.trim()) {
+        payload.historia_number = historia_number.trim();
+      } else if (isEdit) {
+        payload.historia_number = null;
+      }
 
       if (isEdit && patient) {
         await update.mutateAsync({ id: patient.id, ...payload });

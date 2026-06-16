@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
+import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -11,6 +11,7 @@ import { useAppointments, useUpdateAppointment, useDeleteAppointment, type Appoi
 import { useDoctors } from "@/lib/api/profiles";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const FILTERS = ["todas", "programada", "completada", "cancelada"] as const;
 const statusBg: Record<string, string> = {
@@ -180,6 +181,41 @@ export function AgendaPage() {
     completada: appointments.filter((a) => a.status === "completada").length,
     cancelada: appointments.filter((a) => a.status === "cancelada").length,
   }), [appointments]);
+
+  const handleSendWhatsAppReminder = async (appointment: AppointmentWithPatient) => {
+    try {
+      const { data: patient, error } = await supabase
+        .from("patients")
+        .select("phone, full_name")
+        .eq("id", appointment.patient_id)
+        .single();
+
+      if (error || !patient || !patient.phone) {
+        toast.error("El paciente no tiene un número de teléfono registrado.");
+        return;
+      }
+
+      const cleanPhone = patient.phone.replace(/\D/g, "");
+      if (!cleanPhone) {
+        toast.error("El número de teléfono registrado no es válido.");
+        return;
+      }
+
+      const dt = new Date(appointment.scheduled_at);
+      const dateStr = dt.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" });
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const timeStr = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+
+      const doctorName = doctorMap.get(appointment.doctor_id) || "el especialista";
+      const text = `Hola *${patient.full_name}*, le escribimos de *FemeSalud* para recordarle su cita médica el día *${dateStr}* a las *${timeStr}* con *${doctorName}*. Por favor, confirme su asistencia respondiendo a este mensaje. ¡Que tenga un excelente día!`;
+
+      const url = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+      window.open(url, "_blank", "noopener");
+    } catch (e) {
+      toast.error("Error al generar el recordatorio");
+      console.error(e);
+    }
+  };
 
   const changeStatus = async (id: string, status: string) => {
     try { await update.mutateAsync({ id, status }); toast.success("Estado actualizado"); }
@@ -417,10 +453,18 @@ export function AgendaPage() {
                           <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>{a.status}</span>
                           {a.status === "programada" && (
                             <>
-                              <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Marcar completada">
+                              <button
+                                onClick={() => handleSendWhatsAppReminder(a)}
+                                className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-emerald-500/15 hover:text-emerald-600 cursor-pointer"
+                                title="Enviar recordatorio de WhatsApp"
+                                aria-label="WhatsApp"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                              </button>
+                              <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground cursor-pointer" aria-label="Marcar completada">
                                 <CheckCircle2 className="h-4 w-4" />
                               </button>
-                              <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Cancelar">
+                              <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive cursor-pointer" aria-label="Cancelar">
                                 <XCircle className="h-4 w-4" />
                               </button>
                             </>
@@ -772,10 +816,18 @@ export function AgendaPage() {
                               <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>{a.status}</span>
                               {a.status === "programada" && (
                                 <>
-                                  <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Marcar completada">
+                                  <button
+                                    onClick={() => handleSendWhatsAppReminder(a)}
+                                    className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-emerald-500/15 hover:text-emerald-600 cursor-pointer"
+                                    title="Enviar recordatorio de WhatsApp"
+                                    aria-label="WhatsApp"
+                                  >
+                                    <MessageCircle className="h-4 w-4" />
+                                  </button>
+                                  <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground cursor-pointer" aria-label="Marcar completada">
                                     <CheckCircle2 className="h-4 w-4" />
                                   </button>
-                                  <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Cancelar">
+                                  <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive cursor-pointer" aria-label="Cancelar">
                                     <XCircle className="h-4 w-4" />
                                   </button>
                                 </>

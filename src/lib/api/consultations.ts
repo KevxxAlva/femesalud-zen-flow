@@ -335,3 +335,65 @@ export function useUpdateConsultation() {
     },
   });
 }
+
+export interface PrescriptionTemplate {
+  id: string;
+  title: string;
+  indications: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export function usePrescriptionTemplates() {
+  return useQuery({
+    queryKey: ["prescription_templates"],
+    queryFn: async (): Promise<PrescriptionTemplate[]> => {
+      const { data, error } = await supabase
+        .from("prescription_templates")
+        .select("*")
+        .order("title", { ascending: true });
+      if (error) throw error;
+      return data as PrescriptionTemplate[];
+    },
+  });
+}
+
+export function useCreatePrescriptionTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { title: string; indications: string }) => {
+      const { data: user } = await supabase.auth.getUser();
+      const { data, error } = await supabase
+        .from("prescription_templates")
+        .insert({
+          title: input.title,
+          indications: input.indications,
+          created_by: user.user?.id || null,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as PrescriptionTemplate;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescription_templates"] });
+    },
+  });
+}
+
+export function useDeletePrescriptionTemplate() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("prescription_templates")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prescription_templates"] });
+    },
+  });
+}
