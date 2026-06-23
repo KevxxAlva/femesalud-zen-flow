@@ -23,8 +23,6 @@ import { useClinicalNotes } from "@/lib/api/clinical-notes";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
@@ -32,7 +30,6 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
-import * as XLSX from "xlsx";
 
 const loadLogoBase64 = (url: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -193,6 +190,10 @@ export function PatientsPage() {
 
   const handleExportFicha = async (patient: Patient) => {
     try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
@@ -398,6 +399,7 @@ export function PatientsPage() {
 
   const handleExportReposo = async (patient: Patient) => {
     try {
+      const { default: jsPDF } = await import("jspdf");
       const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
       const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
       const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
@@ -577,6 +579,7 @@ export function PatientsPage() {
 
   const handleExportAtencion = async (patient: Patient) => {
     try {
+      const { default: jsPDF } = await import("jspdf");
       const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
       const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
       const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
@@ -751,6 +754,7 @@ export function PatientsPage() {
 
   const handleExportJustificativo = async (patient: Patient) => {
     try {
+      const { default: jsPDF } = await import("jspdf");
       const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
       const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
       const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
@@ -967,6 +971,7 @@ export function PatientsPage() {
         "Fecha de Registro": new Date(p.created_at).toLocaleDateString("es-ES"),
       }));
 
+      const XLSX = await import("xlsx");
       const ws = XLSX.utils.json_to_sheet(excelData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Pacientes");

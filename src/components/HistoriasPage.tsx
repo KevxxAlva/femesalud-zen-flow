@@ -10,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
 
@@ -81,6 +79,10 @@ export function HistoriasPage() {
   // Export full clinical record as PDF
   const handleExportFullHistory = async (patient: Patient, visits: Consultation[]) => {
     try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();

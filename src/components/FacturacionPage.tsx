@@ -11,9 +11,6 @@ import { useClinicInfo } from "@/lib/api/clinic";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import * as XLSX from "xlsx";
 
 const MONTHS_ES = [
   "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
@@ -48,7 +45,15 @@ const statusBg: Record<string, string> = {
 };
 
 export function FacturacionPage() {
-  const { data: appointments = [], isLoading } = useAppointments();
+  const dateFilterFrom = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 2); // Current month and previous 2 months
+    d.setDate(1);
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString();
+  }, []);
+
+  const { data: appointments = [], isLoading } = useAppointments({ from: dateFilterFrom });
   const { data: doctors = [] } = useDoctors();
   const { data: clinic } = useClinicInfo();
   const updateAppointment = useUpdateAppointment();
@@ -187,6 +192,7 @@ export function FacturacionPage() {
 
   const handleExportInvoice = async (app: AppointmentWithPatient) => {
     try {
+      const { default: jsPDF } = await import("jspdf");
       const docObj = doctors.find((d) => d.id === app.doctor_id);
       const doctorName = docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino";
       const doctorSpecialty = docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra";
@@ -315,7 +321,7 @@ export function FacturacionPage() {
     }
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     try {
       if (filtered.length === 0) {
         toast.warning("No hay datos de facturación para exportar");
@@ -333,6 +339,7 @@ export function FacturacionPage() {
         "Referencia de Pago": a.payment_reference || "—",
       }));
 
+      const XLSX = await import("xlsx");
       const ws = XLSX.utils.json_to_sheet(excelData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Facturación");
@@ -355,6 +362,10 @@ export function FacturacionPage() {
 
   const handleExportMonthlyReport = async () => {
     try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const selectedMonthObj = monthOptions.find((m) => m.key === monthFilter);
       const reportTitle = selectedMonthObj
         ? `Reporte de Facturación - ${selectedMonthObj.label}`

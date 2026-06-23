@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect, useRouter } from "@tanstack/react-ro
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/AppSidebar";
+import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -15,6 +16,10 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
   const router = useRouter();
+  
+  // Activate realtime sync only for authenticated sessions
+  useRealtimeSync();
+
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
