@@ -60,7 +60,6 @@ export function useRealtimeSync() {
         { event: "*", schema: "public", table: "clinical_notes" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["clinical_notes"] });
-          queryClient.invalidateQueries({ queryKey: ["clinical-notes"] });
         }
       )
       .subscribe();

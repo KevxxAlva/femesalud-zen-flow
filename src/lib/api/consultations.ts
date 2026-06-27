@@ -221,7 +221,7 @@ export function useCreateConsultation() {
       qc.invalidateQueries({ queryKey: ["consultation", variables.appointment_id] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["patients"] });
-      qc.invalidateQueries({ queryKey: ["clinical-notes"] });
+      qc.invalidateQueries({ queryKey: ["clinical_notes"] });
     },
   });
 }
@@ -331,7 +331,7 @@ export function useUpdateConsultation() {
       }
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["patients"] });
-      qc.invalidateQueries({ queryKey: ["clinical-notes"] });
+      qc.invalidateQueries({ queryKey: ["clinical_notes"] });
     },
   });
 }
