@@ -14,6 +14,7 @@ export function useRealtimeSync() {
         { event: "*", schema: "public", table: "patients" },
         () => {
           queryClient.invalidateQueries({ queryKey: ["patients"] });
+          queryClient.invalidateQueries({ queryKey: ["patient"] });
           queryClient.invalidateQueries({ queryKey: ["patients_count"] });
           queryClient.invalidateQueries({ queryKey: ["patients_paginated"] });
           queryClient.invalidateQueries({ queryKey: ["patients_recent"] });

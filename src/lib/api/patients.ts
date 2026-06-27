@@ -213,6 +213,7 @@ export function useCreatePatient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patient"] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });
@@ -230,6 +231,7 @@ export function useUpdatePatient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patient"] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });
@@ -246,6 +248,7 @@ export function useDeletePatient() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patient"] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });
