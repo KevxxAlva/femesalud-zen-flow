@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
+import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 
-const AgendaPage = lazy(() =>
-  import("@/components/AgendaPage").then((m) => ({ default: m.AgendaPage }))
+const AgendaPage = lazyRouteComponent(
+  () => import("@/components/AgendaPage"),
+  "AgendaPage"
 );
 
 export const Route = createFileRoute("/_authenticated/agenda")({

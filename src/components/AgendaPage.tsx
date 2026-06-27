@@ -169,6 +169,20 @@ export function AgendaPage() {
     return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
   }, [filtered]);
 
+  const appointmentsByDateMap = useMemo(() => {
+    const map = new Map<string, AppointmentWithPatient[]>();
+    for (const a of filtered) {
+      const d = dateOnly(a.scheduled_at);
+      const list = map.get(d) ?? [];
+      list.push(a);
+      map.set(d, list);
+    }
+    for (const list of map.values()) {
+      list.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+    }
+    return map;
+  }, [filtered]);
+
   const totalPages = Math.ceil(grouped.length / itemsPerPage);
   const paginatedGrouped = useMemo(() => {
     const start = (listPage - 1) * itemsPerPage;
@@ -551,7 +565,7 @@ export function AgendaPage() {
                 <div className="grid grid-cols-7 gap-2">
                   {monthDays.map((day, idx) => {
                     const ymd = formatToYMD(day);
-                    const dayAppointments = filtered.filter((a) => dateOnly(a.scheduled_at) === ymd);
+                    const dayAppointments = appointmentsByDateMap.get(ymd) || [];
                     const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                     const isToday = formatToYMD(new Date()) === ymd;
 
@@ -640,8 +654,7 @@ export function AgendaPage() {
             <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
               {weekDays.map((day, idx) => {
                 const ymd = formatToYMD(day);
-                const dayAppointments = filtered.filter((a) => dateOnly(a.scheduled_at) === ymd)
-                  .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+                const dayAppointments = appointmentsByDateMap.get(ymd) || [];
                 const isToday = formatToYMD(new Date()) === ymd;
 
                 return (

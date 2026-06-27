@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,46 @@ const COMMON_CONSUMABLES = [
   { name: "Baja lengua", defaultUnit: "U" },
 ];
 
+interface ConsultationFormValues {
+  visitType: VisitType;
+  isFirstVisit: boolean;
+  subjectiveExam: string;
+  contactChannel: string;
+  heightCm: string;
+  weightKg: string;
+  bloodPressure: string;
+  heartRate: string;
+  respiratoryRate: string;
+  temperature: string;
+  skin: string;
+  headNeck: string;
+  breasts: string;
+  abdomen: string;
+  gynecological: string;
+  extremities: string;
+  neurological: string;
+  aceticAcidTest: string;
+  aceticClockPosition: string;
+  aceticRelativePosition: string;
+  lugolTest: string;
+  lugolClockPosition: string;
+  lugolRelativePosition: string;
+  gestationalAge: string;
+  fetalWeight: string;
+  obstetricBp: string;
+  uterineHeight: string;
+  presentation: string;
+  fetalHeartRate: string;
+  fetalMovements: string;
+  edema: string;
+  alarmSigns: string;
+  diagnosis: string;
+  indications: string;
+  complementaryExams: string;
+  plan: string;
+  nextAppointmentDate: string;
+}
+
 export function ConsultationForm({
   open,
   onOpenChange,
@@ -62,54 +103,51 @@ export function ConsultationForm({
     });
   }, []);
 
-  // General States
-  const [visitType, setVisitType] = useState<VisitType>("CONTROL");
-  const [isFirstVisit, setIsFirstVisit] = useState(false);
-  const [subjectiveExam, setSubjectiveExam] = useState("");
-  const [contactChannel, setContactChannel] = useState("");
+  const { register, handleSubmit, control, reset, setValue, watch, getValues } = useForm<ConsultationFormValues>({
+    defaultValues: {
+      visitType: "CONTROL",
+      isFirstVisit: false,
+      subjectiveExam: "",
+      contactChannel: "",
+      heightCm: "",
+      weightKg: "",
+      bloodPressure: "",
+      heartRate: "",
+      respiratoryRate: "",
+      temperature: "",
+      skin: "",
+      headNeck: "",
+      breasts: "",
+      abdomen: "",
+      gynecological: "",
+      extremities: "",
+      neurological: "",
+      aceticAcidTest: "",
+      aceticClockPosition: "",
+      aceticRelativePosition: "",
+      lugolTest: "",
+      lugolClockPosition: "",
+      lugolRelativePosition: "",
+      gestationalAge: "",
+      fetalWeight: "",
+      obstetricBp: "",
+      uterineHeight: "",
+      presentation: "",
+      fetalHeartRate: "",
+      fetalMovements: "",
+      edema: "",
+      alarmSigns: "",
+      diagnosis: "",
+      indications: "",
+      complementaryExams: "",
+      plan: "",
+      nextAppointmentDate: "",
+    }
+  });
 
-  // Vitals States
-  const [heightCm, setHeightCm] = useState("");
-  const [weightKg, setWeightKg] = useState("");
-  const [bloodPressure, setBloodPressure] = useState("");
-  const [heartRate, setHeartRate] = useState("");
-  const [respiratoryRate, setRespiratoryRate] = useState("");
-  const [temperature, setTemperature] = useState("");
-
-  // Physical Exam States
-  const [skin, setSkin] = useState("");
-  const [headNeck, setHeadNeck] = useState("");
-  const [breasts, setBreasts] = useState("");
-  const [abdomen, setAbdomen] = useState("");
-  const [gynecological, setGynecological] = useState("");
-  const [extremities, setExtremities] = useState("");
-  const [neurological, setNeurological] = useState("");
-
-  // Colposcopy States
-  const [aceticAcidTest, setAceticAcidTest] = useState("");
-  const [aceticClockPosition, setAceticClockPosition] = useState("");
-  const [aceticRelativePosition, setAceticRelativePosition] = useState("");
-  const [lugolTest, setLugolTest] = useState("");
-  const [lugolClockPosition, setLugolClockPosition] = useState("");
-  const [lugolRelativePosition, setLugolRelativePosition] = useState("");
-
-  // Obstetrics States
-  const [gestationalAge, setGestationalAge] = useState("");
-  const [fetalWeight, setFetalWeight] = useState("");
-  const [obstetricBp, setObstetricBp] = useState("");
-  const [uterineHeight, setUterineHeight] = useState("");
-  const [presentation, setPresentation] = useState("");
-  const [fetalHeartRate, setFetalHeartRate] = useState("");
-  const [fetalMovements, setFetalMovements] = useState("");
-  const [edema, setEdema] = useState("");
-  const [alarmSigns, setAlarmSigns] = useState("");
-
-  // Treatment States
-  const [diagnosis, setDiagnosis] = useState("");
-  const [indications, setIndications] = useState("");
-  const [complementaryExams, setComplementaryExams] = useState("");
-  const [plan, setPlan] = useState("");
-  const [nextAppointmentDate, setNextAppointmentDate] = useState("");
+  const indications = watch("indications") || "";
+  const weightKg = watch("weightKg") || "";
+  const heightCm = watch("heightCm") || "";
 
   // Consumables States
   const [commonQuantities, setCommonQuantities] = useState<Record<string, string>>({});
@@ -169,48 +207,45 @@ export function ConsultationForm({
   useEffect(() => {
     if (open) {
       if (existingConsultation) {
-        setVisitType(existingConsultation.visit_type || "CONTROL");
-        setIsFirstVisit(existingConsultation.is_first_visit || false);
-        setSubjectiveExam(existingConsultation.subjective_exam ?? "");
-        setContactChannel(existingConsultation.contact_channel ?? "");
-
-        setHeightCm(existingConsultation.height_cm ? String(existingConsultation.height_cm) : "");
-        setWeightKg(existingConsultation.weight_kg ? String(existingConsultation.weight_kg) : "");
-        setBloodPressure(existingConsultation.blood_pressure ?? "");
-        setHeartRate(existingConsultation.heart_rate ? String(existingConsultation.heart_rate) : "");
-        setRespiratoryRate(existingConsultation.respiratory_rate ? String(existingConsultation.respiratory_rate) : "");
-        setTemperature(existingConsultation.temperature ? String(existingConsultation.temperature) : "");
-
-        setSkin(existingConsultation.skin ?? "");
-        setHeadNeck(existingConsultation.head_neck ?? "");
-        setBreasts(existingConsultation.breasts ?? "");
-        setAbdomen(existingConsultation.abdomen ?? "");
-        setGynecological(existingConsultation.gynecological ?? "");
-        setExtremities(existingConsultation.extremities ?? "");
-        setNeurological(existingConsultation.neurological ?? "");
-
-        setAceticAcidTest(existingConsultation.acetic_acid_test ?? "");
-        setAceticClockPosition(existingConsultation.acetic_clock_position ?? "");
-        setAceticRelativePosition(existingConsultation.acetic_relative_position ?? "");
-        setLugolTest(existingConsultation.lugol_test ?? "");
-        setLugolClockPosition(existingConsultation.lugol_clock_position ?? "");
-        setLugolRelativePosition(existingConsultation.lugol_relative_position ?? "");
-
-        setGestationalAge(existingConsultation.gestational_age ?? "");
-        setFetalWeight(existingConsultation.fetal_weight ? String(existingConsultation.fetal_weight) : "");
-        setObstetricBp(existingConsultation.obstetric_bp ?? "");
-        setUterineHeight(existingConsultation.uterine_height ? String(existingConsultation.uterine_height) : "");
-        setPresentation(existingConsultation.presentation ?? "");
-        setFetalHeartRate(existingConsultation.fetal_heart_rate ? String(existingConsultation.fetal_heart_rate) : "");
-        setFetalMovements(existingConsultation.fetal_movements ?? "");
-        setEdema(existingConsultation.edema ?? "");
-        setAlarmSigns(existingConsultation.alarm_signs ?? "");
-
-        setDiagnosis(existingConsultation.diagnosis ?? "");
-        setIndications(existingConsultation.indications ?? "");
-        setComplementaryExams(existingConsultation.complementary_exams ?? "");
-        setPlan(existingConsultation.plan ?? "");
-        setNextAppointmentDate(existingConsultation.next_appointment_date ?? "");
+        reset({
+          visitType: existingConsultation.visit_type || "CONTROL",
+          isFirstVisit: existingConsultation.is_first_visit || false,
+          subjectiveExam: existingConsultation.subjective_exam ?? "",
+          contactChannel: existingConsultation.contact_channel ?? "",
+          heightCm: existingConsultation.height_cm ? String(existingConsultation.height_cm) : "",
+          weightKg: existingConsultation.weight_kg ? String(existingConsultation.weight_kg) : "",
+          bloodPressure: existingConsultation.blood_pressure ?? "",
+          heartRate: existingConsultation.heart_rate ? String(existingConsultation.heart_rate) : "",
+          respiratoryRate: existingConsultation.respiratory_rate ? String(existingConsultation.respiratory_rate) : "",
+          temperature: existingConsultation.temperature ? String(existingConsultation.temperature) : "",
+          skin: existingConsultation.skin ?? "",
+          headNeck: existingConsultation.head_neck ?? "",
+          breasts: existingConsultation.breasts ?? "",
+          abdomen: existingConsultation.abdomen ?? "",
+          gynecological: existingConsultation.gynecological ?? "",
+          extremities: existingConsultation.extremities ?? "",
+          neurological: existingConsultation.neurological ?? "",
+          aceticAcidTest: existingConsultation.acetic_acid_test ?? "",
+          aceticClockPosition: existingConsultation.acetic_clock_position ?? "",
+          aceticRelativePosition: existingConsultation.acetic_relative_position ?? "",
+          lugolTest: existingConsultation.lugol_test ?? "",
+          lugolClockPosition: existingConsultation.lugol_clock_position ?? "",
+          lugolRelativePosition: existingConsultation.lugol_relative_position ?? "",
+          gestationalAge: existingConsultation.gestational_age ?? "",
+          fetalWeight: existingConsultation.fetal_weight ? String(existingConsultation.fetal_weight) : "",
+          obstetricBp: existingConsultation.obstetric_bp ?? "",
+          uterineHeight: existingConsultation.uterine_height ? String(existingConsultation.uterine_height) : "",
+          presentation: existingConsultation.presentation ?? "",
+          fetalHeartRate: existingConsultation.fetal_heart_rate ? String(existingConsultation.fetal_heart_rate) : "",
+          fetalMovements: existingConsultation.fetal_movements ?? "",
+          edema: existingConsultation.edema ?? "",
+          alarmSigns: existingConsultation.alarm_signs ?? "",
+          diagnosis: existingConsultation.diagnosis ?? "",
+          indications: existingConsultation.indications ?? "",
+          complementaryExams: existingConsultation.complementary_exams ?? "",
+          plan: existingConsultation.plan ?? "",
+          nextAppointmentDate: existingConsultation.next_appointment_date ?? "",
+        });
 
         // Map consumables
         const commonMap: Record<string, string> = {};
@@ -233,48 +268,50 @@ export function ConsultationForm({
         setCustomConsumables(customs);
       } else {
         // Clear all states for a new record
-        setVisitType("CONTROL");
-        setIsFirstVisit(false);
-        setSubjectiveExam("");
-        setContactChannel("");
-        setHeightCm("");
-        setWeightKg("");
-        setBloodPressure("");
-        setHeartRate("");
-        setRespiratoryRate("");
-        setTemperature("");
-        setSkin("");
-        setHeadNeck("");
-        setBreasts("");
-        setAbdomen("");
-        setGynecological("");
-        setExtremities("");
-        setNeurological("");
-        setAceticAcidTest("");
-        setAceticClockPosition("");
-        setAceticRelativePosition("");
-        setLugolTest("");
-        setLugolClockPosition("");
-        setLugolRelativePosition("");
-        setGestationalAge("");
-        setFetalWeight("");
-        setObstetricBp("");
-        setUterineHeight("");
-        setPresentation("");
-        setFetalHeartRate("");
-        setFetalMovements("");
-        setEdema("");
-        setAlarmSigns("");
-        setDiagnosis("");
-        setIndications("");
-        setComplementaryExams("");
-        setPlan("");
-        setNextAppointmentDate("");
+        reset({
+          visitType: "CONTROL",
+          isFirstVisit: false,
+          subjectiveExam: "",
+          contactChannel: "",
+          heightCm: "",
+          weightKg: "",
+          bloodPressure: "",
+          heartRate: "",
+          respiratoryRate: "",
+          temperature: "",
+          skin: "",
+          headNeck: "",
+          breasts: "",
+          abdomen: "",
+          gynecological: "",
+          extremities: "",
+          neurological: "",
+          aceticAcidTest: "",
+          aceticClockPosition: "",
+          aceticRelativePosition: "",
+          lugolTest: "",
+          lugolClockPosition: "",
+          lugolRelativePosition: "",
+          gestationalAge: "",
+          fetalWeight: "",
+          obstetricBp: "",
+          uterineHeight: "",
+          presentation: "",
+          fetalHeartRate: "",
+          fetalMovements: "",
+          edema: "",
+          alarmSigns: "",
+          diagnosis: "",
+          indications: "",
+          complementaryExams: "",
+          plan: "",
+          nextAppointmentDate: "",
+        });
         setCommonQuantities({});
         setCustomConsumables([]);
       }
     }
-  }, [open, existingConsultation]);
+  }, [open, existingConsultation, reset]);
 
   const addCustomConsumable = () => {
     setCustomConsumables([...customConsumables, { item_name: "", quantity: "1", unit: "U" }]);
@@ -294,8 +331,7 @@ export function ConsultationForm({
     setCommonQuantities({ ...commonQuantities, [name]: val });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const onFormSubmit = () => {
     handleSave(false);
   };
 
@@ -331,53 +367,55 @@ export function ConsultationForm({
         }
       });
 
+      const values = getValues();
+
       const payload = {
         appointment_id: appointment.id,
         patient_id: appointment.patient_id,
         doctor_id: null, // assigned by backend / auth user
-        visit_type: visitType,
-        is_first_visit: isFirstVisit,
-        subjective_exam: subjectiveExam || null,
-        contact_channel: contactChannel || null,
+        visit_type: values.visitType,
+        is_first_visit: values.isFirstVisit,
+        subjective_exam: values.subjectiveExam || null,
+        contact_channel: values.contactChannel || null,
 
-        height_cm: heightCm ? parseFloat(heightCm) : null,
-        weight_kg: weightKg ? parseFloat(weightKg) : null,
+        height_cm: values.heightCm ? parseFloat(values.heightCm) : null,
+        weight_kg: values.weightKg ? parseFloat(values.weightKg) : null,
         bmi: bmi ? parseFloat(bmi) : null,
-        blood_pressure: bloodPressure || null,
-        heart_rate: heartRate ? parseInt(heartRate) : null,
-        respiratory_rate: respiratoryRate ? parseInt(respiratoryRate) : null,
-        temperature: temperature ? parseFloat(temperature) : null,
+        blood_pressure: values.bloodPressure || null,
+        heart_rate: values.heartRate ? parseInt(values.heartRate) : null,
+        respiratory_rate: values.respiratoryRate ? parseInt(values.respiratoryRate) : null,
+        temperature: values.temperature ? parseFloat(values.temperature) : null,
 
-        skin: skin || null,
-        head_neck: headNeck || null,
-        breasts: breasts || null,
-        abdomen: abdomen || null,
-        gynecological: gynecological || null,
-        extremities: extremities || null,
-        neurological: neurological || null,
+        skin: values.skin || null,
+        head_neck: values.headNeck || null,
+        breasts: values.breasts || null,
+        abdomen: values.abdomen || null,
+        gynecological: values.gynecological || null,
+        extremities: values.extremities || null,
+        neurological: values.neurological || null,
 
-        acetic_acid_test: aceticAcidTest || null,
-        acetic_clock_position: aceticClockPosition || null,
-        acetic_relative_position: aceticRelativePosition || null,
-        lugol_test: lugolTest || null,
-        lugol_clock_position: lugolClockPosition || null,
-        lugol_relative_position: lugolRelativePosition || null,
+        acetic_acid_test: values.aceticAcidTest || null,
+        acetic_clock_position: values.aceticClockPosition || null,
+        acetic_relative_position: values.aceticRelativePosition || null,
+        lugol_test: values.lugolTest || null,
+        lugol_clock_position: values.lugolClockPosition || null,
+        lugol_relative_position: values.lugolRelativePosition || null,
 
-        gestational_age: gestationalAge || null,
-        fetal_weight: fetalWeight ? parseFloat(fetalWeight) : null,
-        obstetric_bp: obstetricBp || null,
-        uterine_height: uterineHeight ? parseFloat(uterineHeight) : null,
-        presentation: presentation || null,
-        fetal_heart_rate: fetalHeartRate ? parseInt(fetalHeartRate) : null,
-        fetal_movements: fetalMovements || null,
-        edema: edema || null,
-        alarm_signs: alarmSigns || null,
+        gestational_age: values.gestationalAge || null,
+        fetal_weight: values.fetalWeight ? parseFloat(values.fetalWeight) : null,
+        obstetric_bp: values.obstetricBp || null,
+        uterine_height: values.uterineHeight ? parseFloat(values.uterineHeight) : null,
+        presentation: values.presentation || null,
+        fetal_heart_rate: values.fetalHeartRate ? parseInt(values.fetalHeartRate) : null,
+        fetal_movements: values.fetalMovements || null,
+        edema: values.edema || null,
+        alarm_signs: values.alarmSigns || null,
 
-        diagnosis: diagnosis || null,
-        indications: indications || null,
-        complementary_exams: complementaryExams || null,
-        plan: plan || null,
-        next_appointment_date: nextAppointmentDate || null,
+        diagnosis: values.diagnosis || null,
+        indications: values.indications || null,
+        complementary_exams: values.complementaryExams || null,
+        plan: values.plan || null,
+        next_appointment_date: values.nextAppointmentDate || null,
 
         consumables,
       };
@@ -464,7 +502,7 @@ export function ConsultationForm({
             <Loader2 className="h-8 w-8 animate-spin text-mauve" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <form onSubmit={handleSubmit(onFormSubmit)} className="flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
               <TabsList className="grid w-full grid-cols-5 bg-muted/60 p-1 rounded-2xl mb-4">
                 <TabsTrigger value="anamnesis" className="rounded-xl font-medium text-xs">Anamnesis</TabsTrigger>
@@ -481,40 +519,58 @@ export function ConsultationForm({
                     <div className="grid grid-cols-3 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="c-visit-type">Tipo de asistencia</Label>
-                        <Select value={visitType} onValueChange={(v: VisitType) => setVisitType(v)}>
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl">
-                            <SelectItem value="CONTROL">Control</SelectItem>
-                            <SelectItem value="EMERGENCIA">Emergencia</SelectItem>
-                            <SelectItem value="CONSULTA_NUEVA">Consulta Nueva</SelectItem>
-                            <SelectItem value="POST_TRATAMIENTO">Post-Tratamiento</SelectItem>
-                            <SelectItem value="OTRO">Otro</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          name="visitType"
+                          control={control}
+                          render={({ field }) => (
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger className="rounded-xl">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl">
+                                <SelectItem value="CONTROL">Control</SelectItem>
+                                <SelectItem value="EMERGENCIA">Emergencia</SelectItem>
+                                <SelectItem value="CONSULTA_NUEVA">Consulta Nueva</SelectItem>
+                                <SelectItem value="POST_TRATAMIENTO">Post-Tratamiento</SelectItem>
+                                <SelectItem value="OTRO">Otro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
 
                       <div className="grid gap-2">
                         <Label htmlFor="c-channel">Canal de contacto</Label>
-                        <Select value={contactChannel} onValueChange={setContactChannel}>
-                          <SelectTrigger className="rounded-xl">
-                            <SelectValue placeholder="Seleccionar canal..." />
-                          </SelectTrigger>
-                          <SelectContent className="rounded-2xl">
-                            {CONTACT_CHANNELS.map((c) => (
-                              <SelectItem key={c} value={c}>{c}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <Controller
+                          name="contactChannel"
+                          control={control}
+                          render={({ field }) => (
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger className="rounded-xl">
+                                <SelectValue placeholder="Seleccionar canal..." />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl">
+                                {CONTACT_CHANNELS.map((c) => (
+                                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
                       </div>
 
                       <div className="flex items-center gap-2 mt-8">
-                        <Checkbox
-                          id="c-first-visit"
-                          checked={isFirstVisit}
-                          onCheckedChange={(c) => setIsFirstVisit(!!c)}
-                          className="rounded-md"
+                        <Controller
+                          name="isFirstVisit"
+                          control={control}
+                          render={({ field }) => (
+                            <Checkbox
+                              id="c-first-visit"
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              className="rounded-md"
+                            />
+                          )}
                         />
                         <Label htmlFor="c-first-visit" className="cursor-pointer">
                           ¿Es primera visita de la paciente?
@@ -526,10 +582,9 @@ export function ConsultationForm({
                       <Label htmlFor="c-subjective">Examen Subjetivo / Motivo del control</Label>
                       <Textarea
                         id="c-subjective"
-                        value={subjectiveExam}
-                        onChange={(e) => setSubjectiveExam(e.target.value)}
                         placeholder="Descripción subjetiva y antecedentes inmediatos expresados por la paciente..."
                         className="rounded-xl min-h-[140px]"
+                        {...register("subjectiveExam")}
                       />
                     </div>
                   </TabsContent>
@@ -545,9 +600,8 @@ export function ConsultationForm({
                             id="c-height"
                             type="number"
                             placeholder="Ej. 165"
-                            value={heightCm}
-                            onChange={(e) => setHeightCm(e.target.value)}
                             className="rounded-xl"
+                            {...register("heightCm")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -557,9 +611,8 @@ export function ConsultationForm({
                             type="number"
                             step="0.1"
                             placeholder="Ej. 62.5"
-                            value={weightKg}
-                            onChange={(e) => setWeightKg(e.target.value)}
                             className="rounded-xl"
+                            {...register("weightKg")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -576,9 +629,8 @@ export function ConsultationForm({
                           <Input
                             id="c-bp"
                             placeholder="Ej. 120/80"
-                            value={bloodPressure}
-                            onChange={(e) => setBloodPressure(e.target.value)}
                             className="rounded-xl"
+                            {...register("bloodPressure")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -587,9 +639,8 @@ export function ConsultationForm({
                             id="c-hr"
                             type="number"
                             placeholder="LPM"
-                            value={heartRate}
-                            onChange={(e) => setHeartRate(e.target.value)}
                             className="rounded-xl"
+                            {...register("heartRate")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -598,9 +649,8 @@ export function ConsultationForm({
                             id="c-rr"
                             type="number"
                             placeholder="RPM"
-                            value={respiratoryRate}
-                            onChange={(e) => setRespiratoryRate(e.target.value)}
                             className="rounded-xl"
+                            {...register("respiratoryRate")}
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -610,9 +660,8 @@ export function ConsultationForm({
                             type="number"
                             step="0.1"
                             placeholder="Ej. 36.5"
-                            value={temperature}
-                            onChange={(e) => setTemperature(e.target.value)}
                             className="rounded-xl"
+                            {...register("temperature")}
                           />
                         </div>
                       </div>
@@ -623,31 +672,31 @@ export function ConsultationForm({
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-skin">Piel y faneras</Label>
-                          <Input id="c-skin" value={skin} onChange={(e) => setSkin(e.target.value)} placeholder="Normal, hidratada..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-skin" placeholder="Normal, hidratada..." className="rounded-xl text-xs h-9" {...register("skin")} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-headneck">Cabeza y cuello</Label>
-                          <Input id="c-headneck" value={headNeck} onChange={(e) => setHeadNeck(e.target.value)} placeholder="Móvil, sin adenopatías..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-headneck" placeholder="Móvil, sin adenopatías..." className="rounded-xl text-xs h-9" {...register("headNeck")} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-breasts">Mamas</Label>
-                          <Input id="c-breasts" value={breasts} onChange={(e) => setBreasts(e.target.value)} placeholder="Simétricas, sin nódulos palpables..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-breasts" placeholder="Simétricas, sin nódulos palpables..." className="rounded-xl text-xs h-9" {...register("breasts")} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-abdomen">Abdomen</Label>
-                          <Input id="c-abdomen" value={abdomen} onChange={(e) => setAbdomen(e.target.value)} placeholder="Blando, depresible, no doloroso..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-abdomen" placeholder="Blando, depresible, no doloroso..." className="rounded-xl text-xs h-9" {...register("abdomen")} />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
                           <Label htmlFor="c-gyneco">Ginecológico</Label>
-                          <Input id="c-gyneco" value={gynecological} onChange={(e) => setGynecological(e.target.value)} placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-gyneco" placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-xl text-xs h-9" {...register("gynecological")} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-extremities">Extremidades</Label>
-                          <Input id="c-extremities" value={extremities} onChange={(e) => setExtremities(e.target.value)} placeholder="Simétricas, sin edemas..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-extremities" placeholder="Simétricas, sin edemas..." className="rounded-xl text-xs h-9" {...register("extremities")} />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-neuro">Neurológico</Label>
-                          <Input id="c-neuro" value={neurological} onChange={(e) => setNeurological(e.target.value)} placeholder="Lúcida, orientada..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-neuro" placeholder="Lúcida, orientada..." className="rounded-xl text-xs h-9" {...register("neurological")} />
                         </div>
                       </div>
                     </div>
@@ -663,9 +712,8 @@ export function ConsultationForm({
                           <Input
                             id="c-acetic"
                             placeholder="Ej. Acetoblanco positivo..."
-                            value={aceticAcidTest}
-                            onChange={(e) => setAceticAcidTest(e.target.value)}
                             className="rounded-xl"
+                            {...register("aceticAcidTest")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -673,9 +721,8 @@ export function ConsultationForm({
                           <Input
                             id="c-acetic-clock"
                             placeholder="Ej. 12:00, 3:00"
-                            value={aceticClockPosition}
-                            onChange={(e) => setAceticClockPosition(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("aceticClockPosition")}
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -683,9 +730,8 @@ export function ConsultationForm({
                           <Input
                             id="c-acetic-relative"
                             placeholder="Ej. Zona de transformación..."
-                            value={aceticRelativePosition}
-                            onChange={(e) => setAceticRelativePosition(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("aceticRelativePosition")}
                           />
                         </div>
 
@@ -694,9 +740,8 @@ export function ConsultationForm({
                           <Input
                             id="c-lugol"
                             placeholder="Ej. Yodonegativo (Schiller positivo)..."
-                            value={lugolTest}
-                            onChange={(e) => setLugolTest(e.target.value)}
                             className="rounded-xl"
+                            {...register("lugolTest")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -704,9 +749,8 @@ export function ConsultationForm({
                           <Input
                             id="c-lugol-clock"
                             placeholder="Ej. 6:00, 9:00"
-                            value={lugolClockPosition}
-                            onChange={(e) => setLugolClockPosition(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("lugolClockPosition")}
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -714,9 +758,8 @@ export function ConsultationForm({
                           <Input
                             id="c-lugol-relative"
                             placeholder="Ej. Labio anterior..."
-                            value={lugolRelativePosition}
-                            onChange={(e) => setLugolRelativePosition(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("lugolRelativePosition")}
                           />
                         </div>
                       </div>
@@ -733,9 +776,8 @@ export function ConsultationForm({
                           <Input
                             id="c-eg"
                             placeholder="Ej. 24.3 semanas"
-                            value={gestationalAge}
-                            onChange={(e) => setGestationalAge(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("gestationalAge")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -744,9 +786,8 @@ export function ConsultationForm({
                             id="c-fweight"
                             type="number"
                             placeholder="Gramos"
-                            value={fetalWeight}
-                            onChange={(e) => setFetalWeight(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("fetalWeight")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -754,9 +795,8 @@ export function ConsultationForm({
                           <Input
                             id="c-obp"
                             placeholder="Ej. 110/70"
-                            value={obstetricBp}
-                            onChange={(e) => setObstetricBp(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("obstetricBp")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -765,9 +805,8 @@ export function ConsultationForm({
                             id="c-au"
                             type="number"
                             placeholder="cm"
-                            value={uterineHeight}
-                            onChange={(e) => setUterineHeight(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("uterineHeight")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -775,9 +814,8 @@ export function ConsultationForm({
                           <Input
                             id="c-presentation"
                             placeholder="Cefálica, Podálica, Transversa..."
-                            value={presentation}
-                            onChange={(e) => setPresentation(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("presentation")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -786,9 +824,8 @@ export function ConsultationForm({
                             id="c-fhr"
                             type="number"
                             placeholder="LPM"
-                            value={fetalHeartRate}
-                            onChange={(e) => setFetalHeartRate(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("fetalHeartRate")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -796,9 +833,8 @@ export function ConsultationForm({
                           <Input
                             id="c-fmov"
                             placeholder="Activos, presentes, atenuados..."
-                            value={fetalMovements}
-                            onChange={(e) => setFetalMovements(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("fetalMovements")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -806,9 +842,8 @@ export function ConsultationForm({
                           <Input
                             id="c-edema"
                             placeholder="Ausente, grado I, grado II..."
-                            value={edema}
-                            onChange={(e) => setEdema(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("edema")}
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -816,9 +851,8 @@ export function ConsultationForm({
                           <Input
                             id="c-alarm"
                             placeholder="Niega cefalea, zumbidos, sangrado..."
-                            value={alarmSigns}
-                            onChange={(e) => setAlarmSigns(e.target.value)}
                             className="rounded-xl text-xs"
+                            {...register("alarmSigns")}
                           />
                         </div>
                       </div>
@@ -831,11 +865,10 @@ export function ConsultationForm({
                       <Label htmlFor="c-diagnosis">Diagnóstico</Label>
                       <Textarea
                         id="c-diagnosis"
-                        value={diagnosis}
-                        onChange={(e) => setDiagnosis(e.target.value)}
                         placeholder="Diagnóstico clínico presuntivo o definitivo..."
                         required
                         className="rounded-xl min-h-[90px]"
+                        {...register("diagnosis", { required: true })}
                       />
                     </div>
 
@@ -850,7 +883,8 @@ export function ConsultationForm({
                               onValueChange={(val) => {
                                 const selected = templates.find((t) => t.id === val);
                                 if (selected) {
-                                  setIndications((prev) => (prev ? prev + "\n" + selected.indications : selected.indications));
+                                  const currentVal = watch("indications") || "";
+                                  setValue("indications", currentVal ? currentVal + "\n" + selected.indications : selected.indications);
                                   toast.success("Plantilla aplicada");
                                 }
                               }}
@@ -923,10 +957,9 @@ export function ConsultationForm({
 
                       <Textarea
                         id="c-indications"
-                        value={indications}
-                        onChange={(e) => setIndications(e.target.value)}
                         placeholder="Tratamientos médicos recetados, dosis, administración..."
                         className="rounded-xl min-h-[90px]"
+                        {...register("indications")}
                       />
                     </div>
 
@@ -934,10 +967,9 @@ export function ConsultationForm({
                       <Label htmlFor="c-exams">Exámenes Complementarios Solicitados</Label>
                       <Textarea
                         id="c-exams"
-                        value={complementaryExams}
-                        onChange={(e) => setComplementaryExams(e.target.value)}
                         placeholder="Ecografías, perfil de laboratorios, citología..."
                         className="rounded-xl min-h-[90px]"
+                        {...register("complementaryExams")}
                       />
                     </div>
 
@@ -946,10 +978,9 @@ export function ConsultationForm({
                         <Label htmlFor="c-plan">Plan y Seguimiento</Label>
                         <Textarea
                           id="c-plan"
-                          value={plan}
-                          onChange={(e) => setPlan(e.target.value)}
                           placeholder="Recomendaciones generales, pautas de alarma..."
                           className="rounded-xl min-h-[90px]"
+                          {...register("plan")}
                         />
                       </div>
                       <div className="grid gap-2 justify-between">
@@ -958,9 +989,8 @@ export function ConsultationForm({
                           <Input
                             id="c-next-date"
                             type="date"
-                            value={nextAppointmentDate}
-                            onChange={(e) => setNextAppointmentDate(e.target.value)}
                             className="rounded-xl"
+                            {...register("nextAppointmentDate")}
                           />
                         </div>
                         <div className="flex items-center gap-1.5 p-3 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200/50 text-[11px]">
@@ -1087,7 +1117,7 @@ export function ConsultationForm({
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => handleSave(true)}
+                      onClick={handleSubmit(() => handleSave(true))}
                       disabled={busy}
                       className="rounded-xl border-mauve text-mauve hover:bg-mauve/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
                     >
