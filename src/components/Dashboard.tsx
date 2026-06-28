@@ -10,7 +10,7 @@ import { useAppointments } from "@/lib/api/appointments";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -176,6 +176,26 @@ export function Dashboard() {
       return completedOnDay.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
     });
     
+    // Group this month's completed appointments by payment method
+    const paymentGroups: Record<string, number> = {};
+    let totalPaidThisMonth = 0;
+    
+    thisMonthCompleted.forEach((a) => {
+      const method = a.payment_method || "Por Cobrar";
+      const amount = Number(a.price) || 220;
+      paymentGroups[method] = (paymentGroups[method] || 0) + amount;
+      totalPaidThisMonth += amount;
+    });
+
+    const incomeBreakdown = Object.entries(paymentGroups).map(([method, amount]) => {
+      const percentage = totalPaidThisMonth > 0 ? Math.round((amount / totalPaidThisMonth) * 100) : 0;
+      return {
+        method,
+        amount,
+        percentage
+      };
+    }).sort((a, b) => b.amount - a.amount);
+    
     return { 
       todays, 
       upcoming, 
@@ -187,7 +207,9 @@ export function Dashboard() {
       incomeSpark,
       consultDelta,
       patientDelta,
-      incomeDelta
+      incomeDelta,
+      incomeBreakdown,
+      thisMonthIncome
     };
   }, [appointments, patientsCount, patientsGrowth, recentPatients, today]);
 
@@ -444,40 +466,122 @@ export function Dashboard() {
           </div>
         </div>
 
-        {[
-          { label: "Consultas hoy", value: stats.todays.length.toString(), delta: stats.consultDelta, icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
-          { label: "Pacientes totales", value: patientsCount.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
-          { label: "Ingresos del mes", value: `$${(stats.income / 1000).toFixed(1)}k`, delta: stats.incomeDelta, icon: TrendingUp, tone: "text-sage-foreground", spark: stats.incomeSpark },
-        ].map((k) => {
-          const Icon = k.icon;
-          const isPositive = k.delta >= 0;
-          const deltaText = isPositive ? `+${k.delta}%` : `${k.delta}%`;
-          return (
-            <div key={k.label} className="col-span-12 rounded-3xl glass-card p-5 shadow-sm sm:col-span-6 lg:col-span-4">
-              <div className="flex items-start justify-between">
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl bg-muted", k.tone)}>
-                  <Icon className="h-5 w-5" />
+        <div className="col-span-12 lg:col-span-4 flex flex-col gap-5">
+          {[
+            { label: "Consultas hoy", value: stats.todays.length.toString(), delta: stats.consultDelta, icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
+            { label: "Pacientes totales", value: patientsCount.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
+          ].map((k) => {
+            const Icon = k.icon;
+            const isPositive = k.delta >= 0;
+            const deltaText = isPositive ? `+${k.delta}%` : `${k.delta}%`;
+            return (
+              <div key={k.label} className="rounded-3xl glass-card p-5 shadow-sm flex-1 flex flex-col justify-between">
+                <div className="flex items-start justify-between">
+                  <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl bg-muted", k.tone)}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    isPositive 
+                      ? "bg-sage/40 text-sage-foreground" 
+                      : "bg-red-500/10 text-red-500"
+                  )}>
+                    {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                    {deltaText}
+                  </span>
                 </div>
-                <span className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                  isPositive 
-                    ? "bg-sage/40 text-sage-foreground" 
-                    : "bg-red-500/10 text-red-500"
-                )}>
-                  {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {deltaText}
-                </span>
+                <div className="mt-4 flex items-end justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">{k.label}</p>
+                    <p className="font-display text-2xl font-semibold tracking-tight">{k.value}</p>
+                  </div>
+                  <Sparkline data={k.spark} tone={k.tone} />
+                </div>
               </div>
-              <div className="mt-4 flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">{k.label}</p>
-                  <p className="font-display text-2xl font-semibold tracking-tight">{k.value}</p>
-                </div>
-                <Sparkline data={k.spark} tone={k.tone} />
+            );
+          })}
+        </div>
+
+        <div className="col-span-12 lg:col-span-8 rounded-3xl glass-card p-6 shadow-sm border border-border/40 flex flex-col justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Distribución Financiera</p>
+              <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-sage-foreground" /> Ingresos del Mes (Métodos de Pago)
+              </h3>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={cn(
+                "inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold",
+                stats.incomeDelta >= 0 
+                  ? "bg-sage/40 text-sage-foreground" 
+                  : "bg-red-500/10 text-red-500"
+              )}>
+                {stats.incomeDelta >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+                {stats.incomeDelta >= 0 ? `+${stats.incomeDelta}%` : `${stats.incomeDelta}%`}
+              </span>
+              <div className="rounded-2xl bg-sage/15 text-sage-foreground border border-sage/20 px-4 py-2 text-sm font-semibold">
+                Total: ${stats.thisMonthIncome.toLocaleString("es-ES")} USD
               </div>
             </div>
-          );
-        })}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+            <div className="space-y-4 flex flex-col justify-center">
+              {stats.incomeBreakdown.map((d, idx) => {
+                const colors = [
+                  "bg-mauve",
+                  "bg-blush-foreground",
+                  "bg-sage-foreground",
+                  "bg-sky-600",
+                  "bg-amber-600",
+                ];
+                const colorClass = colors[idx % colors.length];
+                return (
+                  <div key={d.method} className="space-y-1">
+                    <div className="flex justify-between text-xs font-semibold">
+                      <span>{d.method}</span>
+                      <span className="text-muted-foreground">${d.amount.toLocaleString("es-ES")} ({d.percentage}%)</span>
+                    </div>
+                    <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
+                      <div
+                        style={{ width: `${d.percentage}%` }}
+                        className={cn("h-full rounded-full transition-all duration-500", colorClass)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+              {stats.incomeBreakdown.length === 0 && (
+                <p className="text-xs text-muted-foreground text-center py-12">No hay ingresos registrados este mes.</p>
+              )}
+            </div>
+
+            {stats.incomeBreakdown.length > 0 && (
+              <div className="h-48 flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={stats.incomeBreakdown.map((d) => ({ name: d.method, value: d.amount }))}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {stats.incomeBreakdown.map((entry, index) => {
+                        const colors = ["#8b5caf", "#e8c5c8", "#87988a", "#0284c7", "#d97706"];
+                        return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                      })}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`$${value.toLocaleString("es-ES")} USD`]} contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0" }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="col-span-12 rounded-3xl glass-card p-6 shadow-sm lg:col-span-7">
           <div className="flex items-center justify-between">

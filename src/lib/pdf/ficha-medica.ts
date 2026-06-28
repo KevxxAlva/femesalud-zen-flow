@@ -19,6 +19,13 @@ export const exportFichaMedica = async (
     const pageHeight = doc.internal.pageSize.getHeight();
 
     const logoBase64 = await loadLogoBase64("/logo.png");
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, "PNG", 70, 45, 75, 75);
+      } catch (err) {
+        console.error("Error drawing header logo:", err);
+      }
+    }
 
     // Font Setup
     doc.setFont("times", "normal");

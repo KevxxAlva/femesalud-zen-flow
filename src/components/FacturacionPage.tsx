@@ -361,7 +361,7 @@ export function FacturacionPage() {
                               ? "bg-sage/50 text-sage-foreground" // Green for Cobrada
                               : "bg-amber-100 text-amber-800 border border-amber-200/50" // Yellow for Por Cobrar
                             : a.status === "programada"
-                            ? "bg-mauve/15 text-mauve" // Purple for Pendiente
+                            ? "bg-amber-100 text-amber-800 border border-amber-200/50" // Yellow for Pendiente
                             : "bg-destructive/15 text-destructive" // Red for Cancelada
                         )}>
                           {a.status === "completada"

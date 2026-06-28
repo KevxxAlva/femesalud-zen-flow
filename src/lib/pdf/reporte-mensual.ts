@@ -139,6 +139,21 @@ export const exportMonthlyReport = async (
         5: { cellWidth: 65 }, // Método
         6: { cellWidth: 65 } // Referencia
       },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 4) {
+          const val = data.cell.raw;
+          if (val === "Cobrada") {
+            data.cell.styles.textColor = [46, 125, 50]; // Green
+            data.cell.styles.fontStyle = "bold";
+          } else if (val === "Por Cobrar" || val === "Pendiente") {
+            data.cell.styles.textColor = [197, 122, 0]; // Yellow / Amber (dark enough to be readable)
+            data.cell.styles.fontStyle = "bold";
+          } else if (val === "Cancelada") {
+            data.cell.styles.textColor = [211, 47, 47]; // Red
+            data.cell.styles.fontStyle = "bold";
+          }
+        }
+      },
       margin: { left: 50, right: 50 }
     });
 
