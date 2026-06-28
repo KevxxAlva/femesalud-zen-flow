@@ -103,12 +103,13 @@ export function HistoriasPage() {
 
   const handleExportRecipe = async (patient: any, consultation: any) => {
     const docObj = doctors.find((d) => d.id === consultation.doctor_id);
+    const isCarli = docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") || docObj?.full_name?.toLowerCase().includes("solé");
     const docInfo = {
       name: docObj?.full_name || "Médico Tratante",
       specialty: docObj?.specialty || "Ginecólogo Obstetra",
-      uni: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "UC-CHET" : (docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET"),
-      mpps: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "102.927" : "",
-      cmc: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "11.619" : "",
+      uni: docObj?.university || (isCarli ? "UC-CHET" : (docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET")),
+      mpps: docObj?.mpps || (isCarli ? "102.927" : ""),
+      cmc: docObj?.cmc || (isCarli ? "11.619" : ""),
     };
     await generateRecipePDF(patient, consultation, clinic, docInfo);
   };

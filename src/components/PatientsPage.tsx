@@ -90,56 +90,31 @@ export function PatientsPage() {
   const [justificativoReason, setJustificativoReason] = useState("");
   const [justificativoDays, setJustificativoDays] = useState("1");
 
-  // Doctor credentials
-  const [doctorUni, setDoctorUni] = useState("UC-CHET");
-  const [doctorMpps, setDoctorMpps] = useState("102.927");
-  const [doctorCmc, setDoctorCmc] = useState("11.619");
-
-  const fillDoctorCredentials = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
-    const docName = docObj?.full_name || "";
-    if (docObj && (docObj.university || docObj.mpps || docObj.cmc)) {
-      setDoctorUni(docObj.university || "");
-      setDoctorMpps(docObj.mpps || "");
-      setDoctorCmc(docObj.cmc || "");
-    } else if (docName.toLowerCase().includes("carli") || docName.toLowerCase().includes("sole") || docName.toLowerCase().includes("solé")) {
-      setDoctorUni("UC-CHET");
-      setDoctorMpps("102.927");
-      setDoctorCmc("11.619");
-    } else {
-      setDoctorUni(docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET");
-      setDoctorMpps("");
-      setDoctorCmc("");
-    }
-  };
-
   const handleOpenReposoDialog = (patient: Patient) => {
-    fillDoctorCredentials(patient);
     setReposoReason("");
     setOpenReposo(true);
   };
 
   const handleOpenAtencionDialog = (patient: Patient) => {
-    fillDoctorCredentials(patient);
     setAtencionReason("");
     setOpenAtencion(true);
   };
 
   const handleOpenJustificativoDialog = (patient: Patient) => {
-    fillDoctorCredentials(patient);
     setJustificativoReason("");
     setJustificativoDays("1");
     setOpenJustificativo(true);
   };
 
   const getDoctorInfoForPdf = (patient: Patient) => {
-    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id);
+    const docObj = doctors.find((d) => d.id === patient.assigned_doctor_id) || myProfile;
+    const isCarli = docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") || docObj?.full_name?.toLowerCase().includes("solé");
     return {
-      name: docObj?.full_name || myProfile?.full_name || "Dra. Carli Solé Aquino",
-      specialty: docObj?.specialty || myProfile?.specialty || "Ginecólogo Obstetra",
-      uni: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "UC-CHET" : (docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET"),
-      mpps: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "102.927" : "",
-      cmc: docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") ? "11.619" : "",
+      name: docObj?.full_name || "Dra. Carli Solé Aquino",
+      specialty: docObj?.specialty || "Ginecólogo Obstetra",
+      uni: docObj?.university || (isCarli ? "UC-CHET" : (docObj?.specialty ? "Ginecólogo Obstetra" : "UC-CHET")),
+      mpps: docObj?.mpps || (isCarli ? "102.927" : ""),
+      cmc: docObj?.cmc || (isCarli ? "11.619" : ""),
     };
   };
 
@@ -336,10 +311,6 @@ export function PatientsPage() {
         justificativoDays={justificativoDays} setJustificativoDays={setJustificativoDays}
         justificativoReason={justificativoReason} setJustificativoReason={setJustificativoReason}
         handleExportJustificativo={handleExportJustificativo}
-
-        doctorUni={doctorUni} setDoctorUni={setDoctorUni}
-        doctorMpps={doctorMpps} setDoctorMpps={setDoctorMpps}
-        doctorCmc={doctorCmc} setDoctorCmc={setDoctorCmc}
       />
     </div>
   );

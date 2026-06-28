@@ -40,13 +40,7 @@ interface PatientExportModalsProps {
   setJustificativoReason: (v: string) => void;
   handleExportJustificativo: () => void;
 
-  // Shared Doctor Info
-  doctorUni: string;
-  setDoctorUni: (v: string) => void;
-  doctorMpps: string;
-  setDoctorMpps: (v: string) => void;
-  doctorCmc: string;
-  setDoctorCmc: (v: string) => void;
+
 }
 
 export const PatientExportModals = React.memo(function PatientExportModals(props: PatientExportModalsProps) {
@@ -94,41 +88,7 @@ export const PatientExportModals = React.memo(function PatientExportModals(props
               />
             </div>
 
-            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
-              <div className="grid gap-1">
-                <Label htmlFor="rp-doc-uni">Universidad / Título Adicional</Label>
-                <Input
-                  id="rp-doc-uni"
-                  placeholder="Ej. UC-CHET"
-                  value={props.doctorUni}
-                  onChange={(e) => props.setDoctorUni(e.target.value)}
-                  className="rounded-xl h-9 text-xs"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="rp-doc-mpps">MPPS</Label>
-                  <Input
-                    id="rp-doc-mpps"
-                    placeholder="Ej. 102.927"
-                    value={props.doctorMpps}
-                    onChange={(e) => props.setDoctorMpps(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="rp-doc-cmc">C.M.C</Label>
-                  <Input
-                    id="rp-doc-cmc"
-                    placeholder="Ej. 11.619"
-                    value={props.doctorCmc}
-                    onChange={(e) => props.setDoctorCmc(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
+
             <Button
               onClick={props.handleExportReposo}
               disabled={!props.reposoReason.trim()}
@@ -180,38 +140,7 @@ export const PatientExportModals = React.memo(function PatientExportModals(props
               />
             </div>
 
-            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
-              <div className="grid gap-1">
-                <Label htmlFor="at-doc-uni">Universidad / Título</Label>
-                <Input
-                  id="at-doc-uni"
-                  value={props.doctorUni}
-                  onChange={(e) => props.setDoctorUni(e.target.value)}
-                  className="rounded-xl h-9 text-xs"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="at-doc-mpps">MPPS</Label>
-                  <Input
-                    id="at-doc-mpps"
-                    value={props.doctorMpps}
-                    onChange={(e) => props.setDoctorMpps(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="at-doc-cmc">C.M.C</Label>
-                  <Input
-                    id="at-doc-cmc"
-                    value={props.doctorCmc}
-                    onChange={(e) => props.setDoctorCmc(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
+
             <Button
               onClick={props.handleExportAtencion}
               className="mt-2 w-full rounded-xl bg-gradient-to-r from-mauve to-blush text-primary-foreground shadow-sm hover:opacity-90 transition-opacity cursor-pointer"
@@ -264,38 +193,7 @@ export const PatientExportModals = React.memo(function PatientExportModals(props
               />
             </div>
 
-            <div className="border-t border-border/60 pt-3 mt-1 space-y-2.5">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Datos de Firma del Médico</p>
-              <div className="grid gap-1">
-                <Label htmlFor="ju-doc-uni">Universidad / Título</Label>
-                <Input
-                  id="ju-doc-uni"
-                  value={props.doctorUni}
-                  onChange={(e) => props.setDoctorUni(e.target.value)}
-                  className="rounded-xl h-9 text-xs"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="grid gap-1">
-                  <Label htmlFor="ju-doc-mpps">MPPS</Label>
-                  <Input
-                    id="ju-doc-mpps"
-                    value={props.doctorMpps}
-                    onChange={(e) => props.setDoctorMpps(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-                <div className="grid gap-1">
-                  <Label htmlFor="ju-doc-cmc">C.M.C</Label>
-                  <Input
-                    id="ju-doc-cmc"
-                    value={props.doctorCmc}
-                    onChange={(e) => props.setDoctorCmc(e.target.value)}
-                    className="rounded-xl h-9 text-xs"
-                  />
-                </div>
-              </div>
-            </div>
+
             <Button
               onClick={props.handleExportJustificativo}
               disabled={!props.justificativoReason.trim()}

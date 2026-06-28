@@ -22,8 +22,9 @@ export const exportConstanciaAtencion = async (
     const pageHeight = doc.internal.pageSize.getHeight();
 
     // Draw Watermark Logo in center
+    let logoBase64: string | null = null;
     try {
-      const logoBase64 = await loadLogoBase64("/logo.png");
+      logoBase64 = await loadLogoBase64("/logo.png");
       if (logoBase64) {
         doc.saveGraphicsState();
         const gState = new (doc as any).GState({ opacity: 0.04 });
@@ -34,9 +35,12 @@ export const exportConstanciaAtencion = async (
         const imgY = (pageHeight - imgHeight) / 2 - 20;
         doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
         doc.restoreGraphicsState();
+
+        // Draw header logo next to clinic info (top-left)
+        doc.addImage(logoBase64, "PNG", 70, 45, 75, 75);
       }
     } catch (watermarkErr) {
-      console.error("Error drawing watermark:", watermarkErr);
+      console.error("Error drawing logo:", watermarkErr);
     }
 
     // Font Setup
