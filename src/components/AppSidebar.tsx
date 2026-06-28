@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
+import { motion } from "framer-motion";
 import {
   Home, Calendar, Users, FileText, Receipt, FileBarChart,
   Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
@@ -30,6 +31,27 @@ const adminModules = [
 const initials = (n: string) =>
   (n || "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.05,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -20, filter: "blur(4px)" },
+  show: { 
+    opacity: 1, 
+    x: 0, 
+    filter: "blur(0px)",
+    transition: { type: "spring", stiffness: 300, damping: 24 } 
+  },
+};
+
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user } = useAuthSession();
@@ -59,34 +81,40 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
           <p className="text-[11px] text-muted-foreground">Premium Clinical Suite</p>
         </div>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
+      <motion.nav 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="flex-1 space-y-1 overflow-y-auto px-3"
+      >
         {modules.map((m) => {
           const active = pathname === m.url;
           const Icon = m.icon;
           return (
-            <Link
-              key={m.url}
-              to={m.url}
-              onClick={onNavigate}
-              className={cn(
-                "group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300",
-                active
-                  ? "bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30"
-                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <Icon
+            <motion.div key={m.url} variants={itemVariants}>
+              <Link
+                to={m.url}
+                onClick={onNavigate}
                 className={cn(
-                  "h-[18px] w-[18px] transition-transform duration-300",
-                  active ? "scale-110" : "group-hover:scale-105",
+                  "group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300",
+                  active
+                    ? "bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30"
+                    : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground hover:scale-[1.02]",
                 )}
-                strokeWidth={active ? 2.4 : 2}
-              />
-              <span>{m.title}</span>
-            </Link>
+              >
+                <Icon
+                  className={cn(
+                    "h-[18px] w-[18px] transition-transform duration-300",
+                    active ? "scale-110" : "group-hover:scale-105",
+                  )}
+                  strokeWidth={active ? 2.4 : 2}
+                />
+                <span>{m.title}</span>
+              </Link>
+            </motion.div>
           );
         })}
-      </nav>
+      </motion.nav>
       <div className="m-3 rounded-2xl bg-gradient-to-br from-blush/60 to-accent/50 p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-mauve to-blush text-xs font-semibold text-primary-foreground">

@@ -156,8 +156,9 @@
     background-color: var(--color-background);
     color: var(--color-foreground);
     background-image:
-      radial-gradient(at 20% 0%, oklch(0.95 0.04 305 / 0.5) 0px, transparent 50%),
-      radial-gradient(at 90% 10%, oklch(0.95 0.04 350 / 0.4) 0px, transparent 50%);
+      radial-gradient(at 0% 0%, oklch(0.95 0.04 305 / 0.6) 0px, transparent 40%),
+      radial-gradient(at 100% 0%, oklch(0.95 0.04 350 / 0.5) 0px, transparent 40%),
+      radial-gradient(at 50% 100%, oklch(0.95 0.03 260 / 0.4) 0px, transparent 50%);
     background-attachment: fixed;
   }
 
@@ -168,8 +169,18 @@
 }
 
 @utility glass-card {
-  background: color-mix(in oklab, var(--color-card) 75%, transparent);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
+  background: color-mix(in oklab, var(--color-card) 70%, transparent);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+  box-shadow: 
+    0 8px 32px 0 rgba(0, 0, 0, 0.03),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+@utility text-gradient-primary {
+  background-image: linear-gradient(135deg, var(--color-primary), var(--color-accent));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
