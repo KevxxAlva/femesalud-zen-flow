@@ -211,7 +211,41 @@ export function useCreatePatient() {
       if (error) throw error;
       return (data as any) as Patient;
     },
-    onSuccess: () => {
+    onMutate: async (newPatient) => {
+      await qc.cancelQueries({ queryKey: ["patients_paginated"] });
+      await qc.cancelQueries({ queryKey: ["patients_recent"] });
+      const previousPaginated = qc.getQueriesData({ queryKey: ["patients_paginated"] });
+      const previousRecent = qc.getQueriesData({ queryKey: ["patients_recent"] });
+      
+      const tempId = crypto.randomUUID();
+      const optimisticPatient = {
+        id: tempId,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        status: newPatient.status || "nuevo",
+        ...newPatient,
+      } as Patient;
+
+      qc.setQueriesData({ queryKey: ["patients_paginated"] }, (old: any) => {
+        if (!old) return old;
+        return { ...old, data: [optimisticPatient, ...old.data], count: old.count + 1 };
+      });
+      qc.setQueriesData({ queryKey: ["patients_recent"] }, (old: any) => {
+        if (!old) return old;
+        return [optimisticPatient, ...old].slice(0, 5);
+      });
+
+      return { previousPaginated, previousRecent };
+    },
+    onError: (err, newPatient, context: any) => {
+      if (context?.previousPaginated) {
+        context.previousPaginated.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousRecent) {
+        context.previousRecent.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
       qc.invalidateQueries({ queryKey: ["patient"] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
@@ -229,9 +263,46 @@ export function useUpdatePatient() {
       if (error) throw error;
       return (data as any) as Patient;
     },
-    onSuccess: () => {
+    onMutate: async (updatedPatient) => {
+      await qc.cancelQueries({ queryKey: ["patients_paginated"] });
+      await qc.cancelQueries({ queryKey: ["patients_recent"] });
+      await qc.cancelQueries({ queryKey: ["patient", updatedPatient.id] });
+      
+      const previousPaginated = qc.getQueriesData({ queryKey: ["patients_paginated"] });
+      const previousRecent = qc.getQueriesData({ queryKey: ["patients_recent"] });
+      const previousPatient = qc.getQueryData(["patient", updatedPatient.id]);
+
+      qc.setQueriesData({ queryKey: ["patients_paginated"] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.map((p: any) => (p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p)),
+        };
+      });
+      qc.setQueriesData({ queryKey: ["patients_recent"] }, (old: any) => {
+        if (!old) return old;
+        return old.map((p: any) => (p.id === updatedPatient.id ? { ...p, ...updatedPatient } : p));
+      });
+      if (previousPatient) {
+        qc.setQueryData(["patient", updatedPatient.id], { ...(previousPatient as any), ...updatedPatient });
+      }
+
+      return { previousPaginated, previousRecent, previousPatient };
+    },
+    onError: (err, updatedPatient, context: any) => {
+      if (context?.previousPaginated) {
+        context.previousPaginated.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousRecent) {
+        context.previousRecent.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousPatient) {
+        qc.setQueryData(["patient", updatedPatient.id], context.previousPatient);
+      }
+    },
+    onSettled: (data, error, variables) => {
       qc.invalidateQueries({ queryKey: ["patients"] });
-      qc.invalidateQueries({ queryKey: ["patient"] });
+      qc.invalidateQueries({ queryKey: ["patient", variables.id] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });
@@ -246,9 +317,39 @@ export function useDeletePatient() {
       const { error } = await supabase.from("patients").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["patients_paginated"] });
+      await qc.cancelQueries({ queryKey: ["patients_recent"] });
+      
+      const previousPaginated = qc.getQueriesData({ queryKey: ["patients_paginated"] });
+      const previousRecent = qc.getQueriesData({ queryKey: ["patients_recent"] });
+
+      qc.setQueriesData({ queryKey: ["patients_paginated"] }, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          data: old.data.filter((p: any) => p.id !== id),
+          count: old.count - 1,
+        };
+      });
+      qc.setQueriesData({ queryKey: ["patients_recent"] }, (old: any) => {
+        if (!old) return old;
+        return old.filter((p: any) => p.id !== id);
+      });
+
+      return { previousPaginated, previousRecent };
+    },
+    onError: (err, id, context: any) => {
+      if (context?.previousPaginated) {
+        context.previousPaginated.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousRecent) {
+        context.previousRecent.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+    },
+    onSettled: (data, error, id) => {
       qc.invalidateQueries({ queryKey: ["patients"] });
-      qc.invalidateQueries({ queryKey: ["patient"] });
+      qc.invalidateQueries({ queryKey: ["patient", id] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });

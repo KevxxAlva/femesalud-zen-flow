@@ -3,8 +3,7 @@ import { FileBarChart, Download, Calendar as CalIcon, Users, CalendarClock, Tren
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+
 import { usePatientsCountByDateRange } from "@/lib/api/patients";
 import { useAppointments } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
@@ -132,6 +131,10 @@ export function ReportsPage() {
 
   const exportPDF = async () => {
     try {
+      const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+        import("jspdf"),
+        import("jspdf-autotable"),
+      ]);
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();

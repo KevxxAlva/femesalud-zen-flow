@@ -153,72 +153,60 @@ export function useCreateConsultation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ consumables, ...consultationData }: ConsultationInput) => {
-      // 1. Insert consultation
-      const { data: user } = await supabase.auth.getUser();
-      const { data: consultation, error: cError } = await supabase
-        .from("consultations")
-        .insert({
-          ...consultationData,
-          doctor_id: consultationData.doctor_id || user.user?.id || null,
-        })
-        .select()
-        .single();
-      if (cError) throw cError;
-
-      // 2. Insert consumables if present
-      if (consumables && consumables.length > 0) {
-        const consumablesWithId = consumables.map((item) => ({
-          ...item,
-          consultation_id: consultation.id,
-        }));
-        const { error: consError } = await supabase
-          .from("consultation_consumables")
-          .insert(consumablesWithId);
-        if (consError) throw consError;
-      }
-
-      // 3. Mark appointment as completed
-      await supabase
-        .from("appointments")
-        .update({ status: "completada" })
-        .eq("id", consultationData.appointment_id);
-
-      // 4. Create next appointment if next_appointment_date is provided
-      if (consultationData.next_appointment_date) {
-        const { data: origApp } = await supabase
-          .from("appointments")
-          .select("scheduled_at, doctor_id, reason, price")
-          .eq("id", consultationData.appointment_id)
-          .maybeSingle();
-
-        let scheduledAt = `${consultationData.next_appointment_date}T09:00:00Z`;
-        if (origApp?.scheduled_at) {
-          try {
-            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
-            scheduledAt = `${consultationData.next_appointment_date}T${timePart}`;
-          } catch (e) {
-            console.error("Error parsing scheduled_at:", e);
-          }
-        }
-
-        await supabase
-          .from("appointments")
-          .insert({
-            patient_id: consultationData.patient_id,
-            doctor_id: origApp?.doctor_id || consultationData.doctor_id || user.user?.id || null,
-            scheduled_at: scheduledAt,
-            status: "programada",
-            reason: "Próxima Cita",
-            price: origApp?.price || 0,
-            created_by: user.user?.id || null,
-          });
-      }
-
-      return consultation;
+      const { data, error } = await supabase.rpc("create_consultation_rpc", {
+        p_consultation: consultationData as any,
+        p_consumables: (consumables ?? []) as any,
+      });
+      if (error) throw error;
+      return data as Consultation;
     },
-    onSuccess: (_, variables) => {
+    onMutate: async (newConsultation) => {
+      await qc.cancelQueries({ queryKey: ["consultations"] });
+      await qc.cancelQueries({ queryKey: ["consultations", "patient", newConsultation.patient_id] });
+      await qc.cancelQueries({ queryKey: ["consultation", newConsultation.appointment_id] });
+
+      const previousConsultations = qc.getQueriesData({ queryKey: ["consultations"] });
+      const previousPatientConsultations = qc.getQueriesData({ queryKey: ["consultations", "patient", newConsultation.patient_id] });
+      const previousConsultation = qc.getQueryData(["consultation", newConsultation.appointment_id]);
+
+      const optimisticConsultation = {
+        id: crypto.randomUUID(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        ...newConsultation,
+      } as Consultation;
+
+      qc.setQueriesData({ queryKey: ["consultations"] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return [optimisticConsultation, ...old];
+        return old;
+      });
+
+      qc.setQueriesData({ queryKey: ["consultations", "patient", newConsultation.patient_id] }, (old: any) => {
+        if (!old) return old;
+        if (Array.isArray(old)) return [optimisticConsultation, ...old];
+        return old;
+      });
+
+      qc.setQueryData(["consultation", newConsultation.appointment_id], optimisticConsultation);
+
+      return { previousConsultations, previousPatientConsultations, previousConsultation };
+    },
+    onError: (err, newConsultation, context: any) => {
+      if (context?.previousConsultations) {
+        context.previousConsultations.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousPatientConsultations) {
+        context.previousPatientConsultations.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousConsultation !== undefined) {
+        qc.setQueryData(["consultation", newConsultation.appointment_id], context.previousConsultation);
+      }
+    },
+    onSettled: (_, __, variables) => {
       qc.invalidateQueries({ queryKey: ["consultations"] });
       qc.invalidateQueries({ queryKey: ["consultation", variables.appointment_id] });
+      qc.invalidateQueries({ queryKey: ["consultations", "patient", variables.patient_id] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["patients"] });
       qc.invalidateQueries({ queryKey: ["clinical_notes"] });
@@ -230,105 +218,56 @@ export function useUpdateConsultation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, consumables, ...patch }: Partial<ConsultationInput> & { id: string }) => {
-      // 1. Fetch current consultation data before update
-      const { data: oldConsultation } = await supabase
-        .from("consultations")
-        .select("next_appointment_date, patient_id, appointment_id, doctor_id")
-        .eq("id", id)
-        .maybeSingle();
-
-      // 2. Update consultation details
-      const { data: consultation, error: cError } = await supabase
-        .from("consultations")
-        .update(patch)
-        .eq("id", id)
-        .select()
-        .single();
-      if (cError) throw cError;
-
-      // 2. Update consumables if provided
-      if (consumables) {
-        // Delete existing ones
-        const { error: delError } = await supabase
-          .from("consultation_consumables")
-          .delete()
-          .eq("consultation_id", id);
-        if (delError) throw delError;
-
-        // Insert new ones
-        if (consumables.length > 0) {
-          const newConsumables = consumables.map((item) => ({
-            ...item,
-            consultation_id: id,
-          }));
-          const { error: insError } = await supabase
-            .from("consultation_consumables")
-            .insert(newConsumables);
-          if (insError) throw insError;
-        }
-      }
-
-      // 4. Handle next appointment date change
-      if (patch.next_appointment_date && patch.next_appointment_date !== oldConsultation?.next_appointment_date) {
-        const { data: user } = await supabase.auth.getUser();
-        
-        // Fetch original appointment to copy details
-        const { data: origApp } = await supabase
-          .from("appointments")
-          .select("scheduled_at, doctor_id, reason, price")
-          .eq("id", oldConsultation.appointment_id)
-          .maybeSingle();
-
-        let scheduledAt = `${patch.next_appointment_date}T09:00:00Z`;
-        if (origApp?.scheduled_at) {
-          try {
-            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
-            scheduledAt = `${patch.next_appointment_date}T${timePart}`;
-          } catch (e) {
-            console.error("Error parsing scheduled_at:", e);
-          }
-        }
-
-        // Check if there is already a scheduled next appointment created after the consultation's original appointment date
-        const { data: existingNextApp } = await supabase
-          .from("appointments")
-          .select("id")
-          .eq("patient_id", oldConsultation.patient_id)
-          .eq("status", "programada")
-          .gt("scheduled_at", origApp?.scheduled_at || new Date(0).toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-
-        if (existingNextApp) {
-          // Update existing next appointment
-          await supabase
-            .from("appointments")
-            .update({ scheduled_at: scheduledAt })
-            .eq("id", existingNextApp.id);
-        } else {
-          // Create new next appointment
-          await supabase
-            .from("appointments")
-            .insert({
-              patient_id: oldConsultation.patient_id,
-              doctor_id: origApp?.doctor_id || oldConsultation.doctor_id || user.user?.id || null,
-              scheduled_at: scheduledAt,
-              status: "programada",
-              reason: "Próxima Cita",
-              price: origApp?.price || 0,
-              created_by: user.user?.id || null,
-            });
-        }
-      }
-
-      return consultation;
+      const { data, error } = await supabase.rpc("update_consultation_rpc", {
+        p_consultation_id: id,
+        p_patch: patch as any,
+        p_consumables: consumables as any,
+      });
+      if (error) throw error;
+      return data as Consultation;
     },
-    onSuccess: (data) => {
+    onMutate: async (updatedConsultation) => {
+      await qc.cancelQueries({ queryKey: ["consultations"] });
+      
+      const previousConsultations = qc.getQueriesData({ queryKey: ["consultations"] });
+      const previousPatientConsultations = qc.getQueriesData({ queryKey: ["consultations", "patient"] });
+
+      qc.setQueriesData({ queryKey: ["consultations"] }, (old: any) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((c: any) => c.id === updatedConsultation.id ? { ...c, ...updatedConsultation } : c);
+      });
+
+      qc.setQueriesData({ queryKey: ["consultations", "patient"] }, (old: any) => {
+        if (!old || !Array.isArray(old)) return old;
+        return old.map((c: any) => c.id === updatedConsultation.id ? { ...c, ...updatedConsultation } : c);
+      });
+
+      let previousConsultation = undefined;
+      if (updatedConsultation.appointment_id) {
+         await qc.cancelQueries({ queryKey: ["consultation", updatedConsultation.appointment_id] });
+         previousConsultation = qc.getQueryData(["consultation", updatedConsultation.appointment_id]);
+         qc.setQueryData(["consultation", updatedConsultation.appointment_id], (old: any) => old ? { ...old, ...updatedConsultation } : old);
+      }
+
+      return { previousConsultations, previousPatientConsultations, previousConsultation, appointment_id: updatedConsultation.appointment_id };
+    },
+    onError: (err, updatedConsultation, context: any) => {
+      if (context?.previousConsultations) {
+        context.previousConsultations.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.previousPatientConsultations) {
+        context.previousPatientConsultations.forEach(([queryKey, data]: any) => qc.setQueryData(queryKey, data));
+      }
+      if (context?.appointment_id && context.previousConsultation !== undefined) {
+        qc.setQueryData(["consultation", context.appointment_id], context.previousConsultation);
+      }
+    },
+    onSettled: (data) => {
       qc.invalidateQueries({ queryKey: ["consultations"] });
       if (data?.appointment_id) {
         qc.invalidateQueries({ queryKey: ["consultation", data.appointment_id] });
       }
+      qc.invalidateQueries({ queryKey: ["consultations", "patient"] });
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["patients"] });
       qc.invalidateQueries({ queryKey: ["clinical_notes"] });

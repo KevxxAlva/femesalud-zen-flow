@@ -1,4 +1,3 @@
-import jsPDF from "jspdf";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -64,6 +63,7 @@ export const generateRecipePDF = async (
 
     // A4 Format (unit: pt, format: a4)
     // Page dimensions in pt: 595.28 x 841.89
+    const { default: jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "a4", orientation: "p" });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
