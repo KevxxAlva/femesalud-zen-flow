@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Plus, Search, Trash2, FileText, Loader2, X, Paperclip, Download, ChevronLeft, ChevronRight, Image as ImageIcon } from "lucide-react";
+import { Plus, Search, Trash2, FileText, Loader2, X, Paperclip, Download, ChevronLeft, ChevronRight, Image as ImageIcon, ClipboardList } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   useClinicalNotes, useCreateClinicalNote, useDeleteClinicalNote,
   uploadClinicalAttachments, getAttachmentUrl, type ClinicalAttachment,
@@ -170,9 +172,17 @@ export function ClinicalNotesPanel({ patientId }: { patientId: string }) {
 
       <div className="space-y-2">
         {isLoading ? (
-          <div className="py-6 text-center"><Loader2 className="mx-auto h-4 w-4 animate-spin text-muted-foreground" /></div>
+          <>
+            {[1, 2, 3].map(i => (
+              <div key={i} className="rounded-2xl border border-border/60 bg-card/40 p-3 space-y-2">
+                <Skeleton className="h-4 w-1/3 bg-muted" />
+                <Skeleton className="h-3 w-full bg-muted/60" />
+                <Skeleton className="h-3 w-4/5 bg-muted/60" />
+              </div>
+            ))}
+          </>
         ) : pageItems.length === 0 ? (
-          <p className="py-6 text-center text-xs text-muted-foreground">Sin notas para los filtros seleccionados.</p>
+          <EmptyState icon={ClipboardList} title="Sin notas" description="No hay notas clínicas guardadas para los filtros seleccionados." />
         ) : (
           pageItems.map((n) => (
             <article key={n.id} className="rounded-2xl border border-border/60 bg-card/40 p-3 group">

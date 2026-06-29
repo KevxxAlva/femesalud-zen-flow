@@ -2,6 +2,8 @@ import React from "react";
 import { Users, Mail, Phone, Stethoscope, Pencil, Trash2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import type { Patient } from "@/lib/api/patients";
 
 interface PatientListProps {
@@ -42,11 +44,7 @@ export const PatientList = React.memo(function PatientList({
   initials,
 }: PatientListProps) {
   if (isLoading) {
-    return (
-      <div className="rounded-3xl glass-card p-12 text-center">
-        <Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TableSkeleton columns={6} rows={10} />;
   }
 
   if (error) {
@@ -58,12 +56,7 @@ export const PatientList = React.memo(function PatientList({
   }
 
   if (paginatedPatients.length === 0) {
-    return (
-      <div className="rounded-3xl glass-card p-12 text-center shadow-sm">
-        <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-        <p className="mt-3 text-sm text-muted-foreground">No se encontraron pacientes.</p>
-      </div>
-    );
+    return <EmptyState icon={Users} title="Sin pacientes" description="No se encontraron pacientes con los filtros de búsqueda actuales." />;
   }
 
   return (

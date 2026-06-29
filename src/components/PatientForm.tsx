@@ -1,5 +1,7 @@
 import { useMemo, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
 } from "@/components/ui/dialog";
@@ -17,62 +19,65 @@ import { useDoctors } from "@/lib/api/profiles";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const STATUSES = ["nuevo", "activo", "en_tratamiento", "alta"];
 const statusLabel = (s: string) => ({ nuevo: "Nuevo", activo: "Activo", en_tratamiento: "En tratamiento", alta: "Alta" } as Record<string, string>)[s] ?? s;
 
-interface PatientFormValues {
-  full_name: string;
-  email: string;
-  phone: string;
-  birth_date: string;
-  status: string;
-  assigned_doctor_id: string;
-  notes: string;
-  address: string;
-  idPrefix: string;
-  idNumber: string;
-  historia_number: string;
-  first_visit_date: string;
-  marital_status: string;
-  birthplace: string;
-  education_level: string;
-  occupation: string;
-  ethnicity: string;
-  consultation_reason: string;
-  current_illness: string;
-  famMother: string;
-  famFather: string;
-  famSiblings: string;
-  famChildren: string;
-  persAlcohol: string;
-  persDrugs: string;
-  persTobacco: string;
-  persBase: string;
-  persSurgical: string;
-  persAllergies: string;
-  gynMenarche: string;
-  gynSexarche: string;
-  gynCycle: string;
-  gynDismenorrea: string;
-  gynNps: string;
-  gynIts: string;
-  gynCytology: string;
-  gynContraceptives: string;
-  obsG: string;
-  obsP: string;
-  obsC: string;
-  obsA: string;
-  obsPig: string;
-  obsEm: string;
-  obsEe: string;
-  obsComplications: string;
-  obsFum: string;
-  obsEg: string;
-  obsFpp: string;
-  obsNumConsultations: string;
-  obsVaccines: string;
-}
+const patientFormSchema = z.object({
+  full_name: z.string().min(1, "El nombre completo es requerido"),
+  email: z.string().email("Correo electrónico inválido").optional().or(z.literal("")),
+  phone: z.string().regex(/^\+?[0-9\s\-()]+$/, "Teléfono inválido").min(10, "Mínimo 10 caracteres").optional().or(z.literal("")),
+  birth_date: z.string().refine((val) => !val || new Date(val) <= new Date(), { message: "La fecha no puede ser futura" }).optional().or(z.literal("")),
+  status: z.string().optional(),
+  assigned_doctor_id: z.string().optional(),
+  notes: z.string().optional(),
+  address: z.string().optional(),
+  idPrefix: z.string().optional(),
+  idNumber: z.string().regex(/^[0-9]+$/, "Debe contener solo números").optional().or(z.literal("")),
+  historia_number: z.string().optional(),
+  first_visit_date: z.string().refine((val) => !val || new Date(val) <= new Date(), { message: "La fecha no puede ser futura" }).optional().or(z.literal("")),
+  marital_status: z.string().optional(),
+  birthplace: z.string().optional(),
+  education_level: z.string().optional(),
+  occupation: z.string().optional(),
+  ethnicity: z.string().optional(),
+  consultation_reason: z.string().optional(),
+  current_illness: z.string().optional(),
+  famMother: z.string().optional(),
+  famFather: z.string().optional(),
+  famSiblings: z.string().optional(),
+  famChildren: z.string().optional(),
+  persAlcohol: z.string().optional(),
+  persDrugs: z.string().optional(),
+  persTobacco: z.string().optional(),
+  persBase: z.string().optional(),
+  persSurgical: z.string().optional(),
+  persAllergies: z.string().optional(),
+  gynMenarche: z.string().optional(),
+  gynSexarche: z.string().optional(),
+  gynCycle: z.string().optional(),
+  gynDismenorrea: z.string().optional(),
+  gynNps: z.string().optional(),
+  gynIts: z.string().optional(),
+  gynCytology: z.string().optional(),
+  gynContraceptives: z.string().optional(),
+  obsG: z.string().optional(),
+  obsP: z.string().optional(),
+  obsC: z.string().optional(),
+  obsA: z.string().optional(),
+  obsPig: z.string().optional(),
+  obsEm: z.string().optional(),
+  obsEe: z.string().optional(),
+  obsComplications: z.string().optional(),
+  obsFum: z.string().optional(),
+  obsEg: z.string().optional(),
+  obsFpp: z.string().optional(),
+  obsNumConsultations: z.string().optional(),
+  obsVaccines: z.string().optional(),
+});
+
+type PatientFormValues = z.infer<typeof patientFormSchema>;
 
 export function PatientForm({
   open, onOpenChange, patient: initialPatient,
@@ -93,7 +98,8 @@ export function PatientForm({
     [patient, isAdmin, doctors, user],
   );
 
-  const { register, handleSubmit, control, reset } = useForm<PatientFormValues>({
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<PatientFormValues>({
+    resolver: zodResolver(patientFormSchema),
     defaultValues: {
       full_name: "",
       email: "",
@@ -311,7 +317,7 @@ export function PatientForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col rounded-3xl p-6">
+      <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border/40 shadow-2xl rounded-3xl">
         <DialogHeader className="pb-2">
           <DialogTitle>{isEdit ? "Editar historia clínica" : "Nueva historia clínica"}</DialogTitle>
           <DialogDescription>
@@ -321,7 +327,7 @@ export function PatientForm({
 
         <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
           <Tabs defaultValue="id" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-5 bg-muted/60 p-1 rounded-2xl mb-4">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap bg-muted/60 p-1 rounded-2xl mb-4">
               <TabsTrigger value="id" className="rounded-xl font-medium">Identificación</TabsTrigger>
               <TabsTrigger value="family" className="rounded-xl font-medium">Ant. Familiares</TabsTrigger>
               <TabsTrigger value="personal" className="rounded-xl font-medium">Ant. Personales</TabsTrigger>
@@ -333,7 +339,7 @@ export function PatientForm({
               <div className="py-1">
                 {/* TAB 1: IDENTIFICATION */}
                 <TabsContent value="id" className="grid gap-4 mt-0">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="historia">Nº Historia</Label>
                       <Input
@@ -344,12 +350,13 @@ export function PatientForm({
                       />
                     </div>
                     <div className="grid gap-2 col-span-2">
-                      <Label htmlFor="name">Nombre completo</Label>
-                      <Input id="name" required className="rounded-xl" {...register("full_name")} />
+                      <Label htmlFor="name">Nombre completo <span className="text-destructive">*</span></Label>
+                      <Input id="name" className={cn("rounded-xl", errors.full_name && "border-destructive")} {...register("full_name")} />
+                      {errors.full_name && <p className="text-[10px] text-destructive mt-1">{errors.full_name.message}</p>}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label>Tipo ID</Label>
                       <Controller
@@ -375,24 +382,28 @@ export function PatientForm({
                       <Input
                         id="doc-number"
                         placeholder="Ej. 12345678"
-                        className="rounded-xl"
+                        className={cn("rounded-xl", errors.idNumber && "border-destructive")}
                         {...register("idNumber")}
                       />
+                      {errors.idNumber && <p className="text-[10px] text-destructive mt-0.5">{errors.idNumber.message}</p>}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="birth">Fecha de Nacimiento</Label>
-                      <Input id="birth" type="date" className="rounded-xl" {...register("birth_date")} />
+                      <Input id="birth" type="date" className={cn("rounded-xl", errors.birth_date && "border-destructive")} {...register("birth_date")} />
+                      {errors.birth_date && <p className="text-[10px] text-destructive mt-0.5">{errors.birth_date.message}</p>}
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="phone">Teléfono</Label>
-                      <Input id="phone" placeholder="0414..." className="rounded-xl" {...register("phone")} />
+                      <Input id="phone" placeholder="0414..." className={cn("rounded-xl", errors.phone && "border-destructive")} {...register("phone")} />
+                      {errors.phone && <p className="text-[10px] text-destructive mt-0.5">{errors.phone.message}</p>}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="email">Correo Electrónico</Label>
-                      <Input id="email" type="email" placeholder="paciente@mail.com" className="rounded-xl" {...register("email")} />
+                      <Input id="email" type="email" placeholder="paciente@mail.com" className={cn("rounded-xl", errors.email && "border-destructive")} {...register("email")} />
+                      {errors.email && <p className="text-[10px] text-destructive mt-0.5">{errors.email.message}</p>}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="marital">Estado Civil</Label>
@@ -400,7 +411,7 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="birthplace">Lugar de Nacimiento</Label>
                       <Input id="birthplace" className="rounded-xl" {...register("birthplace")} />
@@ -415,14 +426,15 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="ethnicity">Etnia</Label>
                       <Input id="ethnicity" placeholder="Ej. Blanca, Negra, Mestiza..." className="rounded-xl" {...register("ethnicity")} />
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="first_visit">Fecha Primera Cita</Label>
-                      <Input id="first_visit" type="date" className="rounded-xl" {...register("first_visit_date")} />
+                      <Input id="first_visit" type="date" className={cn("rounded-xl", errors.first_visit_date && "border-destructive")} {...register("first_visit_date")} />
+                      {errors.first_visit_date && <p className="text-[10px] text-destructive mt-0.5">{errors.first_visit_date.message}</p>}
                     </div>
                     <div className="grid gap-2">
                       <Label>Estado de Paciente</Label>
@@ -509,7 +521,7 @@ export function PatientForm({
 
                 {/* TAB 3: PERSONAL HISTORY */}
                 <TabsContent value="personal" className="grid gap-4 mt-0">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label>Alcohol</Label>
                       <Controller
@@ -581,7 +593,7 @@ export function PatientForm({
 
                 {/* TAB 4: GYNECOLOGICAL DATA */}
                 <TabsContent value="gyn" className="grid gap-4 mt-0">
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="menarche">Menarquía (Edad)</Label>
                       <Input id="menarche" placeholder="Años" type="text" className="rounded-xl" {...register("gynMenarche")} />
@@ -596,7 +608,7 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label>Dismenorrea</Label>
                       <Controller
@@ -638,7 +650,7 @@ export function PatientForm({
 
                 {/* TAB 5: OBSTETRICAL DATA */}
                 <TabsContent value="obs" className="grid gap-4 mt-0">
-                  <div className="grid grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="obs_g">Gestas (G)</Label>
                       <Input id="obs_g" placeholder="G" type="text" className="rounded-xl" {...register("obsG")} />
@@ -657,7 +669,7 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="obs_pig">PIG (Intervalo Gen.)</Label>
                       <Input id="obs_pig" placeholder="Años o meses" className="rounded-xl" {...register("obsPig")} />
@@ -672,7 +684,7 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="obs_fum">FUM</Label>
                       <Input id="obs_fum" placeholder="Ej. 12/03/2026" className="rounded-xl" {...register("obsFum")} />
@@ -687,7 +699,7 @@ export function PatientForm({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="obs_consults">Nº Consultas Previas</Label>
                       <Input id="obs_consults" placeholder="Nº" type="text" className="rounded-xl" {...register("obsNumConsultations")} />

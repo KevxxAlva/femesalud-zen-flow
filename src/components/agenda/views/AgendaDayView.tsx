@@ -1,6 +1,7 @@
-import { Plus, Calendar as CalIcon } from "lucide-react";
+import { Plus, Calendar as CalIcon, Clock, MoreVertical, CreditCard, Stethoscope, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import { type AppointmentWithPatient } from "@/lib/api/appointments";
 import { MONTHS_ES } from "../AgendaUtils";
 import { AgendaAppointmentCard } from "../AgendaAppointmentCard";
@@ -65,10 +66,8 @@ export function AgendaDayView({
           </h3>
 
           {dayAppointments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground h-full">
-              <CalIcon className="h-10 w-10 text-muted-foreground/40 mb-3 animate-pulse" />
-              <p className="font-semibold text-sm">No hay citas programadas para este día.</p>
-              <p className="text-xs text-muted-foreground mt-1">Usa el botón a la izquierda para agendar una.</p>
+            <div className="h-full flex items-center justify-center">
+              <EmptyState icon={CalIcon} title="Día libre" description="No hay citas programadas para este día. Usa el botón a la izquierda para agendar una." />
             </div>
           ) : (
             <div className="space-y-3 relative before:absolute before:left-8 before:top-4 before:bottom-4 before:w-0.5 before:bg-border/30">

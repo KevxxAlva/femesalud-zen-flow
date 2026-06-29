@@ -1,6 +1,8 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { routeTree } from "./routeTree.gen";
+import { GlobalError } from "./components/ui/global-error";
 
 export const getRouter = () => {
   const queryClient = new QueryClient({
@@ -12,11 +14,22 @@ export const getRouter = () => {
         refetchOnReconnect: true,
       },
     },
+    queryCache: new QueryCache({
+      onError: (error) => {
+        toast.error(`Error de consulta: ${error.message}`);
+      },
+    }),
+    mutationCache: new MutationCache({
+      onError: (error) => {
+        toast.error(`Error en operación: ${error.message}`);
+      },
+    }),
   });
 
   const router = createRouter({
     routeTree,
     context: { queryClient },
+    defaultErrorComponent: ({ error, reset }) => <GlobalError error={error} resetErrorBoundary={reset} />,
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,

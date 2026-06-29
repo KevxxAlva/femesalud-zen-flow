@@ -1,5 +1,6 @@
-import { Plus, Clock, Stethoscope, Pencil } from "lucide-react";
+import { Plus, Clock, Stethoscope, Pencil, Calendar as CalIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { EmptyState } from "@/components/ui/empty-state";
 import { type AppointmentWithPatient } from "@/lib/api/appointments";
 import { formatToYMD, timeOnly } from "../AgendaUtils";
 
@@ -54,17 +55,15 @@ export function AgendaWeekView({
               </button>
             </div>
 
-            <div className="space-y-2 flex-1 overflow-y-auto max-h-[400px] pr-1">
+            <div className="p-4 pt-10 min-h-[150px]">
               {dayAppointments.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border border-dashed border-border/50 rounded-2xl h-full min-h-[100px]">
-                  <span className="text-[10px] font-medium">Sin citas</span>
-                </div>
+                <EmptyState icon={CalIcon} title="Día libre" description="" className="min-h-[120px] p-4 bg-transparent border-none" />
               ) : (
                 dayAppointments.map((a) => (
                   <div
                     key={a.id}
                     className={cn(
-                      "group relative flex flex-col gap-1 p-2 rounded-2xl border text-[11px] transition duration-200 hover:shadow-sm cursor-pointer",
+                      "group relative flex flex-col gap-1 p-2 rounded-2xl border text-[11px] transition duration-200 hover:shadow-sm cursor-pointer mb-2",
                       a.status === "programada" ? "bg-mauve/10 border-mauve/30 text-mauve-foreground hover:bg-mauve/15" : "",
                       a.status === "completada" ? "bg-sage/15 border-sage/30 text-sage-foreground hover:bg-sage/20" : "",
                       a.status === "cancelada" ? "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/15" : ""

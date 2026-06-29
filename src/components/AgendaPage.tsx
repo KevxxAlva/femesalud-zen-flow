@@ -5,6 +5,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { TableSkeleton } from "@/components/ui/table-skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppointmentForm } from "@/components/AppointmentForm";
 import { ConsultationForm } from "@/components/ConsultationForm";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment, type AppointmentWithPatient } from "@/lib/api/appointments";
@@ -342,7 +345,7 @@ export function AgendaPage() {
       </div>
 
       {isLoading ? (
-        <div className="rounded-3xl glass-card p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></div>
+        <TableSkeleton columns={5} rows={5} />
       ) : viewMode === "list" ? (
         <AgendaListView
           paginatedGrouped={paginatedGrouped}
