@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { User, Printer, HeartPulse } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePaginatedPatients } from "@/lib/api/patients";
 import { useConsultations } from "@/lib/api/consultations";

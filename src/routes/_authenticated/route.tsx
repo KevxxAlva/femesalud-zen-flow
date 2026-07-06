@@ -40,7 +40,6 @@ function AuthenticatedLayout() {
       <main className="px-4 pt-20 pb-6 md:ml-[18rem] md:pr-6 md:py-6 md:pt-6">
         <Suspense fallback={<div className="flex h-[50vh] items-center justify-center"><div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" /></div>}>
           <motion.div
-            key={pathname}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}

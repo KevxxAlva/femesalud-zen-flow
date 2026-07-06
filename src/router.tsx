@@ -1,6 +1,7 @@
 import { QueryClient, QueryCache, MutationCache } from "@tanstack/react-query";
 import { createRouter } from "@tanstack/react-router";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import { routeTree } from "./routeTree.gen";
 import { GlobalError } from "./components/ui/global-error";
 
@@ -30,6 +31,12 @@ export const getRouter = () => {
     routeTree,
     context: { queryClient },
     defaultErrorComponent: ({ error, reset }) => <GlobalError error={error} resetErrorBoundary={reset} />,
+    defaultPendingComponent: () => (
+      <div className="flex h-full min-h-[50vh] w-full flex-col items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin text-mauve" />
+        <p className="mt-4 text-sm text-muted-foreground animate-pulse">Cargando módulo...</p>
+      </div>
+    ),
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultPreloadStaleTime: 0,

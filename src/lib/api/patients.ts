@@ -202,6 +202,27 @@ export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<PatientInput> & { full_name: string; assigned_doctor_id: string }) => {
+      // Validate uniqueness
+      if (input.document_id) {
+        const { data: existingDocs } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("document_id", input.document_id);
+        if (existingDocs && existingDocs.length > 0) {
+          throw new Error("Ya existe un paciente con este mismo número de cédula/pasaporte.");
+        }
+      }
+
+      if (input.full_name) {
+        const { data: existingNames } = await supabase
+          .from("patients")
+          .select("id")
+          .ilike("full_name", input.full_name.trim());
+        if (existingNames && existingNames.length > 0) {
+          throw new Error("Ya existe un paciente registrado con este mismo nombre completo.");
+        }
+      }
+
       const { data: user } = await supabase.auth.getUser();
       const { error, data } = await supabase
         .from("patients")
@@ -259,6 +280,29 @@ export function useUpdatePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<PatientInput> & { id: string }) => {
+      // Validate uniqueness
+      if (patch.document_id) {
+        const { data: existingDocs } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("document_id", patch.document_id)
+          .neq("id", id);
+        if (existingDocs && existingDocs.length > 0) {
+          throw new Error("Ya existe otro paciente con este mismo número de cédula/pasaporte.");
+        }
+      }
+
+      if (patch.full_name) {
+        const { data: existingNames } = await supabase
+          .from("patients")
+          .select("id")
+          .ilike("full_name", patch.full_name.trim())
+          .neq("id", id);
+        if (existingNames && existingNames.length > 0) {
+          throw new Error("Ya existe otro paciente registrado con este mismo nombre completo.");
+        }
+      }
+
       const { error, data } = await supabase.from("patients").update(patch).eq("id", id).select().single();
       if (error) throw error;
       return (data as any) as Patient;
