@@ -101,7 +101,7 @@ export function HistoriasPage() {
     setExpandedConsultations((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleExportRecipe = async (patient: any, consultation: any) => {
+  const handleExportRecipe = async (patient: any, consultation: any, action: "save" | "whatsapp" = "save") => {
     const docObj = doctors.find((d) => d.id === consultation.doctor_id);
     const isCarli = docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") || docObj?.full_name?.toLowerCase().includes("solé");
     const docInfo = {
@@ -111,7 +111,7 @@ export function HistoriasPage() {
       mpps: docObj?.mpps || (isCarli ? "102.927" : ""),
       cmc: docObj?.cmc || (isCarli ? "11.619" : ""),
     };
-    await generateRecipePDF(patient, consultation, clinic, docInfo);
+    await generateRecipePDF(patient, consultation, docInfo.name, docInfo.specialty, docInfo.uni, docInfo.mpps, docInfo.cmc, action);
   };
 
   return (

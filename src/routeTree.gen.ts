@@ -18,6 +18,7 @@ import { Route as AuthenticatedPacientesRouteImport } from './routes/_authentica
 import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
 import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
+import { Route as AuthenticatedCrmRouteImport } from './routes/_authenticated/crm'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
 
@@ -66,6 +67,11 @@ const AuthenticatedDoctoresRoute = AuthenticatedDoctoresRouteImport.update({
   path: '/doctores',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCrmRoute = AuthenticatedCrmRouteImport.update({
+  id: '/crm',
+  path: '/crm',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConfiguracionRoute =
   AuthenticatedConfiguracionRouteImport.update({
     id: '/configuracion',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/crm': typeof AuthenticatedCrmRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
@@ -94,6 +101,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/crm': typeof AuthenticatedCrmRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
@@ -108,6 +116,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/crm': typeof AuthenticatedCrmRoute
   '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
   '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/configuracion'
+    | '/crm'
     | '/doctores'
     | '/facturacion'
     | '/historias'
@@ -134,6 +144,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/agenda'
     | '/configuracion'
+    | '/crm'
     | '/doctores'
     | '/facturacion'
     | '/historias'
@@ -147,6 +158,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/agenda'
     | '/_authenticated/configuracion'
+    | '/_authenticated/crm'
     | '/_authenticated/doctores'
     | '/_authenticated/facturacion'
     | '/_authenticated/historias'
@@ -226,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDoctoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/crm': {
+      id: '/_authenticated/crm'
+      path: '/crm'
+      fullPath: '/crm'
+      preLoaderRoute: typeof AuthenticatedCrmRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracion': {
       id: '/_authenticated/configuracion'
       path: '/configuracion'
@@ -246,6 +265,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedCrmRoute: typeof AuthenticatedCrmRoute
   AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
   AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
@@ -258,6 +278,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedCrmRoute: AuthenticatedCrmRoute,
   AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
   AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,

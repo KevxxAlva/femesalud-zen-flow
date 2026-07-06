@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import {
   Home, Calendar, Users, FileText, Receipt, FileBarChart,
   Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
-  Sun, Moon,
+  Sun, Moon, Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
@@ -21,6 +21,7 @@ const baseModules = [
   { title: "Reportes", url: "/reportes", icon: FileBarChart },
   { title: "Facturación", url: "/facturacion", icon: Receipt },
   { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
+  { title: "Marketing / CRM", url: "/crm", icon: Megaphone },
 ] as const;
 
 const adminModules = [

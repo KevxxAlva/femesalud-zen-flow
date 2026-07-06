@@ -1,5 +1,5 @@
 import React from "react";
-import { Loader2, Calendar, User, Activity, Scissors, HeartPulse, Stethoscope, FileText, Printer, ChevronUp, ChevronDown } from "lucide-react";
+import { Loader2, Calendar, User, Activity, Scissors, HeartPulse, Stethoscope, FileText, Printer, Share2, ChevronUp, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/lib/api/patients";
@@ -51,7 +51,7 @@ interface HistoriasTimelineProps {
   toggleConsultation: (id: string) => void;
   doctorMap: Map<string, string>;
   selectedPatient: Patient;
-  handleExportRecipe: (patient: Patient, consultation: Consultation) => void;
+  handleExportRecipe: (patient: Patient, consultation: Consultation, action: "save" | "whatsapp") => void;
 }
 
 export const HistoriasTimeline = React.memo(function HistoriasTimeline({
@@ -213,14 +213,24 @@ export const HistoriasTimeline = React.memo(function HistoriasTimeline({
                           <FileText className="h-3 w-3" /> Indicaciones y Receta
                         </h4>
                         {c.indications && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExportRecipe(selectedPatient, c as any)}
-                            className="h-6 px-2 text-[10px] rounded-lg text-mauve hover:text-mauve-foreground hover:bg-mauve/10 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Printer className="h-3 w-3" /> Imprimir Récipe
-                          </Button>
+                          <div className="flex gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleExportRecipe(selectedPatient, c as any, "save")}
+                              className="h-6 px-2 text-[10px] rounded-lg text-mauve hover:text-mauve-foreground hover:bg-mauve/10 flex items-center gap-1 cursor-pointer"
+                            >
+                              <Printer className="h-3 w-3" /> Imprimir
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleExportRecipe(selectedPatient, c as any, "whatsapp")}
+                              className="h-6 px-2 text-[10px] rounded-lg text-green-600 hover:text-green-700 hover:bg-green-50 flex items-center gap-1 cursor-pointer"
+                            >
+                              <Share2 className="h-3 w-3" /> WhatsApp
+                            </Button>
+                          </div>
                         )}
                       </div>
                       <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed text-xs">{c.indications || "Sin indicaciones"}</p>

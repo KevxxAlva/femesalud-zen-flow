@@ -12,6 +12,7 @@ interface AgendaWeekViewProps {
   onAddAppointment: (ymd: string) => void;
   onEdit: (a: AppointmentWithPatient) => void;
   onViewConsultation: (a: AppointmentWithPatient) => void;
+  onDropAppointment?: (appointmentId: string, ymd: string) => void;
 }
 
 export function AgendaWeekView({
@@ -22,6 +23,7 @@ export function AgendaWeekView({
   onAddAppointment,
   onEdit,
   onViewConsultation,
+  onDropAppointment,
 }: AgendaWeekViewProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
@@ -33,6 +35,14 @@ export function AgendaWeekView({
         return (
           <div
             key={idx}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              const id = e.dataTransfer.getData("appointmentId");
+              if (id && onDropAppointment) {
+                onDropAppointment(id, ymd);
+              }
+            }}
             className={cn(
               "rounded-3xl border p-4 flex flex-col gap-3 min-h-[350px] transition-all duration-300",
               isToday ? "bg-card border-mauve ring-2 ring-mauve/10 shadow-md" : "bg-card/40 border-border/60",
@@ -62,8 +72,12 @@ export function AgendaWeekView({
                 dayAppointments.map((a) => (
                   <div
                     key={a.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("appointmentId", a.id);
+                    }}
                     className={cn(
-                      "group relative flex flex-col gap-1 p-2 rounded-2xl border text-[11px] transition duration-200 hover:shadow-sm cursor-pointer mb-2",
+                      "group relative flex flex-col gap-1 p-2 rounded-2xl border text-[11px] transition duration-200 hover:shadow-sm cursor-pointer mb-2 active:opacity-50",
                       a.status === "programada" ? "bg-mauve/10 border-mauve/30 text-mauve-foreground hover:bg-mauve/15" : "",
                       a.status === "completada" ? "bg-sage/15 border-sage/30 text-sage-foreground hover:bg-sage/20" : "",
                       a.status === "cancelada" ? "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/15" : ""

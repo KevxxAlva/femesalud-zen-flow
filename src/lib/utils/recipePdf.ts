@@ -2,9 +2,11 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 export interface RecipePatient {
+  id?: string;
   full_name: string;
   document_id: string | null;
   birth_date: string | null;
+  phone?: string | null;
 }
 
 export interface RecipeConsultation {
@@ -52,7 +54,8 @@ export const generateRecipePDF = async (
   doctorSpecialty?: string,
   doctorUniversity?: string,
   doctorMpps?: string,
-  doctorCmc?: string
+  doctorCmc?: string,
+  action: "save" | "whatsapp" = "save"
 ) => {
   try {
     const indicationsText = consultation.indications?.trim();
@@ -328,11 +331,47 @@ export const generateRecipePDF = async (
       }
     }
 
-    const cleanName = patient.full_name.replace(/\s+/g, "_");
-    doc.save(`Recipe_${cleanName}_${topYear}${topMonth}${topDay}.pdf`);
-    toast.success("Récipe médico exportado correctamente");
+    const cleanName = patient.full_name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove accents
+      .replace(/[^a-zA-Z0-9]/g, "_")   // Replace any non-alphanumeric character with underscore
+      .replace(/_+/g, "_");            // Collapse multiple underscores
+
+    const fileName = `Recipe_${cleanName}_${topYear}${topMonth}${topDay}.pdf`;
+
+    if (action === "save") {
+      doc.save(fileName);
+      toast.success("Récipe médico exportado correctamente");
+    } else if (action === "whatsapp") {
+      toast.loading("Generando y subiendo el récipe...", { id: "recipe-whatsapp" });
+      const pdfBlob = doc.output("blob");
+      const path = `recipes/${patient.id || "tmp"}/${Date.now()}_${fileName}`;
+      
+      const { error: uploadError } = await supabase.storage.from("clinical-attachments").upload(path, pdfBlob, {
+        contentType: "application/pdf"
+      });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data } = await supabase.storage.from("clinical-attachments").createSignedUrl(path, 60 * 60 * 24 * 7); // 7 días
+      if (!data?.signedUrl) throw new Error("No se pudo generar el enlace");
+      
+      const phone = patient.phone?.replace(/\D/g, "");
+      
+      toast.dismiss("recipe-whatsapp");
+      
+      if (!phone) {
+        await navigator.clipboard.writeText(data.signedUrl);
+        toast.success("Enlace copiado. El paciente no tiene teléfono registrado.");
+      } else {
+        const text = `Hola *${patient.full_name}*, aquí tienes tu récipe médico: \n\n${data.signedUrl}`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, "_blank");
+        toast.success("Redirigiendo a WhatsApp...");
+      }
+    }
   } catch (err) {
     console.error(err);
-    toast.error(err instanceof Error ? err.message : "Error al exportar el récipe");
+    toast.dismiss("recipe-whatsapp");
+    toast.error(err instanceof Error ? err.message : "Error al procesar el récipe");
   }
 };

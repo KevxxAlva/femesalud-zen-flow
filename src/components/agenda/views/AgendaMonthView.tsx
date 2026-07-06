@@ -11,6 +11,7 @@ interface AgendaMonthViewProps {
   onDayClick: (d: Date) => void;
   onAddAppointment: (ymd: string) => void;
   onEdit: (a: AppointmentWithPatient) => void;
+  onDropAppointment?: (appointmentId: string, ymd: string) => void;
 }
 
 export function AgendaMonthView({
@@ -20,6 +21,7 @@ export function AgendaMonthView({
   onDayClick,
   onAddAppointment,
   onEdit,
+  onDropAppointment,
 }: AgendaMonthViewProps) {
   return (
     <div className="rounded-3xl glass-card p-5 border border-border/40 shadow-sm overflow-x-auto">
@@ -45,6 +47,14 @@ export function AgendaMonthView({
               <div
                 key={idx}
                 onClick={() => onDayClick(day)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("appointmentId");
+                  if (id && onDropAppointment) {
+                    onDropAppointment(id, ymd);
+                  }
+                }}
                 className={cn(
                   "group min-h-[110px] flex flex-col justify-between p-2.5 rounded-2xl border transition-all duration-300 cursor-pointer relative",
                   isCurrentMonth ? "bg-card/40 border-border/60" : "bg-muted/10 border-transparent opacity-40",
@@ -85,6 +95,10 @@ export function AgendaMonthView({
                       onViewConsultation={() => {}}
                       onEdit={onEdit}
                       onDelete={() => {}}
+                      draggable
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData("appointmentId", a.id);
+                      }}
                     />
                   ))}
                   {dayAppointments.length > 3 && (

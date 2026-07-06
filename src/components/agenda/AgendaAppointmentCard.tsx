@@ -12,6 +12,8 @@ interface AgendaAppointmentCardProps {
   onEdit: (a: AppointmentWithPatient) => void;
   onDelete: (a: AppointmentWithPatient) => void;
   variant?: "list" | "timeline" | "compact";
+  draggable?: boolean;
+  onDragStart?: (e: React.DragEvent<HTMLDivElement>) => void;
 }
 
 export function AgendaAppointmentCard({
@@ -23,12 +25,16 @@ export function AgendaAppointmentCard({
   onEdit,
   onDelete,
   variant = "list",
+  draggable,
+  onDragStart,
 }: AgendaAppointmentCardProps) {
   
   if (variant === "compact") {
     const time = timeOnly(a.scheduled_at);
     return (
       <div
+        draggable={draggable}
+        onDragStart={onDragStart}
         onClick={(e) => {
           e.stopPropagation();
           onEdit(a);
@@ -47,9 +53,13 @@ export function AgendaAppointmentCard({
   }
 
   return (
-    <div className={cn(
+    <div 
+      draggable={draggable}
+      onDragStart={onDragStart}
+      className={cn(
       "group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm",
-      variant === "timeline" ? "flex-1" : ""
+      variant === "timeline" ? "flex-1" : "",
+      draggable ? "cursor-grab active:cursor-grabbing active:opacity-50" : ""
     )}>
       <div className="flex items-center gap-3">
         {variant === "timeline" ? (

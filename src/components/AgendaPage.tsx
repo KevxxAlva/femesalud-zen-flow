@@ -169,6 +169,20 @@ export function AgendaPage() {
     setToDelete(null);
   };
 
+  const handleDropAppointment = async (appointmentId: string, newYMD: string) => {
+    try {
+      const a = appointments.find(x => x.id === appointmentId);
+      if (!a) return;
+      const oldDate = new Date(a.scheduled_at);
+      const [y, m, d] = newYMD.split('-');
+      oldDate.setFullYear(parseInt(y), parseInt(m) - 1, parseInt(d));
+      await update.mutateAsync({ id: appointmentId, scheduled_at: oldDate.toISOString() });
+      toast.success("Cita reprogramada con éxito");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Error al reprogramar");
+    }
+  };
+
   const handlePrev = () => {
     setCurrentDate((prev) => {
       const d = new Date(prev);
@@ -372,6 +386,7 @@ export function AgendaPage() {
               onDayClick={(d) => { setCurrentDate(d); setCalendarView("day"); }}
               onAddAppointment={handleAddAppointment}
               onEdit={handleEditAppointment}
+              onDropAppointment={handleDropAppointment}
             />
           )}
 
@@ -384,6 +399,7 @@ export function AgendaPage() {
               onAddAppointment={handleAddAppointment}
               onEdit={handleEditAppointment}
               onViewConsultation={handleViewConsultation}
+              onDropAppointment={handleDropAppointment}
             />
           )}
 
@@ -399,6 +415,7 @@ export function AgendaPage() {
               onViewConsultation={handleViewConsultation}
               onEdit={handleEditAppointment}
               onDelete={setToDelete}
+              onDropAppointment={handleDropAppointment}
             />
           )}
         </div>

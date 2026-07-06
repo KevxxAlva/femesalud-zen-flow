@@ -318,25 +318,27 @@ export function PatientForm({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl w-[95vw] max-h-[90vh] flex flex-col gap-0 p-0 overflow-hidden bg-background/95 backdrop-blur-xl border-border/40 shadow-2xl rounded-3xl">
-        <DialogHeader className="pb-2">
+        <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle>{isEdit ? "Editar historia clínica" : "Nueva historia clínica"}</DialogTitle>
           <DialogDescription>
             {isEdit ? "Actualiza el registro médico de la paciente." : "Registra los datos clínicos de la paciente."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0">
-          <Tabs defaultValue="id" className="flex-1 flex flex-col min-h-0">
-            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap bg-muted/60 p-1 rounded-2xl mb-4">
-              <TabsTrigger value="id" className="rounded-xl font-medium">Identificación</TabsTrigger>
-              <TabsTrigger value="family" className="rounded-xl font-medium">Ant. Familiares</TabsTrigger>
-              <TabsTrigger value="personal" className="rounded-xl font-medium">Ant. Personales</TabsTrigger>
-              <TabsTrigger value="gyn" className="rounded-xl font-medium">Ginecológicos</TabsTrigger>
-              <TabsTrigger value="obs" className="rounded-xl font-medium">Obstétricos</TabsTrigger>
-            </TabsList>
+        <form onSubmit={handleSubmit(onSubmit)} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <Tabs defaultValue="id" className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="px-6">
+              <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto flex-wrap bg-muted/60 p-1 rounded-2xl mb-2">
+                <TabsTrigger value="id" className="rounded-xl font-medium">Identificación</TabsTrigger>
+                <TabsTrigger value="family" className="rounded-xl font-medium">Ant. Familiares</TabsTrigger>
+                <TabsTrigger value="personal" className="rounded-xl font-medium">Ant. Personales</TabsTrigger>
+                <TabsTrigger value="gyn" className="rounded-xl font-medium">Ginecológicos</TabsTrigger>
+                <TabsTrigger value="obs" className="rounded-xl font-medium">Obstétricos</TabsTrigger>
+              </TabsList>
+            </div>
 
-            <ScrollArea className="flex-1 pr-2">
-              <div className="py-1">
+            <div className="flex-1 overflow-y-auto px-6">
+              <div className="py-2">
                 {/* TAB 1: IDENTIFICATION */}
                 <TabsContent value="id" className="grid gap-4 mt-0">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -716,10 +718,10 @@ export function PatientForm({
                   </div>
                 </TabsContent>
               </div>
-            </ScrollArea>
+            </div>
           </Tabs>
 
-          <DialogFooter className="border-t pt-4 mt-2">
+          <DialogFooter className="border-t px-6 py-4 mt-0 bg-background/50">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} className="rounded-xl">Cancelar</Button>
             <Button type="submit" disabled={busy} className="bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground hover:opacity-95 rounded-xl px-6">
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
