@@ -30,7 +30,7 @@ BEGIN
     (p_consultation->>'appointment_id')::uuid,
     (p_consultation->>'patient_id')::uuid,
     COALESCE((p_consultation->>'doctor_id')::uuid, v_user_id),
-    (p_consultation->>'visit_type'),
+    (p_consultation->>'visit_type')::visit_type_enum,
     (p_consultation->>'is_first_visit')::boolean,
     p_consultation->>'subjective_exam',
     (p_consultation->>'height_cm')::numeric,
@@ -66,7 +66,7 @@ BEGIN
     p_consultation->>'complementary_exams',
     p_consultation->>'diagnosis',
     p_consultation->>'plan',
-    p_consultation->>'next_appointment_date',
+    (p_consultation->>'next_appointment_date')::date,
     p_consultation->>'contact_channel'
   RETURNING * INTO v_consultation;
 
@@ -140,7 +140,7 @@ BEGIN
   SELECT next_appointment_date INTO v_old_next_date FROM consultations WHERE id = p_consultation_id;
   
   UPDATE consultations SET
-    visit_type = COALESCE(p_patch->>'visit_type', visit_type),
+    visit_type = COALESCE((p_patch->>'visit_type')::visit_type_enum, visit_type),
     is_first_visit = COALESCE((p_patch->>'is_first_visit')::boolean, is_first_visit),
     subjective_exam = COALESCE(p_patch->>'subjective_exam', subjective_exam),
     height_cm = COALESCE((p_patch->>'height_cm')::numeric, height_cm),
@@ -176,7 +176,7 @@ BEGIN
     complementary_exams = COALESCE(p_patch->>'complementary_exams', complementary_exams),
     diagnosis = COALESCE(p_patch->>'diagnosis', diagnosis),
     plan = COALESCE(p_patch->>'plan', plan),
-    next_appointment_date = COALESCE(p_patch->>'next_appointment_date', next_appointment_date),
+    next_appointment_date = COALESCE((p_patch->>'next_appointment_date')::date, next_appointment_date),
     contact_channel = COALESCE(p_patch->>'contact_channel', contact_channel),
     updated_at = now()
   WHERE id = p_consultation_id
