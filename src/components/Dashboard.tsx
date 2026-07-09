@@ -102,12 +102,13 @@ export function Dashboard() {
     const endOfThisMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
 
     const completed = appointments.filter((a) => a.status === "completada");
+    const relevantAppointments = appointments.filter((a) => a.status === "completada" || a.status === "programada");
     
-    const thisMonthCompleted = completed.filter((a) => {
+    const thisMonthCompleted = relevantAppointments.filter((a) => {
       const aDate = new Date(a.scheduled_at);
       return aDate >= startOfThisMonth && aDate <= endOfThisMonth;
     });
-    const lastMonthCompletedSamePeriod = completed.filter((a) => {
+    const lastMonthCompletedSamePeriod = relevantAppointments.filter((a) => {
       const aDate = new Date(a.scheduled_at);
       return aDate >= startOfLastMonth && aDate <= endOfLastMonthSameDay;
     });
@@ -150,11 +151,11 @@ export function Dashboard() {
     });
     
     // Group this month's completed appointments by payment method
-    const paymentGroups: Record<string, number> = {};
+    const paymentGroups: Record<string, number> = { "Por Cobrar": 0 };
     let totalPaidThisMonth = 0;
     
     thisMonthCompleted.forEach((a) => {
-      const method = a.payment_method || "Por Cobrar";
+      const method = a.status === "programada" ? "Por Cobrar" : (a.payment_method || "Por Cobrar");
       const amount = Number(a.price) || 0;
       paymentGroups[method] = (paymentGroups[method] || 0) + amount;
       totalPaidThisMonth += amount;
