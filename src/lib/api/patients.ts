@@ -74,7 +74,7 @@ export function usePatients() {
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
         .from("patients")
-        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number")
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number, birth_date")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as any) as Patient[];
@@ -160,7 +160,7 @@ export function usePaginatedPatients(
 
       let query = supabase
         .from("patients")
-        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number", { count: "exact" })
+        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number, birth_date", { count: "exact" })
         .order("created_at", { ascending: false })
         .range(from, to);
 

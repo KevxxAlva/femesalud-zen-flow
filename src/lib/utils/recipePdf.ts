@@ -35,10 +35,19 @@ const loadLogoBase64 = (url: string): Promise<string> => {
   });
 };
 
-const calculateAge = (birthDateStr: string | null): string => {
+export const calculateAge = (birthDateStr: string | null | undefined): string => {
   if (!birthDateStr) return "—";
-  const birth = new Date(birthDateStr);
+  
+  const parts = birthDateStr.split("T")[0].split("-");
+  if (parts.length !== 3) return "—";
+  
+  const birthYear = parseInt(parts[0], 10);
+  const birthMonth = parseInt(parts[1], 10) - 1;
+  const birthDay = parseInt(parts[2], 10);
+  
+  const birth = new Date(birthYear, birthMonth, birthDay);
   const today = new Date();
+  
   let age = today.getFullYear() - birth.getFullYear();
   const monthDiff = today.getMonth() - birth.getMonth();
   if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
@@ -154,6 +163,11 @@ export const generateRecipePDF = async (
 
     // Draw header on Page 1
     const drawHeader = () => {
+      // Add logo to the top left if available
+      if (logoBase64) {
+        doc.addImage(logoBase64, "PNG", 65, 25, 65, 65);
+      }
+
       // Font Setup
       doc.setFont("times", "normal");
       doc.setFontSize(8.5);

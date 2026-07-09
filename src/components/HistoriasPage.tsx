@@ -102,7 +102,7 @@ export function HistoriasPage() {
   };
 
   const handleExportRecipe = async (patient: any, consultation: any, action: "save" | "whatsapp" = "save") => {
-    const docObj = doctors.find((d) => d.id === consultation.doctor_id);
+    const docObj = doctors.find((d) => d.id === (consultation.doctor_id || patient?.assigned_doctor_id));
     const isCarli = docObj?.full_name?.toLowerCase().includes("carli") || docObj?.full_name?.toLowerCase().includes("sole") || docObj?.full_name?.toLowerCase().includes("solé");
     const docInfo = {
       name: docObj?.full_name || "Médico Tratante",

@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { FileDown, FileText, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { calculateAge } from "@/lib/utils/recipePdf";
 import type { Patient } from "@/lib/api/patients";
 import { ClinicalNotesPanel } from "@/components/ClinicalNotesPanel";
 import { PatientTimeline } from "@/components/PatientTimeline";
@@ -154,7 +155,7 @@ export const PatientDetailDialog = React.memo(function PatientDetailDialog({
                 <div>
                   <span className="text-xs text-muted-foreground block">Edad</span>
                   <span className="font-medium">
-                    {viewing.birth_date ? `${new Date().getFullYear() - new Date(viewing.birth_date).getFullYear()} años` : "—"}
+                    {calculateAge(viewing.birth_date)}
                   </span>
                 </div>
                 <div>

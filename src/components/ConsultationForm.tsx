@@ -27,7 +27,7 @@ export function ConsultationForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  appointment?: { id: string; patient_id: string; patient_name?: string } | null;
+  appointment?: { id: string; patient_id: string; patient_name?: string; doctor_id?: string } | null;
 }) {
   const { data: existingConsultation, isLoading: loadingExisting } = useConsultationByAppointment(appointment?.id);
 
@@ -281,7 +281,7 @@ export function ConsultationForm({
       const payload = {
         appointment_id: appointment.id,
         patient_id: appointment.patient_id,
-        doctor_id: null,
+        doctor_id: appointment.doctor_id || currentUserId,
         visit_type: values.visitType,
         is_first_visit: values.isFirstVisit,
         subjective_exam: values.subjectiveExam || null,
@@ -343,7 +343,7 @@ export function ConsultationForm({
 
       if (shouldPrint && payload.indications) {
         const patientData = patient;
-        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
+        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || appointment.doctor_id || currentUserId));
         const doctorName = doctorObj?.full_name || "Médico Tratante";
         const doctorSpecialty = doctorObj?.specialty || undefined;
         
