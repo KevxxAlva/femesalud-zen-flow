@@ -99,19 +99,21 @@ export function Dashboard() {
     const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
     const endOfLastMonthSameDay = new Date(currentYear, currentMonth - 1, currentDate, 23, 59, 59);
 
+    const endOfThisMonth = new Date(currentYear, currentMonth + 1, 0, 23, 59, 59);
+
     const completed = appointments.filter((a) => a.status === "completada");
     
     const thisMonthCompleted = completed.filter((a) => {
       const aDate = new Date(a.scheduled_at);
-      return aDate >= startOfThisMonth && aDate <= now;
+      return aDate >= startOfThisMonth && aDate <= endOfThisMonth;
     });
     const lastMonthCompletedSamePeriod = completed.filter((a) => {
       const aDate = new Date(a.scheduled_at);
       return aDate >= startOfLastMonth && aDate <= endOfLastMonthSameDay;
     });
 
-    const thisMonthIncome = thisMonthCompleted.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
-    const lastMonthIncomeSamePeriod = lastMonthCompletedSamePeriod.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+    const thisMonthIncome = thisMonthCompleted.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
+    const lastMonthIncomeSamePeriod = lastMonthCompletedSamePeriod.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
 
     let incomeDelta = 0;
     if (lastMonthIncomeSamePeriod > 0) {
@@ -120,7 +122,7 @@ export function Dashboard() {
       incomeDelta = 100;
     }
 
-    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
     const upcoming = appointments
       .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
@@ -144,7 +146,7 @@ export function Dashboard() {
       d.setDate(d.getDate() - (9 - i));
       const iso = d.toISOString().slice(0, 10);
       const completedOnDay = appointments.filter((a) => a.status === "completada" && a.scheduled_at.slice(0, 10) === iso);
-      return completedOnDay.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
+      return completedOnDay.reduce((acc, a) => acc + (Number(a.price) || 0), 0);
     });
     
     // Group this month's completed appointments by payment method
@@ -153,7 +155,7 @@ export function Dashboard() {
     
     thisMonthCompleted.forEach((a) => {
       const method = a.payment_method || "Por Cobrar";
-      const amount = Number(a.price) || 220;
+      const amount = Number(a.price) || 0;
       paymentGroups[method] = (paymentGroups[method] || 0) + amount;
       totalPaidThisMonth += amount;
     });
