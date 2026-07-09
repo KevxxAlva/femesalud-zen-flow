@@ -99,11 +99,10 @@ export function FacturacionFilters({
           if (doctorFilter !== "todos") appsToExport = appsToExport.filter(a => a.doctor_id === doctorFilter);
           
           exportMonthlyReport(
+            monthOptions,
             repMonth,
-            appsToExport,
-            metrics.totalEarnings,
-            metrics.pendingEarnings,
-            clinic
+            clinic,
+            appsToExport
           );
         }}
       >

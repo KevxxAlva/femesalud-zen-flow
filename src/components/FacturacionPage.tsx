@@ -79,7 +79,10 @@ export function FacturacionPage() {
       return;
     }
     toast.info("Generando recibo...");
-    exportInvoice(app, facturacion.myProfile, facturacion.clinic);
+    exportInvoice(app, facturacion.clinic, {
+      name: facturacion.myProfile.full_name || "Médico Tratante",
+      specialty: facturacion.myProfile.specialty || "Ginecólogo Obstetra"
+    });
     toast.success("Recibo generado con éxito.");
   };
 

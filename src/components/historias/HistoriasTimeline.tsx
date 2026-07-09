@@ -147,23 +147,20 @@ export const HistoriasTimeline = React.memo(function HistoriasTimeline({
                   </div>
 
                   {/* Physical Exam Details */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-3 rounded-2xl">
-                    <div className="col-span-1 sm:col-span-2 border-b border-border/30 pb-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      <Activity className="h-3.5 w-3.5" /> Revisión Física / Sistemas
-                    </div>
-                    {(!c.skin && !c.head_neck && !c.breasts && !c.abdomen && !c.gynecological && !c.extremities && !c.neurological) && (
-                      <div className="col-span-1 sm:col-span-2 text-muted-foreground text-xs italic">
-                        No hay registros de revisión física para esta consulta.
+                  {(c.skin || c.head_neck || c.breasts || c.abdomen || c.gynecological || c.extremities || c.neurological) ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/20 p-3 rounded-2xl">
+                      <div className="col-span-1 sm:col-span-2 border-b border-border/30 pb-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                        <Activity className="h-3.5 w-3.5" /> Revisión Física / Sistemas
                       </div>
-                    )}
-                    {c.skin && <div><span className="text-muted-foreground text-[10px] block">Piel</span><span className="font-semibold">{c.skin}</span></div>}
-                    {c.head_neck && <div><span className="text-muted-foreground text-[10px] block">Cabeza y Cuello</span><span className="font-semibold">{c.head_neck}</span></div>}
-                    {c.breasts && <div><span className="text-muted-foreground text-[10px] block">Mamas</span><span className="font-semibold">{c.breasts}</span></div>}
-                    {c.abdomen && <div><span className="text-muted-foreground text-[10px] block">Abdomen</span><span className="font-semibold">{c.abdomen}</span></div>}
-                    {c.gynecological && <div className="col-span-1 sm:col-span-2"><span className="text-muted-foreground text-[10px] block">Examen Ginecológico</span><span className="font-semibold">{c.gynecological}</span></div>}
-                    {c.extremities && <div><span className="text-muted-foreground text-[10px] block">Extremidades</span><span className="font-semibold">{c.extremities}</span></div>}
-                    {c.neurological && <div><span className="text-muted-foreground text-[10px] block">Neurológico</span><span className="font-semibold">{c.neurological}</span></div>}
-                  </div>
+                      {c.skin && <div><span className="text-muted-foreground text-[10px] block">Piel</span><span className="font-semibold">{c.skin}</span></div>}
+                      {c.head_neck && <div><span className="text-muted-foreground text-[10px] block">Cabeza y Cuello</span><span className="font-semibold">{c.head_neck}</span></div>}
+                      {c.breasts && <div><span className="text-muted-foreground text-[10px] block">Mamas</span><span className="font-semibold">{c.breasts}</span></div>}
+                      {c.abdomen && <div><span className="text-muted-foreground text-[10px] block">Abdomen</span><span className="font-semibold">{c.abdomen}</span></div>}
+                      {c.gynecological && <div className="col-span-1 sm:col-span-2"><span className="text-muted-foreground text-[10px] block">Examen Ginecológico</span><span className="font-semibold">{c.gynecological}</span></div>}
+                      {c.extremities && <div><span className="text-muted-foreground text-[10px] block">Extremidades</span><span className="font-semibold">{c.extremities}</span></div>}
+                      {c.neurological && <div><span className="text-muted-foreground text-[10px] block">Neurológico</span><span className="font-semibold">{c.neurological}</span></div>}
+                    </div>
+                  ) : null}
 
                   {/* Special Procedures (Colposcopía y Obstetricia) */}
                   {(c.acetic_acid_test || c.lugol_test || c.gestational_age || c.fetal_heart_rate) && (
