@@ -24,10 +24,35 @@ import { cn } from "@/lib/utils";
 const STATUSES = ["nuevo", "activo", "en_tratamiento", "alta"];
 const statusLabel = (s: string) => ({ nuevo: "Nuevo", activo: "Activo", en_tratamiento: "En tratamiento", alta: "Alta" } as Record<string, string>)[s] ?? s;
 
+const COUNTRY_CODES = [
+  { code: "+58", label: "Venezuela", flag: "🇻🇪" },
+  { code: "+1", label: "EE.UU / Canadá", flag: "🇺🇸" },
+  { code: "+57", label: "Colombia", flag: "🇨🇴" },
+  { code: "+56", label: "Chile", flag: "🇨🇱" },
+  { code: "+54", label: "Argentina", flag: "🇦🇷" },
+  { code: "+51", label: "Perú", flag: "🇵🇪" },
+  { code: "+593", label: "Ecuador", flag: "🇪🇨" },
+  { code: "+52", label: "México", flag: "🇲🇽" },
+  { code: "+34", label: "España", flag: "🇪🇸" },
+  { code: "+55", label: "Brasil", flag: "🇧🇷" },
+  { code: "+507", label: "Panamá", flag: "🇵🇦" },
+  { code: "+506", label: "Costa Rica", flag: "🇨🇷" },
+  { code: "+598", label: "Uruguay", flag: "🇺🇾" },
+  { code: "+595", label: "Paraguay", flag: "🇵🇾" },
+  { code: "+591", label: "Bolivia", flag: "🇧🇴" },
+  { code: "+503", label: "El Salvador", flag: "🇸🇻" },
+  { code: "+502", label: "Guatemala", flag: "🇬🇹" },
+  { code: "+504", label: "Honduras", flag: "🇭🇳" },
+  { code: "+505", label: "Nicaragua", flag: "🇳🇮" },
+  { code: "+1809", label: "Rep. Dom.", flag: "🇩🇴" },
+  { code: "+53", label: "Cuba", flag: "🇨🇺" },
+];
+
 const patientFormSchema = z.object({
   full_name: z.string().min(1, "El nombre completo es requerido"),
   email: z.string().email("Correo electrónico inválido").optional().or(z.literal("")),
-  phone: z.string().regex(/^\+?[0-9\s\-()]+$/, "Teléfono inválido").min(10, "Mínimo 10 caracteres").optional().or(z.literal("")),
+  phonePrefix: z.string().optional(),
+  phone: z.string().regex(/^[0-9\s\-()]+$/, "Teléfono inválido").min(10, "Mínimo 10 caracteres").optional().or(z.literal("")),
   birth_date: z.string().refine((val) => !val || new Date(val) <= new Date(), { message: "La fecha no puede ser futura" }).optional().or(z.literal("")),
   status: z.string().optional(),
   assigned_doctor_id: z.string().optional(),
@@ -103,6 +128,7 @@ export function PatientForm({
     defaultValues: {
       full_name: "",
       email: "",
+      phonePrefix: "+58",
       phone: "",
       birth_date: "",
       status: "nuevo",
@@ -165,10 +191,22 @@ export function PatientForm({
   useEffect(() => {
     if (open && (!isEdit || patient)) {
       const [pfx, num] = getDocParts(patient?.document_id ?? null);
+      
+      let phonePrefix = "+58";
+      let phoneNum = patient?.phone ?? "";
+      if (phoneNum) {
+        const match = phoneNum.match(/^(\+\d{1,4})\s?(.*)$/);
+        if (match) {
+          phonePrefix = match[1];
+          phoneNum = match[2];
+        }
+      }
+
       reset({
         full_name: patient?.full_name ?? "",
         email: patient?.email ?? "",
-        phone: patient?.phone ?? "",
+        phonePrefix: phonePrefix,
+        phone: phoneNum,
         birth_date: patient?.birth_date ?? "",
         status: patient?.status ?? "nuevo",
         assigned_doctor_id: patient?.assigned_doctor_id ?? defaultDoctor,
@@ -233,11 +271,12 @@ export function PatientForm({
     }
     try {
       const combinedDocId = data.idNumber.trim() ? `${data.idPrefix === "none" ? "" : data.idPrefix}${data.idNumber.trim()}` : null;
+      const combinedPhone = data.phone ? `${data.phonePrefix || "+58"} ${data.phone}` : null;
       
       const payload: any = {
         full_name: data.full_name.trim(),
         email: data.email || null,
-        phone: data.phone || null,
+        phone: combinedPhone,
         birth_date: data.birth_date || null,
         status: data.status,
         assigned_doctor_id: doctorId,
@@ -399,7 +438,32 @@ export function PatientForm({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="phone">Teléfono</Label>
-                      <Input id="phone" placeholder="0414..." className={cn("rounded-xl", errors.phone && "border-destructive")} {...register("phone")} />
+                      <div className="flex">
+                        <Controller
+                          name="phonePrefix"
+                          control={control}
+                          render={({ field }) => (
+                            <Select value={field.value} onValueChange={field.onChange}>
+                              <SelectTrigger className="w-[100px] rounded-r-none rounded-l-xl border-r-0 focus:ring-0 focus:ring-offset-0 bg-background/50">
+                                <SelectValue placeholder="+58" />
+                              </SelectTrigger>
+                              <SelectContent className="rounded-2xl h-[250px]">
+                                {COUNTRY_CODES.map((c) => (
+                                  <SelectItem key={c.code} value={c.code}>
+                                    {c.flag} {c.code}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                        <Input 
+                          id="phone" 
+                          placeholder="414 1234567" 
+                          className={cn("rounded-l-none rounded-r-xl bg-background/50 flex-1", errors.phone && "border-destructive")} 
+                          {...register("phone")} 
+                        />
+                      </div>
                       {errors.phone && <p className="text-[10px] text-destructive mt-0.5">{errors.phone.message}</p>}
                     </div>
                     <div className="grid gap-2">

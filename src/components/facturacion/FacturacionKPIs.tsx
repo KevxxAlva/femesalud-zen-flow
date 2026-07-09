@@ -10,6 +10,29 @@ interface FacturacionKPIsProps {
 }
 
 export function FacturacionKPIs({ metrics }: FacturacionKPIsProps) {
+  let performanceTitle = "Sin datos";
+  let performanceText = "Comienza a registrar consultas para evaluar tu desempeño financiero.";
+  
+  const totalPotential = metrics.totalEarnings + metrics.pendingEarnings;
+  
+  if (totalPotential > 0) {
+    const pendingRatio = metrics.pendingEarnings / totalPotential;
+    
+    if (pendingRatio === 0) {
+      performanceTitle = "Perfecto";
+      performanceText = "¡Felicidades! Tienes una efectividad de cobranza del 100%.";
+    } else if (pendingRatio <= 0.2) {
+      performanceTitle = "Excelente";
+      performanceText = "Sigue registrando los cobros a tiempo para mantener un flujo de caja saludable.";
+    } else if (pendingRatio <= 0.5) {
+      performanceTitle = "Bueno";
+      performanceText = "Tienes algunas cuentas por cobrar. Intenta hacer seguimiento a los pagos pendientes.";
+    } else {
+      performanceTitle = "Atención Requerida";
+      performanceText = "Gran parte de tus consultas están sin cobrar. Es vital hacer seguimiento para sanear tus finanzas.";
+    }
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in">
       <div className="rounded-3xl glass-card p-6 shadow-sm border border-border/40 relative overflow-hidden group">
@@ -59,10 +82,10 @@ export function FacturacionKPIs({ metrics }: FacturacionKPIsProps) {
             <p className="text-sm font-medium text-primary-foreground/80 flex items-center gap-1">
               <Sparkles className="h-4 w-4" /> Desempeño
             </p>
-            <h3 className="mt-2 text-2xl font-bold">Excelente</h3>
+            <h3 className="mt-2 text-2xl font-bold">{performanceTitle}</h3>
           </div>
           <p className="text-xs text-primary-foreground/80 mt-4 leading-relaxed">
-            Sigue registrando los cobros a tiempo para mantener un flujo de caja saludable en tu clínica.
+            {performanceText}
           </p>
         </div>
       </div>
