@@ -151,6 +151,11 @@ export const HistoriasTimeline = React.memo(function HistoriasTimeline({
                     <div className="col-span-1 sm:col-span-2 border-b border-border/30 pb-1.5 mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
                       <Activity className="h-3.5 w-3.5" /> Revisión Física / Sistemas
                     </div>
+                    {(!c.skin && !c.head_neck && !c.breasts && !c.abdomen && !c.gynecological && !c.extremities && !c.neurological) && (
+                      <div className="col-span-1 sm:col-span-2 text-muted-foreground text-xs italic">
+                        No hay registros de revisión física para esta consulta.
+                      </div>
+                    )}
                     {c.skin && <div><span className="text-muted-foreground text-[10px] block">Piel</span><span className="font-semibold">{c.skin}</span></div>}
                     {c.head_neck && <div><span className="text-muted-foreground text-[10px] block">Cabeza y Cuello</span><span className="font-semibold">{c.head_neck}</span></div>}
                     {c.breasts && <div><span className="text-muted-foreground text-[10px] block">Mamas</span><span className="font-semibold">{c.breasts}</span></div>}

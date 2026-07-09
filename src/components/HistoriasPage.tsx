@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { usePaginatedPatients } from "@/lib/api/patients";
-import { useConsultations } from "@/lib/api/consultations";
+import { usePatientConsultations } from "@/lib/api/consultations";
 import { useDoctors } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { supabase } from "@/integrations/supabase/client";
@@ -51,7 +51,7 @@ export function HistoriasPage() {
 
   const selectedPatient = paginatedPatients.find((p) => p.id === selectedPatientId);
 
-  const { data: consultations = [], isLoading: loadingConsultations } = useConsultations(
+  const { data: consultations = [], isLoading: loadingConsultations } = usePatientConsultations(
     selectedPatientId || undefined
   );
 
