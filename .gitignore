@@ -33,3 +33,8 @@ temp_*.txt
 *.njsproj
 *.sln
 *.sw?
+
+# Sensitive data
+*.xlsx
+*.csv
+excel_*.json
