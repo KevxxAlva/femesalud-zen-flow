@@ -2,7 +2,7 @@ import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
-import { UserRound, Plus, Shield, Stethoscope, Trash2, Loader2, ShieldOff } from "lucide-react";
+import { UserRound, Plus, Shield, Stethoscope, Trash2, Loader2, ShieldOff, Search, X, Filter, ChevronLeft, ChevronRight, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,8 +24,6 @@ export const Route = createFileRoute("/_authenticated/doctores")({
   beforeLoad: async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw redirect({ to: "/auth" });
-    const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-    if (!data) throw redirect({ to: "/" });
   },
   component: DoctoresAdmin,
 });
@@ -45,6 +43,19 @@ function DoctoresAdmin() {
   const [busy, setBusy] = useState(false);
 
   const [form, setForm] = useState({ email: "", password: "", full_name: "", specialty: "", role: "doctor" as "admin" | "doctor" });
+
+  const [q, setQ] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const filtered = profiles.filter((p) => {
+    if (!q) return true;
+    const term = q.toLowerCase();
+    return (p.full_name?.toLowerCase().includes(term) || p.email?.toLowerCase().includes(term) || p.specialty?.toLowerCase().includes(term));
+  });
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,78 +105,144 @@ function DoctoresAdmin() {
   };
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="ml-14 md:ml-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Administración</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Doctores y usuarios</h1>
-          <p className="text-sm text-muted-foreground">{profiles.length} usuarios registrados</p>
+    <div className="bg-white rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
+      {/* TOP HEADER */}
+      <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <button className="text-[#a3aed1] hover:text-[#2b3674]"><ChevronLeft className="h-5 w-5" /></button>
+          <h1 className="text-xl font-bold text-[#2b3674]">Personal</h1>
         </div>
-        <Button onClick={() => setOpenCreate(true)} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95">
-          <Plus className="mr-1 h-4 w-4" /> Nuevo usuario
-        </Button>
+        <div className="flex-1 max-w-xl mx-auto">
+          <div className="flex items-center gap-2 rounded-full bg-gray-50 border border-gray-100 px-4 py-2.5 w-full">
+            <Search className="h-4 w-4 text-[#a3aed1]" />
+            <input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Buscar personal..."
+              className="w-full bg-transparent text-sm outline-none placeholder:text-[#a3aed1] text-[#2b3674]"
+            />
+            {q && <button onClick={() => setQ("")} className="text-[#a3aed1] hover:text-[#2b3674]"><X className="h-4 w-4" /></button>}
+          </div>
+        </div>
+        <div className="flex items-center gap-4 hidden md:flex">
+          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+            <Plus className="h-3.5 w-3.5" /> Añadir Personal
+          </button>
+        </div>
       </header>
 
-      {isLoading ? (
-        <div className="rounded-3xl glass-card p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></div>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {profiles.map((p) => {
-            const isAdmin = p.roles.includes("admin");
-            const isDoctor = p.roles.includes("doctor");
-            const isMe = p.id === me?.id;
-            return (
-              <div key={p.id} className="rounded-3xl glass-card p-5 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground">
-                    {initials(p.full_name || p.email)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">{p.full_name || "Sin nombre"} {isMe && <span className="text-[10px] text-muted-foreground">(tú)</span>}</p>
-                    <p className="truncate text-[11px] text-muted-foreground">{p.email}</p>
-                    {p.specialty && <p className="truncate text-[11px] text-muted-foreground">{p.specialty}</p>}
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-1.5">
-                  {p.roles.map((r) => (
-                    <span key={r} className={cn(
-                      "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize",
-                      r === "admin" ? "bg-mauve/15 text-mauve" : "bg-sage/40 text-sage-foreground",
-                    )}>
-                      {r === "admin" ? <Shield className="h-3 w-3" /> : <Stethoscope className="h-3 w-3" />} {r}
-                    </span>
-                  ))}
-                  {p.roles.length === 0 && <span className="text-[11px] text-muted-foreground">Sin rol</span>}
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-2 border-t border-border/60 pt-3">
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleToggleAdmin(p)}
-                      disabled={isMe || toggle.isPending}
-                      className="text-xs font-medium text-mauve hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer"
-                    >
-                      {isAdmin ? <><ShieldOff className="mr-1 inline h-3 w-3" />Quitar admin</> : <><Shield className="mr-1 inline h-3 w-3" />Promover a admin</>}
-                    </button>
-                    <button
-                      onClick={() => handleToggleDoctor(p)}
-                      disabled={toggle.isPending}
-                      className="text-xs font-medium text-teal-600 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer"
-                    >
-                      {isDoctor ? <><ShieldOff className="mr-1 inline h-3 w-3" />Quitar doctor</> : <><Stethoscope className="mr-1 inline h-3 w-3" />Asignar doctor</>}
-                    </button>
-                  </div>
-                  <button
-                    onClick={() => setToDelete(p)}
-                    disabled={isMe}
-                    className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive disabled:opacity-40 cursor-pointer"
-                    aria-label="Eliminar usuario"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+      {/* SECONDARY TOOLBAR */}
+      <div className="flex flex-wrap items-center justify-between mb-4 border-b border-[#f0f2f5] pb-4 mt-2">
+        <div className="flex items-center gap-2 text-sm font-bold text-[#a3aed1]">
+          <Users className="h-4 w-4" /> {filtered.length} miembros
+        </div>
+        <div className="flex items-center gap-3 md:hidden">
+          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+            <Plus className="h-3.5 w-3.5" /> Añadir Personal
+          </button>
+        </div>
+      </div>
+
+      {/* TABLE */}
+      <div className="flex-1 overflow-x-auto">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-[#f8f9fb] text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">
+              <th className="p-4 w-12 rounded-tl-xl"><input type="checkbox" className="rounded border-gray-300" /></th>
+              <th className="p-4">Nombre <span className="ml-1">↕</span></th>
+              <th className="p-4">Correo <span className="ml-1">↕</span></th>
+              <th className="p-4">Especialidad <span className="ml-1">↕</span></th>
+              <th className="p-4">Rol <span className="ml-1">↕</span></th>
+              <th className="p-4 rounded-tr-xl">Acción <span className="ml-1">↕</span></th>
+            </tr>
+          </thead>
+          <tbody className="text-sm">
+            {isLoading ? (
+              <tr><td colSpan={6} className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#a3aed1]" /></td></tr>
+            ) : paginated.length === 0 ? (
+              <tr><td colSpan={6} className="p-12 text-center text-[#a3aed1] font-medium">No se encontró personal.</td></tr>
+            ) : (
+              paginated.map((p) => {
+                const isAdmin = p.roles.includes("admin");
+                const isDoctor = p.roles.includes("doctor");
+                const isMe = p.id === me?.id;
+                return (
+                  <tr key={p.id} className="border-b border-[#f0f2f5] hover:bg-gray-50/50 transition group">
+                    <td className="p-4"><input type="checkbox" className="rounded border-gray-300" /></td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[#2b3674] text-[10px] font-bold">
+                          {initials(p.full_name || p.email)}
+                        </div>
+                        <span className="font-bold text-[#2b3674]">{p.full_name || "—"} {isMe && <span className="text-[10px] text-gray-400 font-normal ml-1">(tú)</span>}</span>
+                      </div>
+                    </td>
+                    <td className="p-4 text-[#a3aed1] font-medium">
+                      {p.email}
+                    </td>
+                    <td className="p-4 text-[#2b3674] font-bold text-xs">
+                      {p.specialty || "—"}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex flex-wrap gap-1">
+                        {p.roles.map((r) => (
+                          <span key={r} className={cn(
+                            "text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider flex items-center gap-1",
+                            r === "admin" ? "bg-purple-50 text-purple-600 border border-purple-100" : "bg-green-50 text-green-600 border border-green-100"
+                          )}>
+                            {r === "admin" ? <Shield className="h-2.5 w-2.5" /> : <Stethoscope className="h-2.5 w-2.5" />} {r}
+                          </span>
+                        ))}
+                        {p.roles.length === 0 && <span className="text-[9px] bg-gray-50 text-gray-400 px-2 py-1 rounded-full border border-gray-100">Ninguno</span>}
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3 text-[#a3aed1]">
+                        <button
+                          onClick={() => handleToggleAdmin(p)}
+                          disabled={isMe || toggle.isPending}
+                          className="hover:text-purple-600 disabled:opacity-30 flex flex-col items-center gap-1"
+                          title={isAdmin ? "Quitar Admin" : "Hacer Admin"}
+                        >
+                          {isAdmin ? <ShieldOff className="h-4 w-4" /> : <Shield className="h-4 w-4" />}
+                        </button>
+                        <div className="h-3 w-px bg-gray-200"></div>
+                        <button
+                          onClick={() => handleToggleDoctor(p)}
+                          disabled={toggle.isPending}
+                          className="hover:text-green-600 disabled:opacity-30 flex flex-col items-center gap-1"
+                          title={isDoctor ? "Quitar Doctor" : "Hacer Doctor"}
+                        >
+                          {isDoctor ? <ShieldOff className="h-4 w-4" /> : <Stethoscope className="h-4 w-4" />}
+                        </button>
+                        <div className="h-3 w-px bg-gray-200"></div>
+                        <button 
+                          onClick={() => setToDelete(p)} 
+                          disabled={isMe}
+                          className="hover:text-red-500 disabled:opacity-30"
+                          title="Eliminar Usuario"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#f0f2f5]">
+          <p className="text-xs text-[#a3aed1] font-medium">
+            Mostrando <span className="font-bold text-[#2b3674]">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(filtered.length, currentPage * itemsPerPage)}</span> de <span className="font-bold text-[#2b3674]">{filtered.length}</span> miembros
+          </p>
+          <div className="flex gap-1">
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
+          </div>
         </div>
       )}
 

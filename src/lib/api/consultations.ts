@@ -84,29 +84,123 @@ export interface ConsultationFilters {
   to?: string;
 }
 
+// Helpers to Pack/Unpack the JSON payload into `observaciones`
+const packObservaciones = (data: Partial<ConsultationInput>) => {
+  const json = {
+    visit_type: data.visit_type,
+    is_first_visit: data.is_first_visit,
+    subjective_exam: data.subjective_exam,
+    height_cm: data.height_cm, weight_kg: data.weight_kg, bmi: data.bmi,
+    blood_pressure: data.blood_pressure, heart_rate: data.heart_rate,
+    respiratory_rate: data.respiratory_rate, temperature: data.temperature,
+    skin: data.skin, head_neck: data.head_neck, breasts: data.breasts, abdomen: data.abdomen,
+    gynecological: data.gynecological, extremities: data.extremities, neurological: data.neurological,
+    acetic_acid_test: data.acetic_acid_test, acetic_clock_position: data.acetic_clock_position,
+    acetic_relative_position: data.acetic_relative_position, lugol_test: data.lugol_test,
+    lugol_clock_position: data.lugol_clock_position, lugol_relative_position: data.lugol_relative_position,
+    gestational_age: data.gestational_age, fetal_weight: data.fetal_weight,
+    obstetric_bp: data.obstetric_bp, uterine_height: data.uterine_height,
+    presentation: data.presentation, fetal_heart_rate: data.fetal_heart_rate,
+    fetal_movements: data.fetal_movements, edema: data.edema, alarm_signs: data.alarm_signs,
+    complementary_exams: data.complementary_exams, plan: data.plan,
+    next_appointment_date: data.next_appointment_date, contact_channel: data.contact_channel,
+    indications: data.indications, diagnosis: data.diagnosis
+  };
+  return JSON.stringify(json);
+};
+
+const unpackConsultation = (h: any): Consultation => {
+  let extra: any = {};
+  try {
+     extra = h.notas_medicas ? JSON.parse(h.notas_medicas) : (h.observaciones ? JSON.parse(h.observaciones) : {});
+  } catch(e) {}
+
+  const patient = h.citas?.pacientes || h.pacientes || null;
+
+  return {
+    id: (h.id_consulta || h.id_historia || "").toString(),
+    appointment_id: h.id_cita?.toString() || "",
+    patient_id: h.citas?.id_paciente?.toString() || h.id_paciente?.toString() || "",
+    doctor_id: h.id_medico?.toString() || null,
+    
+    visit_type: extra.visit_type || "CONTROL",
+    is_first_visit: !!extra.is_first_visit,
+    subjective_exam: h.sintomas || h.motivo_consulta || extra.subjective_exam || h.enfermedad_actual || null,
+    
+    height_cm: extra.height_cm || null,
+    weight_kg: h.peso_kg || extra.weight_kg || null,
+    bmi: extra.bmi || null,
+    blood_pressure: h.presion_arterial || extra.blood_pressure || null,
+    heart_rate: extra.heart_rate || null,
+    respiratory_rate: extra.respiratory_rate || null,
+    temperature: h.temperatura_c || extra.temperature || null,
+    
+    skin: extra.skin || null,
+    head_neck: extra.head_neck || null,
+    breasts: extra.breasts || null,
+    abdomen: extra.abdomen || null,
+    gynecological: extra.gynecological || h.examen_fisico || null,
+    extremities: extra.extremities || null,
+    neurological: extra.neurological || null,
+    
+    acetic_acid_test: extra.acetic_acid_test || null,
+    acetic_clock_position: extra.acetic_clock_position || null,
+    acetic_relative_position: extra.acetic_relative_position || null,
+    lugol_test: extra.lugol_test || null,
+    lugol_clock_position: extra.lugol_clock_position || null,
+    lugol_relative_position: extra.lugol_relative_position || null,
+    
+    gestational_age: extra.gestational_age || null,
+    fetal_weight: extra.fetal_weight || null,
+    obstetric_bp: extra.obstetric_bp || null,
+    uterine_height: extra.uterine_height || null,
+    presentation: extra.presentation || null,
+    fetal_heart_rate: extra.fetal_heart_rate || null,
+    fetal_movements: extra.fetal_movements || null,
+    edema: extra.edema || null,
+    alarm_signs: extra.alarm_signs || null,
+    
+    indications: extra.indications || h.tratamiento || null,
+    complementary_exams: extra.complementary_exams || null,
+    diagnosis: h.diagnostico || extra.diagnosis || null,
+    plan: extra.plan || null,
+    next_appointment_date: extra.next_appointment_date || null,
+    contact_channel: extra.contact_channel || null,
+    
+    created_at: h.fecha_hora || h.fecha_consulta || new Date().toISOString(),
+    updated_at: h.fecha_hora || h.fecha_consulta || new Date().toISOString(),
+    
+    patient_name: patient ? `${patient.nombre} ${patient.apellido}` : "—",
+    consumables: (h.insumos_consulta ?? []).map((i: any) => ({
+      id: i.id_insumo,
+      consultation_id: i.id_consulta || i.id_historia,
+      item_name: i.nombre_insumo,
+      quantity: i.cantidad,
+      unit: null
+    }))
+  };
+};
+
 export function useConsultations(filters?: ConsultationFilters) {
   const queryKey = filters ? ["consultations", filters] : ["consultations"];
   return useQuery({
     queryKey,
     queryFn: async (): Promise<Consultation[]> => {
       let query = supabase
-        .from("consultations")
-        .select("id, appointment_id, patient_id, doctor_id, visit_type, is_first_visit, diagnosis, contact_channel, created_at, indications, patients(full_name)")
-        .order("created_at", { ascending: false });
+        .from("consultas")
+        .select("*, citas(id_paciente, pacientes(nombre, apellido))")
+        .order("fecha_hora", { ascending: false });
 
       if (filters?.from) {
-        query = query.gte("created_at", filters.from);
+        query = query.gte("fecha_hora", filters.from);
       }
       if (filters?.to) {
-        query = query.lte("created_at", filters.to + "T23:59:59.999Z");
+        query = query.lte("fecha_hora", filters.to + "T23:59:59.999Z");
       }
 
       const { data, error } = await query;
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({
-        ...c,
-        patient_name: c.patients?.full_name ?? "—",
-      }));
+      return (data ?? []).map(unpackConsultation);
     },
   });
 }
@@ -118,16 +212,35 @@ export function usePatientConsultations(patientId: string | undefined) {
     queryFn: async (): Promise<Consultation[]> => {
       if (!patientId) return [];
       const { data, error } = await supabase
-        .from("consultations")
-        .select("*, patients(full_name), consultation_consumables(*)")
-        .eq("patient_id", patientId)
-        .order("created_at", { ascending: false });
+        .from("consultas")
+        .select("*, citas!inner(id_paciente, pacientes(nombre, apellido))")
+        .eq("citas.id_paciente", parseInt(patientId))
+        .order("fecha_hora", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((c: any) => ({
-        ...c,
-        patient_name: c.patients?.full_name ?? "—",
-        consumables: c.consultation_consumables ?? [],
-      }));
+      
+      const mapped = (data ?? []).map(unpackConsultation);
+      
+      // Fetch consumables separately just to be safe
+      const consultaIds = mapped.map(c => parseInt(c.id)).filter(id => !isNaN(id));
+      if (consultaIds.length > 0) {
+        const { data: consumables } = await supabase.from("insumos_consulta").select("*").in("id_consulta", consultaIds);
+        if (consumables && consumables.length > 0) {
+          mapped.forEach(c => {
+             const cons = consumables.filter(co => co.id_consulta === parseInt(c.id));
+             if (cons.length > 0) {
+                c.consumables = cons.map((i: any) => ({
+                  id: i.id_insumo,
+                  consultation_id: i.id_consulta,
+                  item_name: i.nombre_insumo,
+                  quantity: i.cantidad,
+                  unit: null
+                }));
+             }
+          });
+        }
+      }
+
+      return mapped;
     },
   });
 }
@@ -138,12 +251,29 @@ export function useConsultationByAppointment(appointmentId: string | undefined) 
     queryFn: async (): Promise<Consultation | null> => {
       if (!appointmentId) return null;
       const { data, error } = await supabase
-        .from("consultations")
-        .select("*, consultation_consumables(*)")
-        .eq("appointment_id", appointmentId)
+        .from("consultas")
+        .select("*, citas(id_paciente, pacientes(nombre, apellido))")
+        .eq("id_cita", parseInt(appointmentId))
         .maybeSingle();
-      if (error) throw error;
-      return data;
+      if (error && error.code !== 'PGRST116') throw error;
+      if (!data) return null;
+      
+      const mapped = unpackConsultation(data);
+      const idConsulta = parseInt(mapped.id);
+      if (!isNaN(idConsulta)) {
+        const { data: consumables } = await supabase.from("insumos_consulta").select("*").eq("id_consulta", idConsulta);
+        if (consumables && consumables.length > 0) {
+           mapped.consumables = consumables.map((i: any) => ({
+             id: i.id_insumo,
+             consultation_id: i.id_consulta,
+             item_name: i.nombre_insumo,
+             quantity: i.cantidad,
+             unit: null
+           }));
+        }
+      }
+
+      return mapped;
     },
     enabled: !!appointmentId,
   });
@@ -153,68 +283,87 @@ export function useCreateConsultation() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ consumables, ...consultationData }: ConsultationInput) => {
-      // 1. Insert consultation
-      const { data: user } = await supabase.auth.getUser();
-      const { data: consultation, error: cError } = await supabase
-        .from("consultations")
+      // 1. Get or Create historias_clinicas
+      const { data: hcList } = await supabase.from("historias_clinicas").select("id_historia").eq("id_paciente", parseInt(consultationData.patient_id));
+      let id_historia = hcList?.[0]?.id_historia;
+      if (!id_historia) {
+         const { data: newHc, error: hcError } = await supabase.from("historias_clinicas").insert({ id_paciente: parseInt(consultationData.patient_id) }).select().single();
+         if (hcError) throw hcError;
+         id_historia = newHc.id_historia;
+      }
+
+      // 2. Insert consultation
+      const jsonObservaciones = packObservaciones(consultationData);
+      
+      const { data: hc, error: cError } = await supabase
+        .from("consultas")
         .insert({
-          ...consultationData,
-          doctor_id: consultationData.doctor_id || user.user?.id || null,
+          id_cita: parseInt(consultationData.appointment_id),
+          id_historia: id_historia,
+          id_medico: consultationData.doctor_id ? parseInt(consultationData.doctor_id) : null,
+          diagnostico: consultationData.diagnosis || null,
+          peso_kg: consultationData.weight_kg || null,
+          presion_arterial: consultationData.blood_pressure || null,
+          temperatura_c: consultationData.temperature || null,
+          sintomas: consultationData.subjective_exam || null,
+          motivo_consulta: consultationData.visit_type || null,
+          notas_medicas: jsonObservaciones
         })
         .select()
         .single();
       if (cError) throw cError;
 
-      // 2. Insert consumables if present
+      // 3. Insert consumables if present
       if (consumables && consumables.length > 0) {
-        const consumablesWithId = consumables.map((item) => ({
-          ...item,
-          consultation_id: consultation.id,
+        const newConsumables = consumables.map((item) => ({
+          id_consulta: hc.id_consulta,
+          id_historia: id_historia, // In case DB still requires it
+          nombre_insumo: item.item_name,
+          cantidad: item.quantity
         }));
+        // We catch errors silently here just in case schema is out of sync for consumables
         const { error: consError } = await supabase
-          .from("consultation_consumables")
-          .insert(consumablesWithId);
-        if (consError) throw consError;
+          .from("insumos_consulta")
+          .insert(newConsumables);
+        if (consError) {
+           console.warn("Error inserting consumables:", consError);
+        }
       }
 
-      // 3. Mark appointment as completed
+      // 4. Mark appointment as completed
       await supabase
-        .from("appointments")
-        .update({ status: "completada" })
-        .eq("id", consultationData.appointment_id);
+        .from("citas")
+        .update({ estado: "Completada" })
+        .eq("id_cita", parseInt(consultationData.appointment_id));
 
       // 4. Create next appointment if next_appointment_date is provided
       if (consultationData.next_appointment_date) {
         const { data: origApp } = await supabase
-          .from("appointments")
-          .select("scheduled_at, doctor_id, reason, price")
-          .eq("id", consultationData.appointment_id)
+          .from("citas")
+          .select("fecha_hora, id_medico")
+          .eq("id_cita", parseInt(consultationData.appointment_id))
           .maybeSingle();
 
         let scheduledAt = `${consultationData.next_appointment_date}T09:00:00Z`;
-        if (origApp?.scheduled_at) {
+        if (origApp?.fecha_hora) {
           try {
-            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
+            const timePart = new Date(origApp.fecha_hora).toISOString().split("T")[1];
             scheduledAt = `${consultationData.next_appointment_date}T${timePart}`;
-          } catch (e) {
-            console.error("Error parsing scheduled_at:", e);
-          }
+          } catch (e) {}
         }
 
         await supabase
-          .from("appointments")
+          .from("citas")
           .insert({
-            patient_id: consultationData.patient_id,
-            doctor_id: origApp?.doctor_id || consultationData.doctor_id || user.user?.id || null,
-            scheduled_at: scheduledAt,
-            status: "programada",
-            reason: "Próxima Cita",
-            price: origApp?.price || 0,
-            created_by: user.user?.id || null,
+            id_paciente: parseInt(consultationData.patient_id),
+            id_medico: origApp?.id_medico || (consultationData.doctor_id ? parseInt(consultationData.doctor_id) : null),
+            fecha_hora: scheduledAt,
+            estado: "Programada",
+            motivo: "Próxima Cita"
           });
       }
 
-      return consultation;
+      return unpackConsultation(hc);
     },
     onSuccess: (_, variables) => {
       qc.invalidateQueries({ queryKey: ["consultations"] });
@@ -231,98 +380,106 @@ export function useUpdateConsultation() {
   return useMutation({
     mutationFn: async ({ id, consumables, ...patch }: Partial<ConsultationInput> & { id: string }) => {
       // 1. Fetch current consultation data before update
-      const { data: oldConsultation } = await supabase
-        .from("consultations")
-        .select("next_appointment_date, patient_id, appointment_id, doctor_id")
-        .eq("id", id)
+      const { data: oldHc } = await supabase
+        .from("consultas")
+        .select("*, citas(id_paciente)")
+        .eq("id_consulta", parseInt(id))
         .maybeSingle();
 
+      if (!oldHc) throw new Error("Consulta no encontrada");
+
+      // Merge JSON for notas_medicas
+      let oldJson: any = {};
+      try { oldJson = JSON.parse(oldHc.notas_medicas || "{}"); } catch(e){}
+      
+      const newJson = { ...oldJson, ...patch };
+      const jsonObservaciones = packObservaciones(newJson);
+
+      const updateData: any = {
+         notas_medicas: jsonObservaciones
+      };
+      if (patch.diagnosis !== undefined) updateData.diagnostico = patch.diagnosis;
+      if (patch.weight_kg !== undefined) updateData.peso_kg = patch.weight_kg;
+      if (patch.blood_pressure !== undefined) updateData.presion_arterial = patch.blood_pressure;
+      if (patch.temperature !== undefined) updateData.temperatura_c = patch.temperature;
+      if (patch.subjective_exam !== undefined) updateData.sintomas = patch.subjective_exam;
+      if (patch.visit_type !== undefined) updateData.motivo_consulta = patch.visit_type;
+
       // 2. Update consultation details
-      const { data: consultation, error: cError } = await supabase
-        .from("consultations")
-        .update(patch)
-        .eq("id", id)
+      const { data: hc, error: cError } = await supabase
+        .from("consultas")
+        .update(updateData)
+        .eq("id_consulta", parseInt(id))
         .select()
         .single();
       if (cError) throw cError;
 
-      // 2. Update consumables if provided
+      // 3. Update consumables if provided
       if (consumables) {
-        // Delete existing ones
-        const { error: delError } = await supabase
-          .from("consultation_consumables")
-          .delete()
-          .eq("consultation_id", id);
-        if (delError) throw delError;
+        // Try deleting by id_consulta first, then id_historia just in case
+        await supabase.from("insumos_consulta").delete().eq("id_consulta", parseInt(id));
+        if (oldHc.id_historia) {
+           await supabase.from("insumos_consulta").delete().eq("id_historia", oldHc.id_historia);
+        }
 
-        // Insert new ones
         if (consumables.length > 0) {
           const newConsumables = consumables.map((item) => ({
-            ...item,
-            consultation_id: id,
+            id_consulta: parseInt(id),
+            id_historia: oldHc.id_historia,
+            nombre_insumo: item.item_name,
+            cantidad: item.quantity
           }));
-          const { error: insError } = await supabase
-            .from("consultation_consumables")
-            .insert(newConsumables);
-          if (insError) throw insError;
+          const { error: insError } = await supabase.from("insumos_consulta").insert(newConsumables);
+          if (insError) {
+             console.warn("Error inserting consumables on update:", insError);
+          }
         }
       }
 
       // 4. Handle next appointment date change
-      if (patch.next_appointment_date && patch.next_appointment_date !== oldConsultation?.next_appointment_date) {
-        const { data: user } = await supabase.auth.getUser();
+      if (patch.next_appointment_date && patch.next_appointment_date !== oldJson?.next_appointment_date) {
         
-        // Fetch original appointment to copy details
         const { data: origApp } = await supabase
-          .from("appointments")
-          .select("scheduled_at, doctor_id, reason, price")
-          .eq("id", oldConsultation.appointment_id)
+          .from("citas")
+          .select("fecha_hora, id_medico")
+          .eq("id_cita", oldHc.id_cita)
           .maybeSingle();
 
         let scheduledAt = `${patch.next_appointment_date}T09:00:00Z`;
-        if (origApp?.scheduled_at) {
+        if (origApp?.fecha_hora) {
           try {
-            const timePart = new Date(origApp.scheduled_at).toISOString().split("T")[1];
+            const timePart = new Date(origApp.fecha_hora).toISOString().split("T")[1];
             scheduledAt = `${patch.next_appointment_date}T${timePart}`;
-          } catch (e) {
-            console.error("Error parsing scheduled_at:", e);
-          }
+          } catch (e) {}
         }
 
-        // Check if there is already a scheduled next appointment created after the consultation's original appointment date
-        const { data: existingNextApp } = await supabase
-          .from("appointments")
-          .select("id")
-          .eq("patient_id", oldConsultation.patient_id)
-          .eq("status", "programada")
-          .gt("scheduled_at", origApp?.scheduled_at || new Date(0).toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
+        const patientId = oldHc.citas?.id_paciente;
+        if (patientId) {
+          const { data: existingNextApp } = await supabase
+            .from("citas")
+            .select("id_cita")
+            .eq("id_paciente", patientId)
+            .eq("estado", "Programada")
+            .gt("fecha_hora", origApp?.fecha_hora || new Date(0).toISOString())
+            .order("fecha_hora", { ascending: true })
+            .limit(1)
+            .maybeSingle();
 
-        if (existingNextApp) {
-          // Update existing next appointment
-          await supabase
-            .from("appointments")
-            .update({ scheduled_at: scheduledAt })
-            .eq("id", existingNextApp.id);
-        } else {
-          // Create new next appointment
-          await supabase
-            .from("appointments")
-            .insert({
-              patient_id: oldConsultation.patient_id,
-              doctor_id: origApp?.doctor_id || oldConsultation.doctor_id || user.user?.id || null,
-              scheduled_at: scheduledAt,
-              status: "programada",
-              reason: "Próxima Cita",
-              price: origApp?.price || 0,
-              created_by: user.user?.id || null,
+          if (existingNextApp) {
+            await supabase.from("citas").update({ fecha_hora: scheduledAt }).eq("id_cita", existingNextApp.id_cita);
+          } else {
+            await supabase.from("citas").insert({
+              id_paciente: patientId,
+              id_medico: origApp?.id_medico || oldHc.id_medico,
+              fecha_hora: scheduledAt,
+              estado: "Programada",
+              motivo: "Próxima Cita"
             });
+          }
         }
       }
 
-      return consultation;
+      return unpackConsultation(hc);
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["consultations"] });

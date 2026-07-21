@@ -1,45 +1,53 @@
 import { useState } from "react";
 import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
-  Home, Calendar, Users, FileText, Receipt, FileBarChart,
-  Stethoscope, UserRound, Settings, Heart, Menu, X, LogOut, Shield,
-  Sun, Moon,
+  LayoutGrid, Calendar, UserRound, Stethoscope, Users,
+  Wallet, ReceiptText, Bookmark, CreditCard,
+  Box, Monitor, RotateCw, Headphones, Settings,
+  Menu, X, LogOut, ChevronLeft, Building2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
-import { useMyProfile } from "@/lib/api/profiles";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "@/hooks/useTheme";
+import { useClinicInfo } from "@/lib/api/clinic";
 
-const baseModules = [
-  { title: "Inicio", url: "/", icon: Home },
+type ModuleDef = {
+  category?: string;
+  title?: string;
+  url?: string;
+  icon?: any;
+  badge?: number;
+  adminOnly?: boolean;
+};
+
+const navigation: ModuleDef[] = [
+  { title: "Dashboard", url: "/", icon: LayoutGrid },
+  { category: "CLÍNICA" },
   { title: "Agenda", url: "/agenda", icon: Calendar },
-  { title: "Pacientes", url: "/pacientes", icon: Users },
-  { title: "Historias Clínicas", url: "/historias", icon: FileText },
-  { title: "Reportes", url: "/reportes", icon: FileBarChart },
-  { title: "Facturación", url: "/facturacion", icon: Receipt },
-  { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
-] as const;
-
-const adminModules = [
-  { title: "Doctores", url: "/doctores", icon: UserRound },
-  { title: "Configuración", url: "/configuracion", icon: Settings },
-] as const;
-
-const initials = (n: string) =>
-  (n || "U").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+  { title: "Pacientes", url: "/pacientes", icon: UserRound },
+  { title: "Tratamientos", url: "/servicios", icon: Stethoscope },
+  { title: "Personal", url: "/doctores", icon: Users, adminOnly: true },
+  { category: "FINANZAS" },
+  { title: "Cuentas", url: "/cuentas", icon: Wallet, adminOnly: true },
+  { title: "Ventas", url: "/facturacion", icon: ReceiptText },
+  { title: "Compras", url: "/compras", icon: Bookmark, adminOnly: true },
+  { title: "Métodos de Pago", url: "/metodos-pago", icon: CreditCard, adminOnly: true },
+  { category: "ACTIVOS FÍSICOS" },
+  { title: "Inventario", url: "/stocks", icon: Box, adminOnly: true },
+  { title: "Periféricos", url: "/peripherals", icon: Monitor, adminOnly: true },
+  { category: "OTROS" },
+  { title: "Reportes", url: "/reportes", icon: RotateCw },
+  { title: "Atención al Cliente", url: "/support", icon: Headphones },
+  { title: "Configuración", url: "/configuracion", icon: Settings, adminOnly: true },
+];
 
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { user } = useAuthSession();
-  const { data: profile } = useMyProfile(user?.id);
   const isAdmin = useIsAdmin();
   const router = useRouter();
   const qc = useQueryClient();
-  const { isDark, toggleTheme } = useTheme();
-
-  const modules = [...baseModules, ...(isAdmin ? adminModules : [])];
+  const { data: clinic } = useClinicInfo();
 
   const handleLogout = async () => {
     await qc.cancelQueries();
@@ -49,75 +57,86 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   };
 
   return (
-    <>
-      <div className="flex items-center gap-2.5 px-6 pt-6 pb-6">
-        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve to-mauve-soft shadow-sm">
-          <Heart className="h-5 w-5 text-primary-foreground" fill="currentColor" />
+    <div className="flex flex-col h-full bg-white text-[#2b3674] border-r border-[#f0f2f5]">
+      {/* Logo Area */}
+      <div className="pt-6 px-6 pb-4">
+        <div className="flex items-center gap-2 mb-6">
+          <div className="text-[#4361ee]">
+            <Building2 className="h-6 w-6" strokeWidth={2.5} />
+          </div>
+          <span className="font-bold text-xl tracking-tight text-[#2b3674]">FemeSalud</span>
         </div>
-        <div>
-          <h1 className="text-base font-semibold tracking-tight">FemeSalud</h1>
-          <p className="text-[11px] text-muted-foreground">Premium Clinical Suite</p>
+
+        {/* Clinic Info Box */}
+        <div className="bg-[#f8f9fb] border border-[#f0f2f5] rounded-xl p-3 flex gap-3 items-center mb-6">
+          <div className="bg-white p-2 rounded-lg shadow-sm">
+            <Building2 className="h-4 w-4 text-[#a3aed1]" />
+          </div>
+          <div>
+            <p className="text-xs font-bold text-[#2b3674] leading-tight">{clinic?.name || "Clínica FemeSalud"}</p>
+            <p className="text-[9px] text-[#a3aed1] font-medium leading-tight mt-0.5 truncate max-w-[140px]">
+              {clinic?.address_line1 || "Valle de la Pascua, Guárico"}
+            </p>
+          </div>
         </div>
       </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3">
-        {modules.map((m) => {
-          const active = pathname === m.url;
+
+      {/* Navigation List */}
+      <nav className="flex-1 w-full overflow-y-auto no-scrollbar px-4 pb-6 flex flex-col gap-1">
+        {navigation.map((m, i) => {
+          if (m.adminOnly && !isAdmin) return null;
+
+          if (m.category) {
+            return (
+              <div key={`cat-${i}`} className="mt-4 mb-1 px-3">
+                <span className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">
+                  {m.category}
+                </span>
+              </div>
+            );
+          }
+
+          const active = pathname === m.url || (m.url !== "/" && !m.url?.startsWith("#") && pathname.startsWith(m.url || ""));
           const Icon = m.icon;
+          const isDummy = m.url?.startsWith("#");
+
           return (
             <Link
-              key={m.url}
-              to={m.url}
-              onClick={onNavigate}
+              key={m.title}
+              to={isDummy ? "/" : m.url!}
+              onClick={(e) => {
+                if (isDummy) e.preventDefault();
+                else if (onNavigate) onNavigate();
+              }}
               className={cn(
-                "group flex items-center gap-3 rounded-2xl px-3.5 py-2.5 text-sm font-medium transition-all duration-300",
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group text-sm font-bold",
                 active
-                  ? "bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30"
-                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  ? "bg-[#4361ee] text-white shadow-md shadow-blue-500/20"
+                  : "text-[#a3aed1] hover:text-[#2b3674] hover:bg-[#f8f9fb]"
               )}
             >
               <Icon
                 className={cn(
-                  "h-[18px] w-[18px] transition-transform duration-300",
-                  active ? "scale-110" : "group-hover:scale-105",
+                  "h-4 w-4",
+                  active ? "text-white" : "text-[#a3aed1] group-hover:text-[#2b3674]"
                 )}
-                strokeWidth={active ? 2.4 : 2}
+                strokeWidth={2.5}
               />
               <span>{m.title}</span>
             </Link>
           );
         })}
+
+        {/* Logout */}
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group text-sm font-bold text-[#a3aed1] hover:text-red-500 hover:bg-red-50 mt-2"
+        >
+          <LogOut className="h-4 w-4 text-[#a3aed1] group-hover:text-red-500" strokeWidth={2.5} />
+          <span>Log out</span>
+        </button>
       </nav>
-      <div className="m-3 rounded-2xl bg-gradient-to-br from-blush/60 to-accent/50 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-mauve to-blush text-xs font-semibold text-primary-foreground">
-            {initials(profile?.full_name || user?.email || "U")}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">
-              {profile?.full_name?.trim() || user?.email?.split("@")[0] || "Usuario"}
-            </p>
-            <p className="truncate text-[11px] text-muted-foreground flex items-center gap-1">
-              {isAdmin && <Shield className="h-3 w-3 text-mauve" />}
-              {isAdmin ? "Administrador" : profile?.specialty || "Doctor"}
-            </p>
-          </div>
-          <button
-            onClick={toggleTheme}
-            aria-label="Cambiar tema"
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve"
-          >
-            {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
-          </button>
-          <button
-            onClick={handleLogout}
-            aria-label="Cerrar sesión"
-            className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
-    </>
+    </div>
   );
 }
 
@@ -126,35 +145,43 @@ export function AppSidebar() {
 
   return (
     <>
-      <aside className="fixed left-4 top-4 bottom-4 z-30 hidden w-64 flex-col rounded-3xl glass-card shadow-sm md:flex">
+      {/* Desktop Sidebar */}
+      <aside className="fixed left-0 top-0 bottom-0 z-30 hidden w-[260px] flex-col bg-white md:flex shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        {/* Collapse Button (Decorative based on image) */}
+        <button className="absolute -right-3 top-8 h-6 w-6 bg-white border border-[#f0f2f5] rounded-full flex items-center justify-center text-[#a3aed1] hover:text-[#2b3674] shadow-sm z-40">
+          <ChevronLeft className="h-3 w-3" strokeWidth={3} />
+        </button>
         <SidebarBody />
       </aside>
 
+      {/* Mobile Toggle */}
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Abrir menú"
-        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl glass-card shadow-sm md:hidden"
+        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm border border-[#f0f2f5] md:hidden text-[#2b3674]"
       >
         <Menu className="h-5 w-5" />
       </button>
 
+      {/* Mobile Backdrop */}
       <div
         onClick={() => setMobileOpen(false)}
         className={cn(
-          "fixed inset-0 z-40 bg-foreground/30 backdrop-blur-sm transition-opacity duration-300 md:hidden",
-          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0",
+          "fixed inset-0 z-40 bg-black/20 backdrop-blur-sm transition-opacity duration-300 md:hidden",
+          mobileOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
       />
+      
+      {/* Mobile Sidebar */}
       <aside
         className={cn(
-          "fixed left-3 top-3 bottom-3 z-50 flex w-64 flex-col rounded-3xl glass-card shadow-lg transition-all duration-300 ease-out md:hidden",
-          mobileOpen ? "translate-x-0 opacity-100" : "-translate-x-[110%] opacity-0",
+          "fixed left-0 top-0 bottom-0 z-50 flex w-[260px] flex-col bg-white shadow-2xl transition-transform duration-300 ease-out md:hidden",
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <button
           onClick={() => setMobileOpen(false)}
-          aria-label="Cerrar menú"
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl text-muted-foreground hover:bg-muted"
+          className="absolute right-4 top-6 flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 z-50"
         >
           <X className="h-4 w-4" />
         </button>

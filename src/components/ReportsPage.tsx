@@ -196,7 +196,7 @@ export function ReportsPage() {
           ["Citas Canceladas", String(stats.cancelled), "Operativo"],
         ],
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        headStyles: { fillColor: [67, 97, 238], textColor: 255, font: "times" },
         styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
@@ -212,7 +212,7 @@ export function ReportsPage() {
         head: [["Canal de Contacto", "Consultas Registradas", "Porcentaje de Impacto"]],
         body: marketingData.map(d => [d.channel, String(d.count), `${d.percentage}%`]),
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        headStyles: { fillColor: [67, 97, 238], textColor: 255, font: "times" },
         styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
@@ -231,7 +231,7 @@ export function ReportsPage() {
           return [`${MONTHS_ES[parseInt(mn) - 1]} ${yr}`, `$${d.amount.toLocaleString("es-ES")}`];
         }),
         theme: "grid",
-        headStyles: { fillColor: [139, 92, 175], textColor: 255, font: "times" },
+        headStyles: { fillColor: [67, 97, 238], textColor: 255, font: "times" },
         styles: { font: "times", fontSize: 9, cellPadding: 5 },
         margin: { left: 40, right: 40 },
       });
@@ -274,39 +274,42 @@ export function ReportsPage() {
   };
 
   const kpis = [
-    { label: "Citas en rango", value: stats.total, icon: CalendarClock, tone: "text-mauve" },
-    { label: "Completadas", value: stats.completed, icon: CheckCircle2, tone: "text-sage-foreground" },
-    { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-blush-foreground" },
-    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-mauve" },
+    { label: "Citas en rango", value: stats.total, icon: CalendarClock, tone: "text-[#4361ee] bg-[#4361ee]/10" },
+    { label: "Completadas", value: stats.completed, icon: CheckCircle2, tone: "text-emerald-500 bg-emerald-50" },
+    { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-blue-500 bg-blue-50" },
+    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-[#4361ee] bg-[#4361ee]/10" },
+    { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-[#4361ee] bg-[#4361ee]/10" },
+    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-emerald-500 bg-emerald-50" },
   ];
 
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="ml-14 md:ml-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Reportes y Control</h1>
-          <p className="text-sm text-muted-foreground">Estadísticas, ingresos financieros y canales de adquisición.</p>
+        <div className="flex-1">
+          <p className="text-[11px] font-bold text-[#a3aed1] uppercase tracking-wider mb-1">Métricas y Resúmenes</p>
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <FileBarChart className="h-7 w-7 text-[#4361ee]" /> Reportes Analíticos
+          </h1>
         </div>
-        <Button onClick={exportPDF} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 cursor-pointer">
+        <Button onClick={exportPDF} className="rounded-2xl bg-[#4361ee] text-white hover:bg-[#3451d6] cursor-pointer">
           <Download className="mr-1 h-4 w-4" /> Exportar Reporte Ejecutivo
         </Button>
       </header>
 
-      <div className="rounded-3xl glass-card p-5 shadow-sm border border-border/40">
+      <div className="bg-white border border-[#f0f2f5] rounded-[2rem] p-5 shadow-sm border border-[#f0f2f5]">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs font-medium text-[#a3aed1]">
             <CalIcon className="h-3.5 w-3.5" /> Rango de fechas
           </div>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="rounded-xl w-[170px]" />
-          <span className="text-muted-foreground text-xs">a</span>
+          <span className="text-[#a3aed1] text-xs">a</span>
           <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="rounded-xl w-[170px]" />
           <div className="flex gap-1.5 ml-auto">
             {[
               { l: "7 días", n: 7 }, { l: "30 días", n: 30 }, { l: "90 días", n: 90 },
             ].map((p) => (
               <button key={p.l} onClick={() => { setFrom(daysAgoISO(p.n)); setTo(todayISO()); }}
-                className="rounded-full bg-muted/60 px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted cursor-pointer transition">
+                className="rounded-full bg-[#f4f7fe] px-3 py-1.5 text-xs font-medium text-[#a3aed1] hover:bg-[#f4f7fe] cursor-pointer transition">
                 {p.l}
               </button>
             ))}
@@ -315,7 +318,7 @@ export function ReportsPage() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 bg-muted/60 p-1 rounded-2xl">
+        <TabsList className="grid w-full grid-cols-3 bg-[#f4f7fe] p-1 rounded-2xl">
           <TabsTrigger value="overview" className="rounded-xl font-medium text-xs">Vista General</TabsTrigger>
           <TabsTrigger value="financial" className="rounded-xl font-medium text-xs">Resumen Financiero</TabsTrigger>
           <TabsTrigger value="marketing" className="rounded-xl font-medium text-xs">Canales de Marketing</TabsTrigger>
@@ -327,29 +330,29 @@ export function ReportsPage() {
             {kpis.map((k) => {
               const Icon = k.icon;
               return (
-                <div key={k.label} className="rounded-3xl glass-card p-5 shadow-sm border border-border/40">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl bg-muted ${k.tone}`}>
+                <div key={k.label} className="bg-white border border-[#f0f2f5] rounded-[2rem] p-5 shadow-sm">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${k.tone}`}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <p className="mt-4 text-xs text-muted-foreground">{k.label}</p>
-                  <p className="font-display text-2xl font-semibold tracking-tight mt-1">{k.value}</p>
+                  <p className="mt-4 text-xs text-[#a3aed1]">{k.label}</p>
+                  <p className="text-2xl font-semibold tracking-tight mt-1">{k.value}</p>
                 </div>
               );
             })}
           </div>
 
-          <div className="rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+          <div className="bg-white border border-[#f0f2f5] rounded-[2rem] p-6 shadow-sm border border-[#f0f2f5]">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Planificación</p>
+                <p className="text-xs font-medium uppercase tracking-wider text-[#a3aed1]">Planificación</p>
                 <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
-                  <CalendarClock className="h-5 w-5 text-mauve" /> Próximas citas ({upcoming.length})
+                  <CalendarClock className="h-5 w-5 text-[#4361ee]" /> Próximas citas ({upcoming.length})
                 </h3>
               </div>
             </div>
-            <div className="overflow-hidden rounded-2xl border border-border/60">
+            <div className="overflow-hidden rounded-2xl border border-[#f0f2f5]">
               <table className="w-full text-sm">
-                <thead className="bg-muted/40 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                <thead className="bg-[#f4f7fe] text-left text-xs uppercase tracking-wider text-[#a3aed1]">
                   <tr>
                     <th className="px-4 py-2.5">Fecha / Hora</th>
                     <th className="px-4 py-2.5">Paciente</th>
@@ -362,18 +365,18 @@ export function ReportsPage() {
                     const dt = new Date(a.scheduled_at);
                     const pad = (n: number) => String(n).padStart(2, "0");
                     return (
-                      <tr key={a.id} className="hover:bg-muted/30">
+                      <tr key={a.id} className="hover:bg-[#f4f7fe]/50">
                         <td className="px-4 py-3 text-xs">
                           {dt.toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {pad(dt.getHours())}:{pad(dt.getMinutes())}
                         </td>
                         <td className="px-4 py-3 font-semibold">{a.patient_name}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{doctorMap.get(a.doctor_id) ?? "—"}</td>
-                        <td className="px-4 py-3 text-xs text-muted-foreground">{a.reason ?? "—"}</td>
+                        <td className="px-4 py-3 text-xs text-[#a3aed1]">{doctorMap.get(a.doctor_id) ?? "—"}</td>
+                        <td className="px-4 py-3 text-xs text-[#a3aed1]">{a.reason ?? "—"}</td>
                       </tr>
                     );
                   })}
                   {upcoming.length === 0 && (
-                    <tr><td colSpan={4} className="px-4 py-6 text-center text-xs text-muted-foreground">No hay citas próximas programadas.</td></tr>
+                    <tr><td colSpan={4} className="px-4 py-6 text-center text-xs text-[#a3aed1]">No hay citas próximas programadas.</td></tr>
                   )}
                 </tbody>
               </table>
@@ -383,32 +386,32 @@ export function ReportsPage() {
 
         {/* TAB 2: FINANCIAL */}
         <TabsContent value="financial" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-0 outline-none">
-          <div className="lg:col-span-2 rounded-3xl glass-card p-6 shadow-sm border border-border/40 flex flex-col justify-between">
+          <div className="lg:col-span-2 bg-white border border-[#f0f2f5] rounded-[2rem] p-6 shadow-sm border border-[#f0f2f5] flex flex-col justify-between">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Histórico de Ingresos</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-[#a3aed1]">Histórico de Ingresos</p>
               <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-mauve" /> Evolución de Facturación (Últimos 12 meses)
+                <TrendingUp className="h-5 w-5 text-[#4361ee]" /> Evolución de Facturación (Últimos 12 meses)
               </h3>
             </div>
 
             {monthlyData.length === 0 ? (
-              <p className="text-xs text-muted-foreground text-center py-20">No hay transacciones registradas.</p>
+              <p className="text-xs text-[#a3aed1] text-center py-20">No hay transacciones registradas.</p>
             ) : (
-              <div className="flex h-56 items-end gap-3 pt-6 border-b border-border mt-4">
+              <div className="flex h-56 items-end gap-3 pt-6 border-b border-[#f0f2f5] mt-4">
                 {monthlyData.map((d) => {
                   const pct = (d.amount / maxAmount) * 100;
                   const [yr, mn] = d.month.split("-");
                   const label = `${MONTHS_ES[parseInt(mn) - 1].slice(0,3)} '${yr.slice(2)}`;
                   return (
                     <div key={d.month} className="flex-1 flex flex-col items-center gap-2 group h-full justify-end">
-                      <div className="text-[9px] font-bold text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="text-[9px] font-bold text-[#a3aed1] opacity-0 group-hover:opacity-100 transition-opacity">
                         ${d.amount.toLocaleString("es-ES")}
                       </div>
                       <div
                         style={{ height: `${pct}%` }}
-                        className="w-full bg-gradient-to-t from-mauve to-mauve-soft rounded-t-lg transition-all duration-500 hover:opacity-85 shadow-sm shadow-mauve/15"
+                        className="w-full bg-[#4361ee] rounded-t-lg transition-all duration-500 hover:opacity-85 shadow-sm shadow-[#4361ee]/15"
                       />
-                      <div className="text-[10px] text-muted-foreground font-semibold truncate w-full text-center">
+                      <div className="text-[10px] text-[#a3aed1] font-semibold truncate w-full text-center">
                         {label}
                       </div>
                     </div>
@@ -418,13 +421,13 @@ export function ReportsPage() {
             )}
           </div>
 
-          <div className="lg:col-span-1 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-4 flex items-center gap-1">
+          <div className="lg:col-span-1 bg-white border border-[#f0f2f5] rounded-[2rem] p-6 shadow-sm border border-[#f0f2f5]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee] mb-4 flex items-center gap-1">
               <DollarSign className="h-4 w-4" /> Desglose Mensual
             </h3>
-            <div className="overflow-hidden rounded-2xl border border-border/40">
+            <div className="overflow-hidden rounded-2xl border border-[#f0f2f5]">
               <table className="w-full text-xs">
-                <thead className="bg-muted/40 text-left uppercase tracking-wider text-muted-foreground">
+                <thead className="bg-[#f4f7fe] text-left uppercase tracking-wider text-[#a3aed1]">
                   <tr>
                     <th className="px-3 py-2">Mes / Año</th>
                     <th className="px-3 py-2 text-right">Monto ($)</th>
@@ -434,9 +437,9 @@ export function ReportsPage() {
                   {monthlyData.slice().reverse().map((d) => {
                     const [yr, mn] = d.month.split("-");
                     return (
-                      <tr key={d.month} className="hover:bg-muted/20">
+                      <tr key={d.month} className="hover:bg-[#f4f7fe]/20">
                         <td className="px-3 py-2.5 font-medium">{MONTHS_ES[parseInt(mn) - 1]} {yr}</td>
-                        <td className="px-3 py-2.5 text-right font-bold text-mauve">${d.amount.toLocaleString("es-ES")}</td>
+                        <td className="px-3 py-2.5 text-right font-bold text-[#4361ee]">${d.amount.toLocaleString("es-ES")}</td>
                       </tr>
                     );
                   })}
@@ -448,20 +451,20 @@ export function ReportsPage() {
 
         {/* TAB 3: MARKETING */}
         <TabsContent value="marketing" className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-0 outline-none">
-          <div className="lg:col-span-2 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
+          <div className="lg:col-span-2 bg-white border border-[#f0f2f5] rounded-[2rem] p-6 shadow-sm border border-[#f0f2f5]">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Impacto por Canal de Contacto</p>
+              <p className="text-xs font-medium uppercase tracking-wider text-[#a3aed1]">Marketing</p>
               <h3 className="mt-1 text-base font-semibold flex items-center gap-2">
-                <Megaphone className="h-5 w-5 text-mauve" /> Desempeño y Canales de Adquisición
+                <Megaphone className="h-5 w-5 text-[#4361ee]" /> Adquisición de Pacientes
               </h3>
             </div>
 
             <div className="space-y-4 mt-6">
               {marketingData.map((d, idx) => {
                 const colors = [
-                  "bg-mauve",
-                  "bg-blush-foreground",
-                  "bg-sage-foreground",
+                  "bg-[#4361ee]",
+                  "bg-blue-400",
+                  "bg-emerald-500",
                   "bg-sky-600",
                   "bg-amber-600",
                 ];
@@ -470,9 +473,9 @@ export function ReportsPage() {
                   <div key={d.channel} className="space-y-1">
                     <div className="flex justify-between text-xs font-semibold">
                       <span>{d.channel}</span>
-                      <span className="text-muted-foreground">{d.count} consultas ({d.percentage}%)</span>
+                      <span className="text-[#a3aed1]">{d.count} consultas ({d.percentage}%)</span>
                     </div>
-                    <div className="w-full bg-muted h-2.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-[#f4f7fe] h-2.5 rounded-full overflow-hidden">
                       <div
                         style={{ width: `${d.percentage}%` }}
                         className={cn("h-full rounded-full transition-all duration-500", colorClass)}
@@ -482,18 +485,18 @@ export function ReportsPage() {
                 );
               })}
               {marketingData.length === 0 && (
-                <p className="text-xs text-muted-foreground text-center py-12">No hay datos de canales de marketing disponibles.</p>
+                <p className="text-xs text-[#a3aed1] text-center py-12">No hay datos de canales de marketing disponibles.</p>
               )}
             </div>
           </div>
 
-          <div className="lg:col-span-1 rounded-3xl glass-card p-6 shadow-sm border border-border/40">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-mauve mb-4 flex items-center gap-1">
+          <div className="lg:col-span-1 bg-white border border-[#f0f2f5] rounded-[2rem] p-6 shadow-sm border border-[#f0f2f5]">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee] mb-4 flex items-center gap-1">
               <Megaphone className="h-4 w-4" /> Tabla de Impacto
             </h3>
-            <div className="overflow-hidden rounded-2xl border border-border/40">
+            <div className="overflow-hidden rounded-2xl border border-[#f0f2f5]">
               <table className="w-full text-xs">
-                <thead className="bg-muted/40 text-left uppercase tracking-wider text-muted-foreground">
+                <thead className="bg-[#f4f7fe] text-left uppercase tracking-wider text-[#a3aed1]">
                   <tr>
                     <th className="px-3 py-2">Canal</th>
                     <th className="px-3 py-2 text-center">Consultas</th>
@@ -502,10 +505,10 @@ export function ReportsPage() {
                 </thead>
                 <tbody className="divide-y divide-border/60">
                   {marketingData.map((d) => (
-                    <tr key={d.channel} className="hover:bg-muted/20">
+                    <tr key={d.channel} className="hover:bg-[#f4f7fe]/20">
                       <td className="px-3 py-2.5 font-medium">{d.channel}</td>
                       <td className="px-3 py-2.5 text-center font-bold">{d.count}</td>
-                      <td className="px-3 py-2.5 text-right font-bold text-mauve">{d.percentage}%</td>
+                      <td className="px-3 py-2.5 text-right font-bold text-[#4361ee]">{d.percentage}%</td>
                     </tr>
                   ))}
                 </tbody>
@@ -517,3 +520,4 @@ export function ReportsPage() {
     </div>
   );
 }
+

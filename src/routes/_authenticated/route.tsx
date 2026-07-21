@@ -16,6 +16,10 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const router = useRouter();
   useEffect(() => {
+    // Force light mode for the new Med Care design since it's a light UI
+    document.documentElement.classList.remove('dark');
+    localStorage.setItem('theme', 'light');
+
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_OUT") {
         router.navigate({ to: "/auth", replace: true });
@@ -25,9 +29,9 @@ function AuthenticatedLayout() {
   }, [router]);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-[#f8f9fb]">
       <AppSidebar />
-      <main className="px-4 pt-20 pb-6 md:ml-[17.5rem] md:pr-6 md:py-6 md:pt-6">
+      <main className="px-4 pt-20 pb-6 md:ml-[260px] md:pr-6 md:py-6 md:pt-6 h-full min-h-screen">
         <Outlet />
       </main>
     </div>

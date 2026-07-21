@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { FacturacionPage } from "@/components/FacturacionPage";
+import { SalesPage } from "@/components/finance/SalesPage";
+
 export const Route = createFileRoute("/_authenticated/facturacion")({
-  head: () => ({ meta: [{ title: "Facturación — FemeSalud" }] }),
-  component: FacturacionPage,
+  head: () => ({ meta: [{ title: "Sales — FemeSalud" }] }),
+  component: SalesPage,
 });

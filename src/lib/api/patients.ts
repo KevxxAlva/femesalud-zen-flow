@@ -68,16 +68,57 @@ export interface Patient {
 
 export type PatientInput = Omit<Patient, "id" | "created_at" | "updated_at">;
 
+// Helper to map DB record to Patient interface
+const mapPatient = (p: any): Patient => ({
+  id: p.id_paciente.toString(),
+  full_name: `${p.nombre} ${p.apellido}`,
+  email: p.email,
+  phone: p.telefono,
+  birth_date: p.fecha_nacimiento,
+  address: p.direccion,
+  status: "activo", // Defaulting since we didn't add it to DB yet
+  assigned_doctor_id: null,
+  notes: null,
+  created_at: p.creado_en || new Date().toISOString(),
+  updated_at: p.creado_en || new Date().toISOString(),
+  document_id: p.documento_identidad,
+  historia_number: p.historias_clinicas?.[0]?.id_historia?.toString() || null,
+  first_visit_date: null,
+  marital_status: null,
+  birthplace: null,
+  education_level: null,
+  occupation: null,
+  ethnicity: null,
+  family_history: {
+    mother: null,
+    father: null,
+    siblings: null,
+    children: p.historias_clinicas?.[0]?.antecedentes_familiares || null,
+  },
+  personal_history: {
+    alcohol: null,
+    drugs: null,
+    tobacco: null,
+    base_pathology: p.historias_clinicas?.[0]?.enfermedades_cronicas || null,
+    surgical: null,
+    allergies: p.historias_clinicas?.[0]?.alergias || null,
+  },
+  gynecological_data: null,
+  obstetric_data: null,
+  consultation_reason: null,
+  current_illness: null,
+});
+
 export function usePatients() {
   return useQuery({
     queryKey: ["patients"],
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
-        .from("patients")
-        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number")
-        .order("created_at", { ascending: false });
+        .from("pacientes")
+        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)")
+        .order("creado_en", { ascending: false });
       if (error) throw error;
-      return (data as any) as Patient[];
+      return (data ?? []).map(mapPatient);
     },
   });
 }
@@ -87,8 +128,8 @@ export function usePatientCount() {
     queryKey: ["patients_count"],
     queryFn: async (): Promise<number> => {
       const { count, error } = await supabase
-        .from("patients")
-        .select("id", { count: "exact", head: true });
+        .from("pacientes")
+        .select("id_paciente", { count: "exact", head: true });
       if (error) throw error;
       return count ?? 0;
     },
@@ -102,11 +143,11 @@ export function usePatientsGrowth() {
       const fourteenDaysAgo = new Date();
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
       const { data, error } = await supabase
-        .from("patients")
-        .select("created_at")
-        .gte("created_at", fourteenDaysAgo.toISOString());
+        .from("pacientes")
+        .select("creado_en")
+        .gte("creado_en", fourteenDaysAgo.toISOString());
       if (error) throw error;
-      return (data as any) || [];
+      return (data ?? []).map(d => ({ created_at: d.creado_en }));
     },
   });
 }
@@ -116,13 +157,13 @@ export function usePatientsCountByDateRange(from?: string, to?: string) {
     queryKey: ["patients_count_range", from, to],
     queryFn: async (): Promise<number> => {
       let query = supabase
-        .from("patients")
-        .select("id", { count: "exact", head: true });
+        .from("pacientes")
+        .select("id_paciente", { count: "exact", head: true });
       if (from) {
-        query = query.gte("created_at", from);
+        query = query.gte("creado_en", from);
       }
       if (to) {
-        query = query.lte("created_at", to + "T23:59:59.999Z");
+        query = query.lte("creado_en", to + "T23:59:59.999Z");
       }
       const { count, error } = await query;
       if (error) throw error;
@@ -136,12 +177,12 @@ export function useRecentPatients(limit: number = 5) {
     queryKey: ["patients_recent", limit],
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
-        .from("patients")
-        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number")
-        .order("updated_at", { ascending: false })
+        .from("pacientes")
+        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)")
+        .order("creado_en", { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return (data as any) as Patient[];
+      return (data ?? []).map(mapPatient);
     },
   });
 }
@@ -159,24 +200,22 @@ export function usePaginatedPatients(
       const to = from + pageSize - 1;
 
       let query = supabase
-        .from("patients")
-        .select("id, full_name, email, phone, status, assigned_doctor_id, created_at, updated_at, document_id, historia_number", { count: "exact" })
-        .order("created_at", { ascending: false })
+        .from("pacientes")
+        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)", { count: "exact" })
+        .order("creado_en", { ascending: false })
         .range(from, to);
 
       if (search) {
         query = query.or(
-          `full_name.ilike.%${search}%,email.ilike.%${search}%,document_id.ilike.%${search}%`
+          `nombre.ilike.%${search}%,apellido.ilike.%${search}%,email.ilike.%${search}%,documento_identidad.ilike.%${search}%`
         );
       }
 
-      if (status) {
-        query = query.eq("status", status);
-      }
+      // We don't have status in DB yet, ignore status filter
 
       const { data, error, count } = await query;
       if (error) throw error;
-      return { data: (data as any) as Patient[], count: count ?? 0 };
+      return { data: (data ?? []).map(mapPatient), count: count ?? 0 };
     },
   });
 }
@@ -187,12 +226,12 @@ export function usePatient(id: string | undefined | null) {
     queryFn: async (): Promise<Patient> => {
       if (!id) throw new Error("No patient ID provided");
       const { data, error } = await supabase
-        .from("patients")
-        .select("*")
-        .eq("id", id)
+        .from("pacientes")
+        .select("*, historias_clinicas(*)")
+        .eq("id_paciente", parseInt(id))
         .single();
       if (error) throw error;
-      return (data as any) as Patient;
+      return mapPatient(data);
     },
     enabled: !!id,
   });
@@ -202,14 +241,24 @@ export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<PatientInput> & { full_name: string; assigned_doctor_id: string }) => {
-      const { data: user } = await supabase.auth.getUser();
+      const names = input.full_name.split(' ');
+      const nombre = names[0];
+      const apellido = names.slice(1).join(' ') || '';
+
       const { error, data } = await supabase
-        .from("patients")
-        .insert({ ...input, created_by: user.user?.id })
+        .from("pacientes")
+        .insert({ 
+          nombre, 
+          apellido, 
+          email: input.email, 
+          telefono: input.phone,
+          documento_identidad: input.document_id || Math.random().toString().slice(2, 10),
+          fecha_nacimiento: input.birth_date
+        })
         .select()
         .single();
       if (error) throw error;
-      return (data as any) as Patient;
+      return mapPatient(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
@@ -224,9 +273,20 @@ export function useUpdatePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<PatientInput> & { id: string }) => {
-      const { error, data } = await supabase.from("patients").update(patch).eq("id", id).select().single();
+      const updateData: any = {};
+      if (patch.full_name) {
+        const names = patch.full_name.split(' ');
+        updateData.nombre = names[0];
+        updateData.apellido = names.slice(1).join(' ') || '';
+      }
+      if (patch.email !== undefined) updateData.email = patch.email;
+      if (patch.phone !== undefined) updateData.telefono = patch.phone;
+      if (patch.document_id !== undefined) updateData.documento_identidad = patch.document_id;
+      if (patch.birth_date !== undefined) updateData.fecha_nacimiento = patch.birth_date;
+
+      const { error, data } = await supabase.from("pacientes").update(updateData).eq("id_paciente", parseInt(id)).select().single();
       if (error) throw error;
-      return (data as any) as Patient;
+      return mapPatient(data);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
@@ -241,7 +301,7 @@ export function useDeletePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("patients").delete().eq("id", id);
+      const { error } = await supabase.from("pacientes").delete().eq("id_paciente", parseInt(id));
       if (error) throw error;
     },
     onSuccess: () => {

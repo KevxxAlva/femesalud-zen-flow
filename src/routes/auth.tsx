@@ -142,13 +142,13 @@ function AuthPage() {
                 <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
                 <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
               </div>
-              <span className="text-[10px] font-bold text-[#A855F7] bg-[#A855F7]/10 px-2 py-0.5 rounded-full">Hoy</span>
+              <span className="text-[10px] font-bold text-[#4361ee] bg-[#4361ee]/10 px-2 py-0.5 rounded-full">Hoy</span>
             </div>
             
             <div className="space-y-2.5">
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100/30 dark:border-zinc-800/30">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-7 rounded-full bg-[#A855F7]" />
+                  <div className="w-1.5 h-7 rounded-full bg-[#4361ee]" />
                   <div className="text-left">
                     <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">Dra. Sofía Ramos</p>
                     <p className="text-[9px] text-zinc-400">Ginecología • Consulta</p>
@@ -159,7 +159,7 @@ function AuthPage() {
               
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100/30 dark:border-zinc-800/30">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-1.5 h-7 rounded-full bg-[#A855F7]/40" />
+                  <div className="w-1.5 h-7 rounded-full bg-[#4361ee]/40" />
                   <div className="text-left">
                     <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">Dr. Carlos Mendoza</p>
                     <p className="text-[9px] text-zinc-400">Pediatría • Control</p>
@@ -171,7 +171,7 @@ function AuthPage() {
             
             {/* Overlapping floating card */}
             <div className="absolute -bottom-4 -right-2 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-2.5 shadow-xl flex items-center gap-2.5 animate-bounce-slow">
-              <div className="w-7 h-7 rounded-lg bg-[#A855F7]/10 flex items-center justify-center text-[#A855F7]">
+              <div className="w-7 h-7 rounded-lg bg-[#4361ee]/10 flex items-center justify-center text-[#4361ee]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
                 </svg>
@@ -189,7 +189,7 @@ function AuthPage() {
           <div className="relative w-full h-[220px] bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-5 shadow-xl select-none animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-[#A855F7]/10 flex items-center justify-center text-[#A855F7] font-semibold text-[10px]">MG</div>
+                <div className="w-7 h-7 rounded-full bg-[#4361ee]/10 flex items-center justify-center text-[#4361ee] font-semibold text-[10px]">MG</div>
                 <div className="text-left">
                   <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200">María González</p>
                   <p className="text-[8px] text-zinc-400">ID: FS-9082 • 28 años</p>
@@ -230,7 +230,7 @@ function AuthPage() {
         
       case 2: // Facturas
         return (
-          <div className="relative w-full h-[220px] bg-gradient-to-tr from-[#A855F7] to-[#7c3aed] rounded-3xl p-5 shadow-xl text-white select-none animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col justify-between">
+          <div className="relative w-full h-[220px] bg-gradient-to-tr from-[#4361ee] to-[#3451d6] rounded-3xl p-5 shadow-xl text-white select-none animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col justify-between">
             <div className="flex items-start justify-between">
               <div className="text-left">
                 <p className="text-[9px] uppercase tracking-wider opacity-70">FemeSalud Suite</p>
@@ -266,7 +266,7 @@ function AuthPage() {
             
             {/* Overlapping floating card */}
             <div className="absolute -bottom-4 -right-2 bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-2.5 shadow-xl flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 animate-bounce-slow">
-              <div className="w-7 h-7 rounded-lg bg-[#A855F7]/10 flex items-center justify-center text-[#A855F7]">
+              <div className="w-7 h-7 rounded-lg bg-[#4361ee]/10 flex items-center justify-center text-[#4361ee]">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -291,11 +291,11 @@ function AuthPage() {
         
         {/* Top brand logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#A855F7]/10 text-[#A855F7] shadow-sm">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#4361ee]/10 text-[#4361ee] shadow-sm">
             <Heart className="h-5 w-5" fill="currentColor" />
           </div>
           <span className="font-display font-bold text-xl tracking-tight text-zinc-950 dark:text-white">
-            feme<span className="text-[#A855F7]">salud</span>
+            feme<span className="text-[#4361ee]">salud</span>
           </span>
         </div>
 
@@ -319,7 +319,7 @@ function AuthPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                   />
                 </div>
 
@@ -334,7 +334,7 @@ function AuthPage() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       autoComplete="current-password"
-                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                     />
                     <button
                       type="button"
@@ -350,14 +350,14 @@ function AuthPage() {
                   <label className="flex items-center gap-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 cursor-pointer select-none">
                     <input
                       type="checkbox"
-                      className="rounded border-zinc-300 dark:border-zinc-800 text-[#A855F7] focus:ring-[#A855F7] w-4 h-4 cursor-pointer"
+                      className="rounded border-zinc-300 dark:border-zinc-800 text-[#4361ee] focus:ring-[#4361ee] w-4 h-4 cursor-pointer"
                     />
                     <span>Remember me</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setMode("recovery")}
-                    className="font-bold text-zinc-400 hover:text-[#A855F7] transition-colors bg-transparent border-0 cursor-pointer p-0"
+                    className="font-bold text-zinc-400 hover:text-[#4361ee] transition-colors bg-transparent border-0 cursor-pointer p-0"
                   >
                     Forgot Password?
                   </button>
@@ -366,7 +366,7 @@ function AuthPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                  className="w-full h-11 rounded-2xl bg-[#4361ee] hover:bg-[#3451d6] text-white font-semibold shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Sign in"}
                 </Button>
@@ -391,14 +391,14 @@ function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                   />
                 </div>
 
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                  className="w-full h-11 rounded-2xl bg-[#4361ee] hover:bg-[#3451d6] text-white font-semibold shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Enviar enlace"}
                 </Button>
@@ -433,7 +433,7 @@ function AuthPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                     />
                     <button
                       type="button"
@@ -448,7 +448,7 @@ function AuthPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                  className="w-full h-11 rounded-2xl bg-[#4361ee] hover:bg-[#3451d6] text-white font-semibold shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Actualizar contraseña"}
                 </Button>
@@ -472,7 +472,7 @@ function AuthPage() {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     required
-                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                   />
                 </div>
 
@@ -485,7 +485,7 @@ function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                    className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                   />
                 </div>
 
@@ -500,7 +500,7 @@ function AuthPage() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#A855F7] transition-all"
+                      className="rounded-2xl border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-900/50 px-4 py-3 pr-10 h-11 focus-visible:ring-2 focus-visible:ring-[#4361ee] transition-all"
                     />
                     <button
                       type="button"
@@ -515,7 +515,7 @@ function AuthPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-11 rounded-2xl bg-[#A855F7] hover:bg-[#9333EA] text-white font-semibold shadow-md shadow-purple-500/10 hover:shadow-purple-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                  className="w-full h-11 rounded-2xl bg-[#4361ee] hover:bg-[#3451d6] text-white font-semibold shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
                   {loading ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : "Crear administrador"}
                 </Button>
@@ -540,11 +540,11 @@ function AuthPage() {
       </div>
 
       {/* Right side: Image Showcase Carousel */}
-      <div className="hidden md:flex md:w-[50%] lg:w-[55%] flex-col justify-between p-12 lg:p-16 relative overflow-hidden bg-gradient-to-br from-[#120422] via-[#240c42] to-[#3b0764] text-white">
+      <div className="hidden md:flex md:w-[50%] lg:w-[55%] flex-col justify-between p-12 lg:p-16 relative overflow-hidden bg-gradient-to-br from-[#0b1437] via-[#111c44] to-[#1b2559] text-white">
         
         {/* Glow Effects */}
-        <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-[#A855F7]/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#A855F7]/15 rounded-full blur-[100px] pointer-events-none" />
+        <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-[#4361ee]/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-[#4361ee]/15 rounded-full blur-[100px] pointer-events-none" />
 
         {/* Top bar */}
         <div className="flex justify-end z-10">
@@ -552,7 +552,7 @@ function AuthPage() {
             onClick={() => toast.success("Soporte FemeSalud iniciado. Escríbenos a soporte@femesalud.com")}
             className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 transition-all text-xs font-semibold cursor-pointer"
           >
-            <Headphones className="w-3.5 h-3.5 text-[#A855F7]" />
+            <Headphones className="w-3.5 h-3.5 text-[#4361ee]" />
             <span>Support</span>
           </button>
         </div>
@@ -567,13 +567,13 @@ function AuthPage() {
 
           {/* Text content details */}
           <div className="text-left w-full space-y-4 px-2 min-h-[140px]">
-            <span className="text-[10px] uppercase font-bold tracking-widest text-[#A855F7] bg-[#A855F7]/10 border border-[#A855F7]/20 px-3 py-1 rounded-full">
+            <span className="text-[10px] uppercase font-bold tracking-widest text-[#4361ee] bg-[#4361ee]/10 border border-[#4361ee]/20 px-3 py-1 rounded-full">
               {slides[currentSlide].badge}
             </span>
             <h3 className="font-display text-2xl font-bold tracking-tight text-white mt-2 leading-tight">
               {slides[currentSlide].title}
             </h3>
-            <p className="text-xs text-purple-200/70 font-medium leading-relaxed">
+            <p className="text-xs text-blue-200/70 font-medium leading-relaxed">
               {slides[currentSlide].description}
             </p>
           </div>
@@ -583,10 +583,10 @@ function AuthPage() {
         <div className="flex items-center justify-between z-10 w-full">
           {/* Slide Description info */}
           <div className="text-left hidden lg:block max-w-[280px]">
-            <p className="text-[10px] font-bold text-purple-300/60 uppercase tracking-wider">
+            <p className="text-[10px] font-bold text-blue-300/60 uppercase tracking-wider">
               {slides[currentSlide].featureTitle}
             </p>
-            <p className="text-[9px] text-purple-300/40 mt-1 leading-normal font-medium">
+            <p className="text-[9px] text-blue-300/40 mt-1 leading-normal font-medium">
               {slides[currentSlide].featureDesc}
             </p>
           </div>
@@ -600,7 +600,7 @@ function AuthPage() {
                   key={i}
                   onClick={() => setCurrentSlide(i)}
                   className={`h-2 rounded-full cursor-pointer transition-all border-0 p-0 ${
-                    i === currentSlide ? "w-5 bg-[#A855F7]" : "w-2 bg-white/20 hover:bg-white/40"
+                    i === currentSlide ? "w-5 bg-[#4361ee]" : "w-2 bg-white/20 hover:bg-white/40"
                   }`}
                   aria-label={`Ir al slide ${i + 1}`}
                 />
@@ -630,3 +630,4 @@ function AuthPage() {
     </div>
   );
 }
+

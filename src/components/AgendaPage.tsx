@@ -1,24 +1,16 @@
 import { useMemo, useState, useEffect } from "react";
-import { Plus, Calendar as CalIcon, Clock, Pencil, Trash2, CheckCircle2, XCircle, Filter, Loader2, ChevronLeft, ChevronRight, Stethoscope } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { AppointmentForm } from "@/components/AppointmentForm";
-import { ConsultationForm } from "@/components/ConsultationForm";
+import { Link } from "@tanstack/react-router";
+import { Plus, ChevronLeft, ChevronRight, Download, Filter, Search, Grid, MoreHorizontal, Clock, LifeBuoy, Stethoscope, Video, Network } from "lucide-react";
 import { useAppointments, useUpdateAppointment, useDeleteAppointment, type AppointmentWithPatient } from "@/lib/api/appointments";
 import { useDoctors } from "@/lib/api/profiles";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AppointmentForm } from "@/components/AppointmentForm";
+import { ConsultationForm } from "@/components/ConsultationForm";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const FILTERS = ["todas", "programada", "completada", "cancelada"] as const;
-const statusBg: Record<string, string> = {
-  programada: "bg-mauve/15 text-mauve",
-  completada: "bg-sage/50 text-sage-foreground",
-  cancelada: "bg-destructive/15 text-destructive",
-};
-
+// Helpers
 function dateOnly(iso: string) { return iso.slice(0, 10); }
 function timeOnly(iso: string) {
   const d = new Date(iso);
@@ -26,11 +18,9 @@ function timeOnly(iso: string) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-// Calendar Calculation Helpers
 function getMonday(d: Date) {
   const date = new Date(d);
   const day = date.getDay();
-  // adjust when day is sunday (0)
   const diff = date.getDate() - day + (day === 0 ? -6 : 1);
   return new Date(date.setDate(diff));
 }
@@ -46,22 +36,15 @@ function getWeekDays(d: Date) {
   return days;
 }
 
-function getStartOfMonth(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
-
 function getCalendarMonthDays(d: Date) {
-  const start = getStartOfMonth(d);
+  const start = new Date(d.getFullYear(), d.getMonth(), 1);
   let dayOfWeek = start.getDay();
-  // We want Lunes (1) to be index 0, Domingo (0) to be index 6
   let offset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  
   const calendarStart = new Date(start);
   calendarStart.setDate(start.getDate() - offset);
   
   const days = [];
-  // We always render 42 days (6 weeks) to maintain a stable size grid
-  for (let i = 0; i < 42; i++) {
+  for (let i = 0; i < 35; i++) {
     const next = new Date(calendarStart);
     next.setDate(calendarStart.getDate() + i);
     days.push(next);
@@ -76,761 +59,540 @@ function formatToYMD(d: Date) {
   return `${year}-${month}-${day}`;
 }
 
-const MONTHS_ES = [
-  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-];
-const WEEKDAYS_ES = [
-  "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"
-];
+const MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const WEEKDAYS_SHORT = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const HOURS = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
 
 export function AgendaPage() {
-  // Navigation states & modes
-  const [viewMode, setViewMode] = useState<"list" | "calendar">("calendar");
-  const [calendarView, setCalendarView] = useState<"day" | "week" | "month">("month");
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [formOpen, setFormOpen] = useState(false);
   const [defaultFormDate, setDefaultFormDate] = useState<string | undefined>(undefined);
+  const [editingApp, setEditingApp] = useState<AppointmentWithPatient | null>(null);
 
-  const [filter, setFilter] = useState<(typeof FILTERS)[number]>("todas");
-  const [scope, setScope] = useState<"hoy" | "semana" | "todas">("todas");
+  const [consultationOpen, setConsultationOpen] = useState(false);
+  const [consultationApp, setConsultationApp] = useState<AppointmentWithPatient | null>(null);
+  const [compactMode, setCompactMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [calendarView, setCalendarView] = useState("Semanal");
+  const [statusFilter, setStatusFilter] = useState("todas");
 
-  // Compute query range dynamically based on active navigation and scope
-  const queryRange = useMemo(() => {
-    if (viewMode === "list" && scope === "todas") {
-      const fromDate = new Date();
-      fromDate.setMonth(fromDate.getMonth() - 6);
-      const toDate = new Date();
-      toDate.setMonth(toDate.getMonth() + 12);
-      return {
-        from: fromDate.toISOString().slice(0, 10),
-        to: toDate.toISOString().slice(0, 10),
-      };
-    }
-    const fromDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
-    const toDate = new Date(currentDate.getFullYear(), currentDate.getMonth() + 2, 0);
-    return {
-      from: fromDate.toISOString().slice(0, 10),
-      to: toDate.toISOString().slice(0, 10),
-    };
-  }, [currentDate.getFullYear(), currentDate.getMonth(), viewMode, scope]);
-
-  const { data: appointments = [], isLoading } = useAppointments(queryRange);
+  // Queries
+  const { data: appointments = [], isLoading } = useAppointments({
+    from: new Date(currentDate.getFullYear(), currentDate.getMonth() - 2, 1).toISOString().slice(0, 10),
+    to: new Date(currentDate.getFullYear(), currentDate.getMonth() + 3, 0).toISOString().slice(0, 10),
+  });
   const { data: doctors = [] } = useDoctors();
   const update = useUpdateAppointment();
   const del = useDeleteAppointment();
-  const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<AppointmentWithPatient | null>(null);
-  const [toDelete, setToDelete] = useState<AppointmentWithPatient | null>(null);
-  const [listPage, setListPage] = useState(1);
-  const itemsPerPage = 15;
 
-  useEffect(() => {
-    setListPage(1);
-  }, [filter, scope, viewMode]);
-
-  // Consultation states
-  const [consultationOpen, setConsultationOpen] = useState(false);
-  const [consultationApp, setConsultationApp] = useState<AppointmentWithPatient | null>(null);
-
-  const today = new Date().toISOString().slice(0, 10);
-  const weekEnd = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() + 7);
-    return d.toISOString().slice(0, 10);
-  }, []);
-
-  const ymdSelected = formatToYMD(currentDate);
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
-
-  const filtered = useMemo(() => {
-    return appointments.filter((a) => {
-      const d = dateOnly(a.scheduled_at);
-      if (filter !== "todas" && a.status !== filter) return false;
-      if (viewMode === "list") {
-        if (scope === "hoy" && d !== today) return false;
-        if (scope === "semana" && (d < today || d > weekEnd)) return false;
-      }
-      return true;
-    });
-  }, [appointments, filter, scope, today, weekEnd, viewMode]);
-
-  const dayAppointments = useMemo(() => {
-    return filtered
-      .filter((a) => dateOnly(a.scheduled_at) === ymdSelected)
-      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-  }, [filtered, ymdSelected]);
-
-  const grouped = useMemo(() => {
-    const map = new Map<string, AppointmentWithPatient[]>();
-    for (const a of filtered) {
-      const d = dateOnly(a.scheduled_at);
-      const list = map.get(d) ?? [];
-      list.push(a);
-      map.set(d, list);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) => b.localeCompare(a));
-  }, [filtered]);
-
-  const totalPages = Math.ceil(grouped.length / itemsPerPage);
-  const paginatedGrouped = useMemo(() => {
-    const start = (listPage - 1) * itemsPerPage;
-    return grouped.slice(start, start + itemsPerPage);
-  }, [grouped, listPage]);
-
-  const counts = useMemo(() => ({
-    todas: appointments.length,
-    programada: appointments.filter((a) => a.status === "programada").length,
-    completada: appointments.filter((a) => a.status === "completada").length,
-    cancelada: appointments.filter((a) => a.status === "cancelada").length,
-  }), [appointments]);
+  
+  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
+  const monthDays = useMemo(() => getCalendarMonthDays(currentDate), [currentDate]);
 
   const changeStatus = async (id: string, status: string) => {
     try { await update.mutateAsync({ id, status }); toast.success("Estado actualizado"); }
     catch (err) { toast.error(err instanceof Error ? err.message : "Error"); }
   };
 
-  const handleDelete = async () => {
-    if (!toDelete) return;
-    try { await del.mutateAsync(toDelete.id); toast.success("Cita eliminada"); }
-    catch (err) { toast.error(err instanceof Error ? err.message : "Error"); }
-    setToDelete(null);
+  const deleteApp = async (id: string) => {
+    try { await del.mutateAsync(id); toast.success("Cita eliminada"); }
+    catch (err: any) { toast.error(err?.message || "Error al eliminar"); }
   };
 
-  const handlePrev = () => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      if (calendarView === "month") {
-        d.setMonth(d.getMonth() - 1);
-      } else if (calendarView === "week") {
-        d.setDate(d.getDate() - 7);
-      } else if (calendarView === "day") {
-        d.setDate(d.getDate() - 1);
+  // Process events for the grid
+  const gridEvents = useMemo(() => {
+    const weekStart = formatToYMD(weekDays[0]);
+    const weekEnd = formatToYMD(weekDays[6]);
+    
+    return appointments.filter((a) => {
+      // Handle both "YYYY-MM-DD HH:MM:SS" and ISO strings safely
+      const safeIso = a.scheduled_at.replace(" ", "T");
+      const d = dateOnly(safeIso);
+      const matchesSearch = !searchQuery || (a.patient_name && a.patient_name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const matchesStatus = statusFilter === "todas" ? a.status !== "cancelada" : a.status === statusFilter;
+      return d >= weekStart && d <= weekEnd && matchesSearch && matchesStatus;
+    }).map((app) => {
+      const safeIso = app.scheduled_at.replace(" ", "T");
+      const date = new Date(safeIso);
+      const hour = date.getHours();
+      const mins = date.getMinutes();
+      
+      // Calculate top position relative to 8 AM
+      const startFloat = hour + (mins / 60);
+      const startFrom8 = startFloat - 8;
+      
+      // Use actual duration or default to 1 hour
+      const durationHours = (app.duration_minutes || 60) / 60;
+      
+      let theme;
+      if (app.status?.toLowerCase() === 'completada') {
+        theme = { bg: "bg-green-50", border: "border-green-400", text: "text-green-700" };
+      } else {
+        theme = { bg: "bg-blue-50", border: "border-blue-300", text: "text-[#4361ee]" };
       }
+      
+      return {
+        ...app,
+        dayIndex: date.getDay() === 0 ? 6 : date.getDay() - 1, // 0 = Mon, 6 = Sun
+        topHours: startFrom8,
+        durationHours,
+        theme
+      };
+    });
+  }, [appointments, weekDays]);
+
+  const monthDaysGrid = useMemo(() => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDayOfMonth = new Date(year, month, 1);
+    const startDate = getMonday(firstDayOfMonth);
+    
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
       return d;
     });
-  };
+  }, [currentDate]);
 
-  const handleNext = () => {
-    setCurrentDate((prev) => {
-      const d = new Date(prev);
-      if (calendarView === "month") {
-        d.setMonth(d.getMonth() + 1);
-      } else if (calendarView === "week") {
-        d.setDate(d.getDate() + 7);
-      } else if (calendarView === "day") {
-        d.setDate(d.getDate() + 1);
-      }
-      return d;
-    });
-  };
-
-  const handleToday = () => {
-    setCurrentDate(new Date());
-  };
-
-  // Memoized lists of days for Week & Month views
-  const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
-  const monthDays = useMemo(() => getCalendarMonthDays(currentDate), [currentDate]);
+  const daysToRender = calendarView === "Diaria" ? [currentDate] : weekDays;
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="ml-14 md:ml-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight font-display">Agenda</h1>
-          <p className="text-sm text-muted-foreground">
-            {viewMode === "list" ? `${filtered.length} citas mostradas` : "Vista de Calendario"}
-          </p>
-        </div>
+    <>
+      <div className="bg-white rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans text-[#2b3674] flex flex-col">
         
-        <div className="flex items-center gap-3">
-          {/* List/Calendar Switcher */}
-          <div className="flex items-center gap-1 bg-muted/60 p-1 rounded-2xl border border-border/30 shadow-sm animate-fade-in">
-            <button
-              onClick={() => setViewMode("calendar")}
-              className={cn(
-                "rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-300 cursor-pointer",
-                viewMode === "calendar" ? "bg-background text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Calendario
-            </button>
-            <button
-              onClick={() => setViewMode("list")}
-              className={cn(
-                "rounded-xl px-4 py-1.5 text-xs font-semibold transition-all duration-300 cursor-pointer",
-                viewMode === "list" ? "bg-background text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Lista
-            </button>
-          </div>
+        {/* HEADER */}
+        <header className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold text-[#4361ee] tracking-tight">Agenda</h1>
+          <button 
+            onClick={() => { setDefaultFormDate(formatToYMD(new Date())); setEditingApp(null); setFormOpen(true); }}
+            className="flex items-center gap-2 bg-[#4361ee] text-white px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-[#3451d6] transition-colors"
+          >
+            <Plus className="h-4 w-4" strokeWidth={3} /> Nueva Cita
+          </button>
+        </header>
 
-          <Button onClick={() => { setDefaultFormDate(undefined); setEditing(null); setFormOpen(true); }} className="rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/30 hover:opacity-95 transition-all duration-300 hover:scale-[1.02]">
-            <Plus className="mr-1 h-4 w-4" /> Nueva cita
-          </Button>
-        </div>
-      </header>
-
-      {/* FILTER BAR - Applies to both views (Status only in Calendar, Status + Scope in List) */}
-      <div className="rounded-3xl glass-card p-4 shadow-sm border border-border/40">
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Filter className="h-3.5 w-3.5" /> Estado
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => (
-              <button key={f} onClick={() => setFilter(f)} className={cn(
-                "rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-300 cursor-pointer",
-                filter === f ? "bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/20" : "bg-muted/60 text-muted-foreground hover:bg-muted",
-              )}>
-                {f} · {counts[f]}
-              </button>
-            ))}
-          </div>
-
-          {viewMode === "list" && (
-            <>
-              <div className="mx-2 hidden h-5 w-px bg-border md:block" />
-              <div className="flex gap-1.5">
-                {(["hoy", "semana", "todas"] as const).map((s) => (
-                  <button key={s} onClick={() => setScope(s)} className={cn(
-                    "rounded-full px-3.5 py-1.5 text-xs font-medium capitalize transition-all duration-300 cursor-pointer",
-                    scope === s ? "bg-foreground text-background" : "bg-muted/60 text-muted-foreground hover:bg-muted",
-                  )}>{s}</button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* CALENDAR NAVIGATION - Only in Calendar Mode */}
-      {viewMode === "calendar" && (
-        <div className="rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handlePrev} className="rounded-xl hover:bg-muted/80 h-9 w-9">
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" onClick={handleToday} className="rounded-xl px-4 font-semibold text-xs border-border/50 h-9 hover:bg-muted/20">
-                Hoy
-              </Button>
-              <Button variant="ghost" size="icon" onClick={handleNext} className="rounded-xl hover:bg-muted/80 h-9 w-9">
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              
-              <h3 className="font-display font-bold text-sm md:text-base tracking-tight ml-2 capitalize">
-                {calendarView === "month" && (
-                  <span>{MONTHS_ES[currentDate.getMonth()]} {currentDate.getFullYear()}</span>
-                )}
-                {calendarView === "week" && (
-                  <span>
-                    Semana del {weekDays[0].getDate()} al {weekDays[6].getDate()} de {MONTHS_ES[weekDays[6].getMonth()]} {weekDays[6].getFullYear()}
-                  </span>
-                )}
-                {calendarView === "day" && (
-                  <span>
-                    {currentDate.toLocaleDateString("es-ES", { weekday: "long", day: "numeric" })} de {MONTHS_ES[currentDate.getMonth()]}
-                  </span>
-                )}
-              </h3>
-            </div>
-            
-            <div className="flex gap-1 bg-muted/60 p-1 rounded-2xl border border-border/30 shadow-sm">
-              {(["day", "week", "month"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setCalendarView(v)}
-                  className={cn(
-                    "rounded-xl px-4 py-1.5 text-xs font-semibold capitalize transition-all duration-300 cursor-pointer",
-                    calendarView === v ? "bg-background text-foreground shadow-sm font-bold" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {v === "day" ? "Día" : v === "week" ? "Semana" : "Mes"}
+        {/* TOOLBAR */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none">
+                  <Filter className="h-4 w-4 text-[#a3aed1]" /> Filtro
+                  {statusFilter !== "todas" && <span className="bg-[#4361ee] w-2 h-2 rounded-full absolute top-1 right-1"></span>}
                 </button>
-              ))}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48 rounded-xl">
+                <DropdownMenuItem onClick={() => setStatusFilter("todas")} className="text-xs font-bold cursor-pointer">Todas (Activas)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("programada")} className="text-xs font-bold cursor-pointer">Solo Programadas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("completada")} className="text-xs font-bold cursor-pointer">Solo Completadas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("cancelada")} className="text-xs font-bold cursor-pointer text-red-500 hover:text-red-600 focus:text-red-600">Ver Canceladas</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none">
+                  <Clock className="h-4 w-4 text-[#a3aed1]" /> {calendarView} <span className="ml-1 text-[10px] text-[#a3aed1]">▼</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-40 rounded-xl">
+                <DropdownMenuItem onClick={() => setCalendarView("Mensual")} className="text-xs font-bold cursor-pointer">Mensual</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCalendarView("Semanal")} className="text-xs font-bold cursor-pointer">Semanal</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCalendarView("Diaria")} className="text-xs font-bold cursor-pointer">Diaria</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50">
+              <Download className="h-4 w-4 text-[#a3aed1]" /> Descargar Datos
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className={cn("flex items-center transition-all duration-300 overflow-hidden", isSearchOpen ? "w-48 opacity-100" : "w-9 opacity-100")}>
+              {isSearchOpen ? (
+                <div className="relative w-full">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onBlur={() => { if (!searchQuery) setIsSearchOpen(false); }}
+                    placeholder="Buscar paciente..."
+                    className="w-full h-9 pl-9 pr-3 text-xs border border-[#4361ee] rounded-full focus:outline-none focus:ring-1 focus:ring-[#4361ee]"
+                  />
+                  <Search className="h-4 w-4 text-[#4361ee] absolute left-3 top-2.5" />
+                </div>
+              ) : (
+                <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 shrink-0 flex items-center justify-center border border-[#f0f2f5] rounded-full text-[#a3aed1] hover:bg-gray-50 focus:outline-none">
+                  <Search className="h-4 w-4" />
+                </button>
+              )}
             </div>
+            <Link to="/support">
+              <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50">
+                <LifeBuoy className="h-4 w-4 text-[#a3aed1]" /> Soporte
+              </button>
+            </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none focus:ring-0">
+                  <Grid className="h-4 w-4 text-[#a3aed1]" /> Diseño
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48 rounded-xl">
+                <DropdownMenuItem onClick={() => setCompactMode(false)} className="text-xs font-bold cursor-pointer">
+                  Vista Cómoda (Normal)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setCompactMode(true)} className="text-xs font-bold cursor-pointer">
+                  Vista Compacta
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
-      )}
 
-      {/* RENDER VIEWS */}
-      {isLoading ? (
-        <div className="rounded-3xl glass-card p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></div>
-      ) : viewMode === "list" ? (
-        /* LIST VIEW (ORIGINAL IMPLEMENTATION) */
-        grouped.length === 0 ? (
-          <div className="rounded-3xl glass-card p-12 text-center shadow-sm">
-            <CalIcon className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 text-sm text-muted-foreground">No hay citas que coincidan con los filtros.</p>
-          </div>
-        ) : (
-          <div className="space-y-6 animate-fade-in">
-            {paginatedGrouped.map(([date, items]) => {
-              const d = new Date(date + "T00:00:00");
-              const isToday = date === today;
-              return (
-                <section key={date} className="rounded-3xl glass-card p-5 shadow-sm border border-border/40">
-                  <div className="mb-4 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                        {isToday ? "Hoy" : d.toLocaleDateString("es-ES", { weekday: "long" })}
-                      </p>
-                      <h3 className="font-display text-lg font-semibold tracking-tight">
-                        {d.toLocaleDateString("es-ES", { day: "2-digit", month: "long", year: "numeric" })}
-                      </h3>
+        <div className="flex flex-col lg:flex-row gap-8 flex-1">
+          {/* LEFT SIDEBAR */}
+          <aside className="w-full lg:w-[280px] flex flex-col gap-8 shrink-0">
+            
+            {/* Appointment Calendar */}
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="font-bold text-sm tracking-wide text-[#2b3674]">Calendario de Citas</h2>
+                <div className="flex gap-1">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-6 w-6 flex items-center justify-center bg-[#4361ee] text-white rounded-full hover:opacity-90">
+                    <ChevronLeft className="h-3 w-3" />
+                  </button>
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-6 w-6 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200">
+                    <ChevronRight className="h-3 w-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-7 text-center gap-y-3 gap-x-1">
+                {WEEKDAYS_SHORT.map(d => (
+                  <div key={d} className="text-[10px] font-bold text-[#a3aed1]">{d}</div>
+                ))}
+                {monthDays.map((d, i) => {
+                  const isCurrentMonth = d.getMonth() === currentDate.getMonth();
+                  const isSelected = formatToYMD(d) === formatToYMD(currentDate);
+                  return (
+                    <div 
+                      key={i} 
+                      onClick={() => setCurrentDate(d)}
+                      className={cn(
+                        "h-8 w-8 mx-auto flex items-center justify-center text-xs font-bold rounded-full cursor-pointer transition-colors",
+                        !isCurrentMonth && "text-gray-300",
+                        isCurrentMonth && !isSelected && "text-[#2b3674] hover:bg-gray-100",
+                        isSelected && "bg-[#4361ee] text-white shadow-md"
+                      )}
+                    >
+                      {d.getDate()}
                     </div>
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      {items.length} {items.length === 1 ? "cita" : "citas"}
-                    </span>
-                  </div>
-                  <div className="space-y-2">
-                    {items.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).map((a) => (
-                      <div key={a.id} className="group flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm">
+                  );
+                })}
+              </div>
+            </div>
+
+            <hr className="border-[#f0f2f5]" />
+
+            {/* Doctor Appointment List */}
+            <div className="flex-1 flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-bold text-sm tracking-wide text-[#2b3674]">Lista de Citas Médicas</h2>
+                <button className="text-[#a3aed1] border border-[#f0f2f5] p-1 rounded-lg"><MoreHorizontal className="h-4 w-4" /></button>
+              </div>
+
+              <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2">
+                {gridEvents.length === 0 ? (
+                  <div className="text-center text-xs text-[#a3aed1] mt-10">No hay citas en este rango de fechas.</div>
+                ) : (
+                  gridEvents.slice(0, 10).map((app) => {
+                    const safeIso = app.scheduled_at.replace(" ", "T");
+                    const d = new Date(safeIso);
+                    const end = new Date(d.getTime() + (app.duration_minutes || 60) * 60000);
+                    const pad = (n: number) => String(n).padStart(2, '0');
+                    return (
+                      <div key={app.id} onClick={() => { setEditingApp(app); setFormOpen(true); }} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-[#f4f7fe] rounded-xl transition">
                         <div className="flex items-center gap-3">
-                          <div className="flex w-16 items-center justify-center gap-1 rounded-xl bg-muted px-2 py-1.5 text-xs font-semibold">
-                            <Clock className="h-3 w-3 text-mauve" /> {timeOnly(a.scheduled_at)}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold">{a.patient_name}</p>
-                            <p className="truncate text-xs text-muted-foreground">{a.reason || "—"} · {doctorMap.get(a.doctor_id) || "Doctor"}</p>
+                          <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${app.patient_name}`} alt={app.patient_name} className="h-10 w-10 rounded-full bg-blue-50 border-2 border-white shadow-sm" />
+                          <div className="overflow-hidden max-w-[120px]">
+                            <p className="text-xs font-bold text-[#2b3674] group-hover:text-[#4361ee] transition truncate">{app.patient_name}</p>
+                            <p className="text-[10px] font-medium text-[#a3aed1] uppercase tracking-wider truncate">{app.reason || "Cita"}</p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>{a.status}</span>
-                          {a.status === "programada" && (
-                            <>
-                              <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Marcar completada">
-                                <CheckCircle2 className="h-4 w-4" />
-                              </button>
-                              <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Cancelar">
-                                <XCircle className="h-4 w-4" />
-                              </button>
-                            </>
-                          )}
-                          {(a.status === "completada" || a.status === "programada") && (
-                            <button
-                              onClick={() => {
-                                setConsultationApp(a);
-                                setConsultationOpen(true);
-                              }}
-                              className={cn(
-                                "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
-                                a.has_consultation
-                                  ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
-                                  : "bg-mauve/15 text-mauve hover:bg-mauve/25"
-                              )}
-                            >
-                              <Stethoscope className="h-3.5 w-3.5" />
-                              {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
-                            </button>
-                          )}
-                          <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
-                            <Pencil className="h-3.5 w-3.5" />
-                          </button>
-                          <button onClick={() => setToDelete(a)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
+                        <div className="text-right shrink-0">
+                          <Clock className="h-3 w-3 text-[#a3aed1] ml-auto mb-0.5" />
+                          <p className="text-[10px] font-bold text-[#2b3674]">{pad(d.getHours())}:{pad(d.getMinutes())} - {pad(end.getHours())}:{pad(end.getMinutes())}</p>
                         </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <button className="mt-4 w-full bg-[#4361ee] text-white text-xs font-bold py-3 rounded-2xl hover:bg-[#3451d6] transition shadow-md shadow-blue-500/20">
+                Ver Todo
+              </button>
+            </div>
+          </aside>
+
+          {/* MAIN WEEK GRID */}
+          <section className="flex-1 border border-[#f0f2f5] rounded-3xl flex flex-col overflow-hidden shadow-sm relative">
+            
+            {/* Grid Toolbar */}
+            <div className="flex flex-wrap items-center justify-between p-4 border-b border-[#f0f2f5] bg-white z-20 relative">
+              <div className="flex items-center gap-4">
+                <h2 className="text-base font-bold text-[#2b3674]">
+                  {MONTHS_ES[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </h2>
+                <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-[#4361ee] bg-[#f4f7fe] px-3 py-1 rounded-lg">Hoy</button>
+                <div className="flex items-center gap-1 text-[#a3aed1]">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() - 7 * 86400000))} className="hover:bg-gray-100 p-1 rounded-md"><ChevronLeft className="h-4 w-4" /></button>
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() + 7 * 86400000))} className="hover:bg-gray-100 p-1 rounded-md"><ChevronRight className="h-4 w-4" /></button>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-xs font-bold text-[#a3aed1]">
+                <button className="hover:text-[#2b3674]">Ninguno</button>
+                <button className="hover:text-[#2b3674]">Prioridad</button>
+                <button className="hover:text-[#2b3674]">Límite</button>
+                <div className="h-4 w-px bg-gray-200 mx-1"></div>
+                <button className="hover:text-[#2b3674]"><Video className="h-4 w-4" /></button>
+                <button className="hover:text-[#2b3674]"><Network className="h-4 w-4" /></button>
+              </div>
+            </div>
+
+            {/* Timetable Body Container */}
+            <div className="flex-1 overflow-y-auto relative bg-white">
+              
+              {calendarView === "Mensual" ? (
+                <div className="flex flex-col min-h-full bg-white relative">
+                  {/* Monthly Header */}
+                  <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#f0f2f5] bg-white">
+                    {WEEKDAYS_SHORT.map((dayName, i) => (
+                      <div key={i} className="text-center py-3 border-r border-[#f0f2f5] last:border-0">
+                        <p className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">{dayName}</p>
                       </div>
                     ))}
                   </div>
-                </section>
-              );
-            })}
+                  {/* Monthly Grid */}
+                  <div className="flex-1 grid grid-cols-7 grid-rows-6">
+                    {monthDaysGrid.map((d, i) => {
+                      const isToday = formatToYMD(d) === formatToYMD(new Date());
+                      const isCurrentMonth = d.getMonth() === currentDate.getMonth();
+                      
+                      const dayEvents = appointments.filter(a => {
+                        const safeIso = a.scheduled_at.replace(" ", "T");
+                        const matchesSearch = !searchQuery || (a.patient_name && a.patient_name.toLowerCase().includes(searchQuery.toLowerCase()));
+                        const matchesStatus = statusFilter === "todas" ? a.status !== "cancelada" : a.status === statusFilter;
+                        return dateOnly(safeIso) === formatToYMD(d) && matchesSearch && matchesStatus;
+                      });
 
-            {totalPages > 1 && (
-              <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl glass-card p-4 shadow-sm border border-border/40 animate-fade-in mt-4">
-                <p className="text-xs text-muted-foreground">
-                  Mostrando <span className="font-semibold text-foreground">{(listPage - 1) * itemsPerPage + 1} - {Math.min(grouped.length, listPage * itemsPerPage)}</span> de <span className="font-semibold text-foreground">{grouped.length}</span> días con citas
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={listPage === 1}
-                    onClick={() => setListPage((prev) => Math.max(1, prev - 1))}
-                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
-                  >
-                    <ChevronLeft className="h-4 w-4" /> Anterior
-                  </Button>
-                  <span className="text-xs font-semibold px-3 py-1 bg-muted/60 rounded-lg">
-                    {listPage} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={listPage === totalPages}
-                    onClick={() => setListPage((prev) => Math.min(totalPages, prev + 1))}
-                    className="rounded-xl flex items-center gap-1 h-9 cursor-pointer"
-                  >
-                    Siguiente <ChevronRight className="h-4 w-4" />
-                  </Button>
+                      return (
+                        <div 
+                          key={i} 
+                          onClick={() => { setDefaultFormDate(formatToYMD(d)); setEditingApp(null); setFormOpen(true); }}
+                          className={cn(
+                            "border-r border-b border-[#f0f2f5] p-2 min-h-[120px] transition hover:bg-gray-50/50 cursor-pointer overflow-hidden flex flex-col", 
+                            !isCurrentMonth && "bg-gray-50/30 opacity-50", 
+                            isToday && "bg-[#f8f9fe]/50"
+                          )}
+                        >
+                          <div className="flex justify-between items-center mb-1 shrink-0">
+                            <span className={cn("text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full", isToday ? "bg-[#4361ee] text-white" : "text-[#2b3674]")}>
+                              {d.getDate()}
+                            </span>
+                          </div>
+                          <div className="space-y-1 flex-1 overflow-y-auto no-scrollbar">
+                            {dayEvents.map(ev => {
+                              let theme;
+                              if (ev.status?.toLowerCase() === 'completada') {
+                                theme = { bg: "bg-green-100 text-green-700 hover:bg-green-200" };
+                              } else {
+                                theme = { bg: "bg-blue-100 text-blue-700 hover:bg-blue-200" };
+                              }
+                              return (
+                                <div 
+                                  key={ev.id} 
+                                  onClick={(e) => { e.stopPropagation(); setEditingApp(ev); setFormOpen(true); }} 
+                                  className={cn("text-[10px] font-bold px-1.5 py-1 rounded truncate transition", theme.bg)}
+                                >
+                                  {timeOnly(ev.scheduled_at.replace(" ", "T"))} {ev.patient_name}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )
-      ) : (
-        /* CALENDAR SUB-VIEWS */
-        <div className="animate-fade-in">
-          {calendarView === "month" && (
-            <div className="rounded-3xl glass-card p-5 border border-border/40 shadow-sm overflow-x-auto">
-              <div className="min-w-[700px]">
-                {/* Weekdays row */}
-                <div className="grid grid-cols-7 gap-2 text-center font-bold text-xs text-muted-foreground mb-3 uppercase tracking-wider">
-                  {WEEKDAYS_ES.map((day) => (
-                    <div key={day} className="py-1">
-                      <span>{day}</span>
+              ) : (
+                <>
+                  {/* Days Header */}
+              <div className="sticky top-0 z-20 flex bg-white border-b border-[#f0f2f5]">
+                <div className="w-16 shrink-0 border-r border-[#f0f2f5] bg-white flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-[#a3aed1]">GMT-4</span>
+                </div>
+                <div className={cn("flex-1 grid", calendarView === "Diaria" ? "grid-cols-1" : "grid-cols-7")}>
+                  {daysToRender.map((d, i) => (
+                    <div key={i} className="text-center py-3 border-r border-[#f0f2f5] last:border-0">
+                      <p className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">{WEEKDAYS_SHORT[d.getDay() === 0 ? 6 : d.getDay() - 1]} {d.getDate()}</p>
                     </div>
                   ))}
                 </div>
-                
-                {/* Calendar grid */}
-                <div className="grid grid-cols-7 gap-2">
-                  {monthDays.map((day, idx) => {
-                    const ymd = formatToYMD(day);
-                    const dayAppointments = filtered.filter((a) => dateOnly(a.scheduled_at) === ymd);
-                    const isCurrentMonth = day.getMonth() === currentDate.getMonth();
-                    const isToday = formatToYMD(new Date()) === ymd;
+              </div>
 
+              {/* Grid Lines & Events Container */}
+              <div className="flex relative">
+                {/* Y-Axis Hours */}
+                <div className="w-16 shrink-0 border-r border-[#f0f2f5] bg-white relative z-10">
+                  {HOURS.map((h, i) => (
+                    <div key={h} className={cn("border-b border-transparent relative flex items-start justify-center pt-2", compactMode ? "h-12" : "h-24")}>
+                      {i > 0 && <span className={cn("text-[10px] font-bold text-[#a3aed1] bg-white px-1", compactMode ? "-mt-3" : "-mt-4")}>{h < 12 ? h : h === 12 ? 12 : h - 12} {h < 12 ? 'AM' : 'PM'}</span>}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Main Grid */}
+                <div className={cn("flex-1 grid relative", calendarView === "Diaria" ? "grid-cols-1" : "grid-cols-7")}>
+                  {/* Background horizontal lines */}
+                  <div className="absolute inset-0 pointer-events-none flex flex-col">
+                     {HOURS.map((h, i) => (
+                       <div key={h} className={cn("w-full", compactMode ? "h-12" : "h-24", i > 0 && "border-t border-[#f0f2f5]")}></div>
+                     ))}
+                  </div>
+
+                  {/* Day Columns */}
+                  {daysToRender.map((d, colIndex) => {
+                    const isToday = formatToYMD(d) === formatToYMD(new Date());
+                    const actualDayIndex = d.getDay() === 0 ? 6 : d.getDay() - 1; // 0=Mon
                     return (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          setCurrentDate(day);
-                          setCalendarView("day");
-                        }}
-                        className={cn(
-                          "group min-h-[110px] flex flex-col justify-between p-2.5 rounded-2xl border transition-all duration-300 cursor-pointer relative",
-                          isCurrentMonth ? "bg-card/40 border-border/60" : "bg-muted/10 border-transparent opacity-40",
-                          isToday ? "ring-2 ring-mauve border-transparent bg-mauve/[0.03]" : "",
-                          "hover:bg-card hover:shadow-md hover:-translate-y-0.5"
-                        )}
+                      <div 
+                        key={colIndex} 
+                        onClick={() => { setDefaultFormDate(formatToYMD(d)); setEditingApp(null); setFormOpen(true); }}
+                        className={cn("border-r border-[#f0f2f5] last:border-0 relative h-full min-h-[800px] cursor-pointer hover:bg-gray-50/50 transition-colors", isToday && "bg-[#f8f9fe]/50")}
                       >
-                        <div className="flex items-center justify-between">
-                          <span
-                            className={cn(
-                              "flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold transition-colors",
-                              isToday ? "bg-mauve text-primary-foreground" : "text-muted-foreground group-hover:text-foreground"
-                            )}
-                          >
-                            {day.getDate()}
-                          </span>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setDefaultFormDate(ymd);
-                              setEditing(null);
-                              setFormOpen(true);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 hover:bg-muted p-1 rounded-lg transition-all h-6 w-6 flex items-center justify-center border border-border/40"
-                          >
-                            <Plus className="h-3 w-3 text-muted-foreground" />
-                          </button>
-                        </div>
-                        
-                        {/* Render appointments */}
-                        <div className="mt-2 space-y-1 overflow-hidden flex-1 flex flex-col justify-end">
-                          {dayAppointments.slice(0, 3).map((a) => {
-                            const time = timeOnly(a.scheduled_at);
-                            return (
-                              <div
-                                key={a.id}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setEditing(a);
-                                  setFormOpen(true);
-                                }}
-                                className={cn(
-                                  "text-[9px] font-semibold px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer transition hover:opacity-90",
-                                  a.status === "programada" ? "bg-mauve/10 border-mauve text-mauve-foreground" : "",
-                                  a.status === "completada" ? "bg-sage/20 border-sage text-sage-foreground" : "",
-                                  a.status === "cancelada" ? "bg-destructive/10 border-destructive text-destructive" : ""
-                                )}
-                                title={`${time} - ${a.patient_name}`}
-                              >
-                                {time} {a.patient_name}
-                              </div>
-                            );
-                          })}
-                          {dayAppointments.length > 3 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentDate(day);
-                                setCalendarView("day");
-                              }}
-                              className="text-[9px] font-extrabold text-mauve hover:text-mauve-soft text-left px-1 hover:underline mt-0.5"
-                            >
-                              + {dayAppointments.length - 3} más
-                            </button>
-                          )}
-                        </div>
+                        {/* Render Events for this day */}
+                        {gridEvents.filter(ev => ev.dayIndex === actualDayIndex).map((ev) => {
+                          const pxPerHour = compactMode ? 48 : 96;
+                          const topPx = ev.topHours * pxPerHour; 
+                          const heightPx = ev.durationHours * pxPerHour;
+
+                          return (
+                            <Popover key={ev.id}>
+                              <PopoverTrigger asChild>
+                                <div 
+                                  onClick={(e) => e.stopPropagation()} // Prevent column click when clicking event
+                                  className={cn(
+                                    "absolute left-1 right-1 rounded-[1rem] p-3 text-xs font-bold cursor-pointer transition-all hover:scale-[1.02] hover:z-30 overflow-hidden shadow-sm border border-l-4",
+                                    ev.theme.bg, ev.theme.border, ev.theme.text
+                                  )}
+                                  style={{ top: `${topPx}px`, height: `${heightPx}px` }}
+                                >
+                                  <p className="truncate font-extrabold">{ev.patient_name}</p>
+                                  <p className="text-[10px] opacity-80 font-medium tracking-wide mt-0.5 flex gap-1">
+                                    {timeOnly(ev.scheduled_at.replace(" ", "T"))} - {timeOnly(new Date(new Date(ev.scheduled_at.replace(" ", "T")).getTime() + ev.durationHours * 3600000).toISOString())}
+                                  </p>
+                                </div>
+                              </PopoverTrigger>
+                              
+                              {/* Edit Schedule Popover */}
+                              <PopoverContent align="start" side="right" className="w-64 p-0 rounded-2xl shadow-xl border-border/40 z-50">
+                                <div className="px-4 py-3 flex justify-between items-center border-b border-border/40">
+                                  <span className="text-xs font-bold text-[#2b3674] tracking-wide">Editar Horario</span>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="text-[#a3aed1] hover:text-[#2b3674]"><MoreHorizontal className="h-4 w-4" /></button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="w-40 rounded-xl">
+                                      <DropdownMenuItem className="text-xs font-bold text-red-500 focus:text-red-600 cursor-pointer" onClick={(e) => { e.stopPropagation(); deleteApp(ev.id); }}>
+                                        Eliminar Cita
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
+                                <div className="p-4 space-y-4">
+                                  <div className="flex gap-3 text-sm">
+                                    <div className="mt-0.5 shrink-0"><div className="h-3 w-3 rounded-full border-2 border-[#4361ee]"></div></div>
+                                    <div className="flex-1">
+                                      <p className="font-bold text-[#2b3674] leading-tight">{ev.patient_name}</p>
+                                      <p className="text-[10px] text-[#4361ee] font-medium mt-0.5 cursor-pointer hover:underline">Añadir Descripción</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-3 text-sm">
+                                    <Clock className="h-4 w-4 text-[#a3aed1] shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                      <p className="font-bold text-[#2b3674] text-xs">Añadir Hora</p>
+                                      <p className="text-[10px] text-[#4361ee] font-medium mt-0.5">
+                                        {timeOnly(ev.scheduled_at.replace(" ", "T"))} → {timeOnly(new Date(new Date(ev.scheduled_at.replace(" ", "T")).getTime() + ev.durationHours * 3600000).toISOString())}
+                                      </p>
+                                    </div>
+                                    <button className="text-[#a3aed1]"><Network className="h-4 w-4" /></button>
+                                  </div>
+                                  <div className="flex gap-3 text-sm">
+                                    <Users className="h-4 w-4 text-[#a3aed1] shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                      <p className="font-bold text-[#2b3674] text-xs">Añadir Invitados</p>
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${ev.patient_name}`} className="h-4 w-4 rounded-full bg-blue-50" />
+                                        <p className="text-[9px] text-[#a3aed1] font-bold">1 Asiste, 1 Esperando</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="p-3 border-t border-border/40 flex justify-end gap-2 bg-gray-50/50 rounded-b-2xl">
+                                  <button onClick={() => { setEditingApp(ev); setFormOpen(true); }} className="text-xs font-bold text-[#2b3674] hover:bg-gray-200 px-4 py-2 rounded-xl transition">Editar</button>
+                                  <button onClick={() => { setConsultationApp(ev); setConsultationOpen(true); }} className={`text-xs font-bold text-white px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition ${ev.status?.toLowerCase() === 'completada' ? 'bg-[#05c46b] hover:bg-[#04b060]' : 'bg-[#4361ee] hover:bg-[#3f37c9]'}`}>
+                                    <Stethoscope className="h-3.5 w-3.5" /> 
+                                    {ev.status?.toLowerCase() === 'completada' ? 'Ver / Editar Consulta' : 'Iniciar Consulta'}
+                                  </button>
+                                </div>
+                              </PopoverContent>
+                            </Popover>
+                          );
+                        })}
                       </div>
                     );
                   })}
                 </div>
               </div>
+              </>
+              )}
             </div>
-          )}
-
-          {calendarView === "week" && (
-            <div className="grid grid-cols-1 md:grid-cols-7 gap-3">
-              {weekDays.map((day, idx) => {
-                const ymd = formatToYMD(day);
-                const dayAppointments = filtered.filter((a) => dateOnly(a.scheduled_at) === ymd)
-                  .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-                const isToday = formatToYMD(new Date()) === ymd;
-
-                return (
-                  <div
-                    key={idx}
-                    className={cn(
-                      "rounded-3xl border p-4 flex flex-col gap-3 min-h-[350px] transition-all duration-300",
-                      isToday ? "bg-card border-mauve ring-2 ring-mauve/10 shadow-md" : "bg-card/40 border-border/60",
-                    )}
-                  >
-                    <div className="flex items-center justify-between pb-2 border-b border-border/40">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                          {day.toLocaleDateString("es-ES", { weekday: "short" })}
-                        </p>
-                        <h4 className="font-display text-sm md:text-base font-bold tracking-tight mt-0.5">
-                          {day.getDate()} {day.toLocaleDateString("es-ES", { month: "short" })}
-                        </h4>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setDefaultFormDate(ymd);
-                          setEditing(null);
-                          setFormOpen(true);
-                        }}
-                        className="flex h-7 w-7 items-center justify-center rounded-xl bg-muted/80 hover:bg-muted text-muted-foreground transition border border-border/20"
-                      >
-                        <Plus className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 flex-1 overflow-y-auto max-h-[400px] pr-1">
-                      {dayAppointments.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground border border-dashed border-border/50 rounded-2xl h-full min-h-[100px]">
-                          <span className="text-[10px] font-medium">Sin citas</span>
-                        </div>
-                      ) : (
-                        dayAppointments.map((a) => (
-                          <div
-                            key={a.id}
-                            className={cn(
-                              "group relative flex flex-col gap-1 p-2 rounded-2xl border text-[11px] transition duration-200 hover:shadow-sm cursor-pointer",
-                              a.status === "programada" ? "bg-mauve/10 border-mauve/30 text-mauve-foreground hover:bg-mauve/15" : "",
-                              a.status === "completada" ? "bg-sage/15 border-sage/30 text-sage-foreground hover:bg-sage/20" : "",
-                              a.status === "cancelada" ? "bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/15" : ""
-                            )}
-                            onClick={() => {
-                              setEditing(a);
-                              setFormOpen(true);
-                            }}
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-bold flex items-center gap-1 text-[10px]">
-                                <Clock className="h-2.5 w-2.5" /> {timeOnly(a.scheduled_at)}
-                                {(a.status === "completada" || a.status === "programada") && (
-                                  <span
-                                    title={a.has_consultation ? "Ver/Editar consulta" : "Registrar consulta"}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setConsultationApp(a);
-                                      setConsultationOpen(true);
-                                    }}
-                                    className="cursor-pointer inline-flex items-center"
-                                  >
-                                    <Stethoscope
-                                      className={cn(
-                                        "h-2.5 w-2.5 ml-1 transition hover:scale-110",
-                                        a.has_consultation ? "text-sage-foreground font-bold" : "text-mauve"
-                                      )}
-                                    />
-                                  </span>
-                                )}
-                              </span>
-                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setEditing(a);
-                                    setFormOpen(true);
-                                  }}
-                                  className="p-0.5 hover:bg-background/80 rounded transition"
-                                >
-                                  <Pencil className="h-2.5 w-2.5 text-muted-foreground" />
-                                </button>
-                              </div>
-                            </div>
-                            <p className="font-semibold truncate">{a.patient_name}</p>
-                            <p className="text-[9px] text-muted-foreground truncate">
-                              {doctorMap.get(a.doctor_id) || "Doctor"}
-                            </p>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {calendarView === "day" && (
-            <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-              {/* Left panel: Selected Date details card */}
-              <div className="lg:col-span-1 space-y-4">
-                <div className="rounded-3xl glass-card p-5 border border-border/40 shadow-sm flex flex-col items-center text-center">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Fecha Seleccionada</p>
-                  <h2 className="font-display text-5xl font-extrabold tracking-tight text-mauve mt-2">
-                    {currentDate.getDate()}
-                  </h2>
-                  <p className="font-bold text-sm mt-1 capitalize">
-                    {currentDate.toLocaleDateString("es-ES", { weekday: "long" })}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    de {MONTHS_ES[currentDate.getMonth()]} del {currentDate.getFullYear()}
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setDefaultFormDate(ymdSelected);
-                      setEditing(null);
-                      setFormOpen(true);
-                    }}
-                    className="w-full mt-5 rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/20 hover:opacity-95 transition-all duration-300 hover:scale-[1.02]"
-                  >
-                    <Plus className="h-4 w-4 mr-1" /> Programar Cita
-                  </Button>
-                </div>
-              </div>
-
-              {/* Right panel: Timeline of the day */}
-              <div className="lg:col-span-3 space-y-4">
-                <div className="rounded-3xl glass-card p-6 border border-border/40 shadow-sm min-h-[350px]">
-                  <h3 className="font-display text-base md:text-lg font-bold mb-5 flex items-center justify-between border-b border-border/20 pb-3">
-                    <span>Citas Programadas</span>
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-                      {dayAppointments.length} {dayAppointments.length === 1 ? "cita" : "citas"}
-                    </span>
-                  </h3>
-
-                  {dayAppointments.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground h-full">
-                      <CalIcon className="h-10 w-10 text-muted-foreground/40 mb-3 animate-pulse" />
-                      <p className="font-semibold text-sm">No hay citas programadas para este día.</p>
-                      <p className="text-xs text-muted-foreground mt-1">Usa el botón a la izquierda para agendar una.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 relative before:absolute before:left-8 before:top-4 before:bottom-4 before:w-0.5 before:bg-border/30">
-                      {dayAppointments.map((a) => (
-                        <div key={a.id} className="relative pl-14 group">
-                          {/* Timeline bullet */}
-                          <div className={cn(
-                            "absolute left-8 top-5 -translate-x-1/2 flex h-3.5 w-3.5 items-center justify-center rounded-full border bg-background z-10 transition-all",
-                            a.status === "programada" ? "border-mauve ring-4 ring-mauve/10" : "",
-                            a.status === "completada" ? "border-sage ring-4 ring-sage/10" : "",
-                            a.status === "cancelada" ? "border-destructive ring-4 ring-destructive/10" : ""
-                          )} />
-                          
-                          {/* Appointment card */}
-                          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border/60 bg-card/60 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm">
-                            <div className="flex items-center gap-3">
-                              <div className="flex w-20 flex-col items-center justify-center gap-0.5 rounded-xl bg-muted px-2 py-1 text-xs font-bold">
-                                <span className="text-[9px] text-muted-foreground uppercase">Hora</span>
-                                <span className="text-sm text-mauve font-extrabold">{timeOnly(a.scheduled_at)}</span>
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm md:text-base font-bold">{a.patient_name}</p>
-                                <p className="truncate text-xs text-muted-foreground mt-0.5">
-                                  {a.reason || "—"} · {doctorMap.get(a.doctor_id) || "Doctor"}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>{a.status}</span>
-                              {a.status === "programada" && (
-                                <>
-                                  <button onClick={() => changeStatus(a.id, "completada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-sage/30 hover:text-sage-foreground" aria-label="Marcar completada">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                  </button>
-                                  <button onClick={() => changeStatus(a.id, "cancelada")} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Cancelar">
-                                    <XCircle className="h-4 w-4" />
-                                  </button>
-                                </>
-                              )}
-                              {(a.status === "completada" || a.status === "programada") && (
-                                <button
-                                  onClick={() => {
-                                    setConsultationApp(a);
-                                    setConsultationOpen(true);
-                                  }}
-                                  className={cn(
-                                    "flex items-center gap-1 text-[11px] font-semibold px-2.5 py-1 rounded-xl transition cursor-pointer",
-                                    a.has_consultation
-                                      ? "bg-sage/20 text-sage-foreground hover:bg-sage/30"
-                                      : "bg-mauve/15 text-mauve hover:bg-mauve/25"
-                                  )}
-                                >
-                                  <Stethoscope className="h-3.5 w-3.5" />
-                                  {a.has_consultation ? "Ver Consulta" : "Reg. Consulta"}
-                                </button>
-                              )}
-                              <button onClick={() => { setEditing(a); setFormOpen(true); }} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-mauve/10 hover:text-mauve" aria-label="Editar">
-                                <Pencil className="h-3.5 w-3.5" />
-                              </button>
-                              <button onClick={() => setToDelete(a)} className="flex h-8 w-8 items-center justify-center rounded-xl text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive" aria-label="Eliminar">
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          </section>
         </div>
+      </div>
+
+      {/* Appointment Creation/Editing Form */}
+      {formOpen && (
+        <AppointmentForm 
+          open={formOpen} 
+          onOpenChange={setFormOpen}
+          initialDate={defaultFormDate}
+          appointment={editingApp}
+        />
       )}
 
-      {/* Appointment form dialog */}
-      <AppointmentForm 
-        open={formOpen} 
-        onOpenChange={setFormOpen} 
-        appointment={editing} 
-        defaultDate={defaultFormDate}
-      />
+      {/* Consultation Process Form */}
+      {consultationOpen && consultationApp && (
+        <ConsultationForm 
+          open={consultationOpen} 
+          onOpenChange={setConsultationOpen}
+          appointment={consultationApp}
+        />
+      )}
+    </>
+  );
+}
 
-      {/* Delete Confirmation Alert Dialog */}
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <AlertDialogContent className="rounded-3xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar cita?</AlertDialogTitle>
-            <AlertDialogDescription>
-              La cita de {toDelete?.patient_name} se eliminará. Esta acción no se puede deshacer.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Consultation form dialog */}
-      <ConsultationForm
-        open={consultationOpen}
-        onOpenChange={setConsultationOpen}
-        appointment={consultationApp}
-      />
-    </div>
+// Inline missing icon
+function Users(props: any) {
+  return (
+    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
   );
 }

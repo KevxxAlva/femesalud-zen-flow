@@ -39,11 +39,16 @@ export function useRoles() {
     enabled: !!user,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user!.id);
+        .from("usuarios")
+        .select("roles(nombre_rol)")
+        .eq("auth_id", user!.id)
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []).map((r) => r.role as AppRole);
+      if (!data || !data.roles) return [];
+      // TypeScript could infer data.roles as an array if it's a one-to-many, but in this case it's a one-to-one or many-to-one (id_rol). 
+      // Ensure we handle it whether it's an array or an object
+      const roleName = Array.isArray(data.roles) ? data.roles[0]?.nombre_rol : (data.roles as any).nombre_rol;
+      return roleName ? [roleName.toLowerCase() as AppRole] : [];
     },
   });
 }

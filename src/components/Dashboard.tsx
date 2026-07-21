@@ -1,484 +1,482 @@
-import { useMemo, useState } from "react";
-import {
-  Activity, CalendarClock, TrendingUp, Users, Sparkles, ArrowUpRight, ArrowDownRight,
-  Clock, Plus, Search, Bell, X,
-} from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { cn } from "@/lib/utils";
-import { usePatientCount, useRecentPatients, usePatientsGrowth } from "@/lib/api/patients";
-import { useAppointments } from "@/lib/api/appointments";
-import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
+import { 
+  Search, Bell, Settings, MoreHorizontal, MapPin, Edit2, ChevronDown, Users, CalendarClock
+} from "lucide-react";
+import { useAuthSession, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
+import { useAppointments } from "@/lib/api/appointments";
+import { useRecentPatients, usePatientsCountByDateRange } from "@/lib/api/patients";
+import { useDashboardStats, useMonthlyPayments } from "@/lib/api/dashboard";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 
-function Sparkline({ data, className }: { data: number[]; className?: string }) {
-  const w = 120, h = 36;
+function Sparkline({ data, colorClass }: { data: number[]; colorClass: string }) {
+  const w = 100, h = 30;
   const max = Math.max(...data, 1);
   const min = Math.min(...data);
   const range = max - min || 1;
   const pts = data.map((v, i) => `${(i / Math.max(data.length - 1, 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={cn("h-9 w-full", className)} preserveAspectRatio="none">
-      <polygon points={`0,${h} ${pts} ${w},${h}`} fill="currentColor" opacity="0.15" />
-      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${w} ${h}`} className={cn("h-10 w-full mt-2", colorClass)} preserveAspectRatio="none">
+      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-const statusBg: Record<string, string> = {
-  programada: "bg-mauve/15 text-mauve",
-  completada: "bg-sage/50 text-sage-foreground",
-  cancelada: "bg-destructive/15 text-destructive",
-};
+function DonutChart({ percentage }: { percentage: number }) {
+  const radius = 36;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (percentage / 100) * circumference;
 
-const tagBg: Record<string, string> = {
-  activo: "bg-sage/50 text-sage-foreground",
-  en_tratamiento: "bg-mauve/15 text-mauve",
-  nuevo: "bg-blush/60 text-blush-foreground",
-  alta: "bg-muted text-muted-foreground",
-};
-
-const initials = (n: string) => (n || "?").split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase();
+  return (
+    <div className="relative flex items-center justify-center">
+      <svg width="120" height="120" className="transform -rotate-90">
+        {/* Background track */}
+        <circle cx="60" cy="60" r={radius} stroke="#f0f2f5" strokeWidth="12" fill="none" />
+        
+        {/* Colored Segments to mimic the image (Pink, Purple, Cyan) */}
+        {/* For simplicity, we use a single gradient or solid color, but the image has multi-colored segments */}
+        <circle 
+          cx="60" cy="60" r={radius} 
+          stroke="url(#gradient)" 
+          strokeWidth="12" 
+          fill="none" 
+          strokeDasharray={circumference} 
+          strokeDashoffset={strokeDashoffset} 
+          strokeLinecap="round" 
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#ff4b82" />
+            <stop offset="50%" stopColor="#9a55ff" />
+            <stop offset="100%" stopColor="#00e1f2" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="absolute flex flex-col items-center justify-center">
+        <span className="text-2xl font-bold text-[#2b3674]">{percentage}%</span>
+        <span className="text-[9px] font-bold text-[#a3aed1] tracking-wider">OCUPACIÓN</span>
+      </div>
+    </div>
+  );
+}
 
 export function Dashboard() {
   const { user } = useAuthSession();
-  const isAdmin = useIsAdmin();
+  const { data: roles = [] } = useRoles();
   const { data: profile } = useMyProfile(user?.id);
-  const { data: patientsCount = 0 } = usePatientCount();
+  const { data: doctors = [] } = useDoctors();
   const { data: recentPatients = [] } = useRecentPatients(5);
-  const { data: patientsGrowth = [] } = usePatientsGrowth();
+  const { data: totalPatients = 0 } = usePatientsCountByDateRange();
+  const { data: stats } = useDashboardStats();
+  const { data: monthlyPayments = 0 } = useMonthlyPayments();
+  const { data: clinic } = useClinicInfo();
+  
+  // Real data
   const startOfLastMonthStr = useMemo(() => {
     const now = new Date();
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return startOfLastMonth.toISOString().slice(0, 10);
   }, []);
   const { data: appointments = [] } = useAppointments({ from: startOfLastMonthStr });
-  const { data: doctors = [] } = useDoctors();
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
-  const today = new Date().toISOString().slice(0, 10);
+  
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  
+  const todaysAppointments = useMemo(() => {
+    return appointments.filter(a => a.scheduled_at.slice(0, 10) === todayStr)
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  }, [appointments, todayStr]);
 
-  const stats = useMemo(() => {
-    const todays = appointments.filter((a) => a.scheduled_at.slice(0, 10) === today);
-    
-    // Yesterday
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().slice(0, 10);
-    const yesterdays = appointments.filter((a) => a.scheduled_at.slice(0, 10) === yesterdayStr);
-
-    let consultDelta = 0;
-    if (yesterdays.length > 0) {
-      consultDelta = Math.round(((todays.length - yesterdays.length) / yesterdays.length) * 100);
-    } else if (todays.length > 0) {
-      consultDelta = 100;
+  const currentWeek = useMemo(() => {
+    const days = [];
+    const date = new Date(today);
+    // Move to Sunday of current week
+    date.setDate(date.getDate() - date.getDay());
+    for (let i = 0; i < 7; i++) {
+      days.push({
+        day: date.toLocaleString('es-ES', { weekday: 'short' }).slice(0, 3).replace(/^\w/, c => c.toUpperCase()),
+        date: date.getDate(),
+        active: date.toDateString() === today.toDateString()
+      });
+      date.setDate(date.getDate() + 1);
     }
-
-    // Patients registered in last 7 days vs previous 7 days
-    const msInDay = 24 * 60 * 60 * 1000;
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * msInDay);
-    const fourteenDaysAgo = new Date(now.getTime() - 14 * msInDay);
-
-    const patientsLast7Days = patientsGrowth.filter((p) => new Date(p.created_at) >= sevenDaysAgo);
-    const patientsPrev7Days = patientsGrowth.filter((p) => {
-      const pDate = new Date(p.created_at);
-      return pDate >= fourteenDaysAgo && pDate < sevenDaysAgo;
-    });
-
-    let patientDelta = 0;
-    if (patientsPrev7Days.length > 0) {
-      patientDelta = Math.round(((patientsLast7Days.length - patientsPrev7Days.length) / patientsPrev7Days.length) * 100);
-    } else if (patientsLast7Days.length > 0) {
-      patientDelta = 100;
-    }
-
-    // Completed appointments revenue this month so far vs last month (same period)
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
-    const currentDate = now.getDate();
-
-    const startOfThisMonth = new Date(currentYear, currentMonth, 1);
-    const startOfLastMonth = new Date(currentYear, currentMonth - 1, 1);
-    const endOfLastMonthSameDay = new Date(currentYear, currentMonth - 1, currentDate, 23, 59, 59);
-
-    const completed = appointments.filter((a) => a.status === "completada");
-    
-    const thisMonthCompleted = completed.filter((a) => {
-      const aDate = new Date(a.scheduled_at);
-      return aDate >= startOfThisMonth && aDate <= now;
-    });
-    const lastMonthCompletedSamePeriod = completed.filter((a) => {
-      const aDate = new Date(a.scheduled_at);
-      return aDate >= startOfLastMonth && aDate <= endOfLastMonthSameDay;
-    });
-
-    const thisMonthIncome = thisMonthCompleted.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
-    const lastMonthIncomeSamePeriod = lastMonthCompletedSamePeriod.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
-
-    let incomeDelta = 0;
-    if (lastMonthIncomeSamePeriod > 0) {
-      incomeDelta = Math.round(((thisMonthIncome - lastMonthIncomeSamePeriod) / lastMonthIncomeSamePeriod) * 100);
-    } else if (thisMonthIncome > 0) {
-      incomeDelta = 100;
-    }
-
-    const income = completed.reduce((acc, a) => acc + (Number(a.price) || 220), 0);
-    const upcoming = appointments
-      .filter((a) => a.status === "programada" && a.scheduled_at.slice(0, 10) >= today)
-      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
-      .slice(0, 5);
-    const recent = recentPatients.slice(0, 4);
-
-    const consultSpark = Array.from({ length: 10 }).map((_, i) => {
-      const d = new Date();
-      d.setDate(d.getDate() - (9 - i));
-      const iso = d.toISOString().slice(0, 10);
-      return appointments.filter((a) => a.scheduled_at.slice(0, 10) === iso).length;
-    });
-    const patientSpark = Array.from({ length: 10 }).map((_, i) => Math.max(1, patientsCount - (9 - i)));
-    const incomeSpark = consultSpark.map((v) => 10 + v * 4);
-    
-    return { 
-      todays, 
-      upcoming, 
-      recent, 
-      income, 
-      completed: completed.length, 
-      consultSpark, 
-      patientSpark, 
-      incomeSpark,
-      consultDelta,
-      patientDelta,
-      incomeDelta
-    };
-  }, [appointments, patientsCount, patientsGrowth, recentPatients, today]);
-
-  const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Doctor";
-  const [searchQuery, setSearchQuery] = useState("");
+    return days;
+  }, [todayStr]);
 
   const notifications = useMemo(() => {
-    const list: { id: string; text: string; time: string; type: "appointment" | "patient"; rawDate: string }[] = [];
-    
-    // Appointments created recently
-    const sortedApps = [...appointments]
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 3);
-      
-    sortedApps.forEach((app) => {
+    const list = [];
+    if (todaysAppointments.length > 0) {
       list.push({
-        id: `app-${app.id}`,
-        text: `Nueva cita agendada para ${app.patient_name || "Paciente"}`,
-        time: new Date(app.created_at).toLocaleDateString("es-ES") + " " + new Date(app.created_at).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
-        type: "appointment",
-        rawDate: app.created_at
+        id: "app-1",
+        title: "Citas para Hoy",
+        desc: `Tienes ${todaysAppointments.length} cita(s) programadas para hoy.`,
+        icon: CalendarClock,
+        color: "text-blue-500",
+        bg: "bg-blue-50",
       });
-    });
-
-    // Patients registered recently
-    const sortedPatients = [...recentPatients]
-      .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 3);
-
-    sortedPatients.forEach((pat) => {
+    }
+    if (recentPatients.length > 0) {
       list.push({
-        id: `pat-${pat.id}`,
-        text: `Nuevo paciente registrado: ${pat.full_name}`,
-        time: new Date(pat.created_at).toLocaleDateString("es-ES") + " " + new Date(pat.created_at).toLocaleTimeString("es-ES", { hour: '2-digit', minute: '2-digit' }),
-        type: "patient",
-        rawDate: pat.created_at
+        id: "pat-1",
+        title: "Nuevos Pacientes",
+        desc: `${recentPatients.length} paciente(s) registrados recientemente.`,
+        icon: Users,
+        color: "text-emerald-500",
+        bg: "bg-emerald-50",
       });
-    });
-
-    // Sort combined list by created_at DESC
-    return list.sort((a, b) => b.rawDate.localeCompare(a.rawDate)).slice(0, 5);
-  }, [appointments, recentPatients]);
-
-  // Notification read tracking
-  const [lastReadTime, setLastReadTime] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("notifications_last_read") || "";
     }
-    return "";
-  });
+    return list;
+  }, [todaysAppointments, recentPatients]);
 
-  const unreadCount = useMemo(() => {
-    if (!lastReadTime) return notifications.length;
-    return notifications.filter((n) => n.rawDate > lastReadTime).length;
-  }, [notifications, lastReadTime]);
-
-  const handleOpenChange = (open: boolean) => {
-    if (open && notifications.length > 0) {
-      const newestDate = notifications[0].rawDate;
-      setLastReadTime(newestDate);
-      localStorage.setItem("notifications_last_read", newestDate);
-    }
-  };
-
-  // Search filters
-  const filteredUpcoming = useMemo(() => {
-    return stats.upcoming.filter((a) => {
-      if (!searchQuery.trim()) return true;
-      const term = searchQuery.toLowerCase();
-      const patientName = a.patient_name || "";
-      const reason = a.reason || "";
-      return (
-        patientName.toLowerCase().includes(term) ||
-        reason.toLowerCase().includes(term)
-      );
-    });
-  }, [stats.upcoming, searchQuery]);
-
-  const filteredRecent = useMemo(() => {
-    return stats.recent.filter((p) => {
-      if (!searchQuery.trim()) return true;
-      const term = searchQuery.toLowerCase();
-      const fullName = p.full_name || "";
-      return fullName.toLowerCase().includes(term);
-    });
-  }, [stats.recent, searchQuery]);
+  const displayName = profile?.full_name?.trim() || user?.email?.split("@")[0] || "Usuario";
+  const roleDisplay = roles.includes("admin") ? "Administrador" : "Médico";
 
   return (
-    <div className="space-y-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div className="ml-14 md:ml-0">
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground" suppressHydrationWarning>
-            {new Date().toLocaleDateString("es-ES", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })}
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Buen día, {displayName}</h1>
+    <div className="min-h-full bg-[#f4f7fe] rounded-[2rem] p-4 md:p-8 font-sans text-[#2b3674]">
+      {/* Header Bar */}
+      <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
+        <div className="relative w-full max-w-sm flex items-center bg-white rounded-full px-4 py-2.5 shadow-sm">
+          <Search className="h-4 w-4 text-[#a3aed1] shrink-0" />
+          <input 
+            type="text" 
+            placeholder="Search for events, patients etc." 
+            className="w-full bg-transparent outline-none pl-3 text-sm placeholder:text-[#a3aed1] text-[#2b3674]"
+          />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-2xl glass-card px-4 py-2.5 sm:flex">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input 
-              placeholder="Buscar pacientes, citas..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-56 bg-transparent text-sm outline-none placeholder:text-muted-foreground" 
-            />
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="text-xs text-muted-foreground hover:text-foreground">
-                <X className="h-3 w-3" />
-              </button>
-            )}
-          </div>
-          
-          <Popover onOpenChange={handleOpenChange}>
+        <div className="flex items-center gap-4">
+          <Popover>
             <PopoverTrigger asChild>
-              <button className="relative rounded-2xl glass-card p-2.5 transition hover:bg-accent cursor-pointer">
-                <Bell className="h-4 w-4" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm">
-                    {unreadCount}
-                  </span>
+              <button className="flex items-center justify-center h-10 w-10 bg-white rounded-full shadow-sm text-[#4361ee] relative transition hover:bg-gray-50 focus:outline-none">
+                <Bell className="h-5 w-5 fill-current" />
+                {notifications.length > 0 && (
+                  <span className="absolute top-2 right-2 h-2 w-2 bg-red-500 rounded-full border border-white"></span>
                 )}
               </button>
             </PopoverTrigger>
-            <PopoverContent className="w-80 rounded-3xl p-4 shadow-xl border border-muted/50 bg-card" align="end">
-              <div className="space-y-3">
-                <div className="flex items-center justify-between border-b border-muted/50 pb-2">
-                  <h4 className="font-semibold text-sm">Notificaciones</h4>
-                  <span className="text-[10px] bg-mauve/10 text-mauve px-2 py-0.5 rounded-full font-medium">En vivo</span>
-                </div>
-                {notifications.length === 0 ? (
-                  <p className="text-xs text-muted-foreground text-center py-4">No hay notificaciones recientes</p>
-                ) : (
-                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
-                    {notifications.map((n) => (
-                      <div key={n.id} className="text-xs p-2.5 rounded-2xl hover:bg-muted/50 transition-colors border border-transparent hover:border-muted/50 flex gap-2.5 items-start">
-                        <div className={cn(
-                          "p-1.5 rounded-xl flex-shrink-0 mt-0.5",
-                          n.type === "appointment" ? "bg-mauve/10 text-mauve" : "bg-blush/10 text-blush"
-                        )}>
-                          {n.type === "appointment" ? <CalendarClock className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+            <PopoverContent align="end" className="w-80 p-0 rounded-[1.5rem] shadow-xl overflow-hidden border-[#f0f2f5] font-sans">
+              <div className="px-4 py-3 bg-[#4361ee] text-white flex justify-between items-center">
+                <span className="font-bold text-xs uppercase tracking-wider">Notificaciones</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-full font-bold">{notifications.length} nuevas</span>
+              </div>
+              <div className="max-h-[300px] overflow-y-auto p-2 bg-white">
+                {notifications.length > 0 ? (
+                  notifications.map((n) => {
+                    const Icon = n.icon;
+                    return (
+                      <div key={n.id} className="flex gap-3 p-3 hover:bg-[#f4f7fe] rounded-xl transition cursor-default">
+                        <div className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-full", n.bg, n.color)}>
+                          <Icon className="h-4 w-4" strokeWidth={2.5} />
                         </div>
-                        <div className="space-y-0.5 min-w-0">
-                          <p className="font-medium text-foreground leading-tight">{n.text}</p>
-                          <p className="text-[10px] text-muted-foreground">{n.time}</p>
+                        <div>
+                          <p className="text-sm font-bold text-[#2b3674]">{n.title}</p>
+                          <p className="text-xs text-[#a3aed1] font-medium">{n.desc}</p>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })
+                ) : (
+                  <div className="p-6 text-center text-sm font-medium text-[#a3aed1]">
+                    No hay notificaciones nuevas
                   </div>
                 )}
               </div>
             </PopoverContent>
           </Popover>
 
-          <Link to="/agenda" className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-mauve to-mauve-soft px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm shadow-mauve/30 transition hover:shadow-md">
-            <Plus className="h-4 w-4" /> Nueva cita
+          <Link to="/configuracion" className="flex items-center justify-center h-10 w-10 bg-white rounded-full shadow-sm text-[#a3aed1] transition hover:bg-[#f4f7fe] hover:text-[#4361ee] focus:outline-none">
+            <Settings className="h-5 w-5" />
           </Link>
         </div>
       </header>
 
-      <div className="grid grid-cols-12 gap-5">
-        <div className="relative col-span-12 overflow-hidden rounded-3xl bg-gradient-to-br from-mauve via-mauve-soft to-blush p-8 text-primary-foreground shadow-sm lg:col-span-8">
-          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
-          <div className="absolute -bottom-10 right-20 h-40 w-40 rounded-full bg-white/10 blur-2xl" />
-          <div className="relative max-w-lg">
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-[11px] font-medium backdrop-blur">
-              <Sparkles className="h-3 w-3" /> Resumen inteligente del día
-            </div>
-            <h2 className="mt-4 font-display text-3xl font-semibold leading-tight tracking-tight md:text-4xl">
-              {isAdmin 
-                ? "Visión completa de la clínica." 
-                : stats.todays.length === 0 
-                  ? "Tu jornada está libre hoy." 
-                  : stats.todays.length === 1 
-                    ? "Tienes una cita programada." 
-                    : stats.todays.length <= 3 
-                      ? "Tu jornada luce tranquila." 
-                      : "Tienes una jornada activa hoy."}
-            </h2>
-            <p className="mt-2 text-sm text-primary-foreground/85">
-              Hoy hay {stats.todays.length === 1 ? "1 cita" : `${stats.todays.length} citas`},{" "}
-              {patientsCount === 1 
-                ? `1 paciente ${isAdmin ? "en total" : "asignado"}` 
-                : `${patientsCount} pacientes ${isAdmin ? "en total" : "asignados"}`}{" "}
-              y {stats.completed === 1 ? "1 consulta completada" : `${stats.completed} consultas completadas`}.
-            </p>
-            <div className="mt-6 flex flex-wrap gap-2">
-              <Link to="/agenda" className="rounded-2xl bg-white px-4 py-2 text-sm font-medium text-mauve transition hover:bg-white/90">Ver agenda</Link>
-              <Link to="/pacientes" className="rounded-2xl bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur transition hover:bg-white/25">Ver pacientes</Link>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-span-12 rounded-3xl glass-card p-6 shadow-sm lg:col-span-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Pulso de la clínica</p>
-              <h3 className="mt-1 text-lg font-semibold">Actividad ahora</h3>
-            </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-sage/40 text-sage-foreground">
-              <Activity className="h-5 w-5" />
-            </div>
-          </div>
-          <div className="mt-5 space-y-3">
-            {[
-              { label: "Ocupación de salas", value: Math.min(100, stats.todays.length * 12), tone: "bg-mauve" },
-              { label: "Citas completadas", value: Math.min(100, stats.completed * 15), tone: "bg-blush-foreground" },
-              { label: "Satisfacción", value: 94, tone: "bg-sage-foreground" },
-            ].map((m) => (
-              <div key={m.label}>
-                <div className="mb-1 flex justify-between text-xs">
-                  <span className="text-muted-foreground">{m.label}</span>
-                  <span className="font-medium">{m.value}%</span>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div className={cn("h-full rounded-full transition-all", m.tone)} style={{ width: `${m.value}%` }} />
-                </div>
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        {/* LEFT COLUMN (Content) */}
+        <div className="xl:col-span-8 flex flex-col gap-6">
+          
+          {/* HERO BANNER */}
+          <div className="relative bg-[#4361ee] rounded-3xl p-8 overflow-hidden text-white shadow-lg flex justify-between items-center h-48">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 bg-white/20 w-max px-3 py-1.5 rounded-full backdrop-blur-sm mb-4">
+                <span className="text-xs font-medium">📅 {today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} {today.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-            ))}
+              <h1 className="text-3xl font-bold mb-1">¡Buen día, {displayName}!</h1>
+              <p className="text-white/80 font-medium">¡Que tengas un excelente {today.toLocaleDateString("es-ES", { weekday: "long" })}!</p>
+            </div>
+            
+            {/* Abstract Doctor Illustration using CSS/Icons */}
+            <div className="absolute right-0 bottom-0 top-0 w-1/2 overflow-hidden hidden md:block">
+              {/* Background waves */}
+              <div className="absolute inset-0 opacity-20">
+                <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg" className="h-full w-full">
+                  <path fill="#ffffff" d="M0,100 C150,200 250,0 400,100 L400,200 L0,200 Z" />
+                  <path fill="#ffffff" d="M0,50 C150,-50 250,250 400,50 L400,200 L0,200 Z" opacity="0.5"/>
+                </svg>
+              </div>
+              
+              {/* Stylized Avatar Placeholder */}
+              <div className="absolute bottom-0 right-16 w-32 h-40 bg-white/10 rounded-t-[3rem] border border-white/20 flex flex-col items-center justify-end overflow-hidden">
+                <div className="w-16 h-16 bg-[#ffd166] rounded-full mb-2"></div> {/* Head */}
+                <div className="w-24 h-24 bg-white rounded-t-full"></div> {/* Coat */}
+              </div>
+              {/* Floating medical elements */}
+              <div className="absolute top-8 right-8 text-white/50 text-2xl rotate-12">💊</div>
+              <div className="absolute bottom-12 right-4 text-white/50 text-2xl -rotate-12">🩺</div>
+              <div className="absolute top-16 right-48 text-white/50 text-2xl rotate-45">📋</div>
+            </div>
           </div>
-        </div>
 
-        {[
-          { label: "Consultas hoy", value: stats.todays.length.toString(), delta: stats.consultDelta, icon: CalendarClock, tone: "text-mauve", spark: stats.consultSpark },
-          { label: "Pacientes totales", value: patientsCount.toString(), delta: stats.patientDelta, icon: Users, tone: "text-blush-foreground", spark: stats.patientSpark },
-          { label: "Ingresos del mes", value: `$${(stats.income / 1000).toFixed(1)}k`, delta: stats.incomeDelta, icon: TrendingUp, tone: "text-sage-foreground", spark: stats.incomeSpark },
-        ].map((k) => {
-          const Icon = k.icon;
-          const isPositive = k.delta >= 0;
-          const deltaText = isPositive ? `+${k.delta}%` : `${k.delta}%`;
-          return (
-            <div key={k.label} className="col-span-12 rounded-3xl glass-card p-5 shadow-sm sm:col-span-6 lg:col-span-4">
-              <div className="flex items-start justify-between">
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-2xl bg-muted", k.tone)}>
-                  <Icon className="h-5 w-5" />
-                </div>
-                <span className={cn(
-                  "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
-                  isPositive 
-                    ? "bg-sage/40 text-sage-foreground" 
-                    : "bg-red-500/10 text-red-500"
-                )}>
-                  {isPositive ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
-                  {deltaText}
+          {/* 3 WORK CARDS */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Total Patients */}
+            <div className="bg-white rounded-[2rem] p-5 shadow-sm flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">Pacientes Registrados</h3>
+                <MoreHorizontal className="h-4 w-4 text-[#a3aed1]" />
+              </div>
+              <div className="flex items-end gap-3 mb-1">
+                <span className="text-3xl font-bold text-[#2b3674]">{totalPatients}</span>
+                <span className="text-xs font-medium text-[#a3aed1] mb-1">en el sistema</span>
+              </div>
+              <div className="mt-auto pt-4">
+                <Sparkline data={stats?.offlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorClass="text-[#4361ee]" />
+              </div>
+            </div>
+
+            {/* Online Work */}
+            <div className="bg-white rounded-[2rem] p-5 shadow-sm flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">Citas Online</h3>
+                <MoreHorizontal className="h-4 w-4 text-[#a3aed1]" />
+              </div>
+              <div className="flex items-end gap-3 mb-1">
+                <span className="text-3xl font-bold text-[#2b3674]">{stats?.onlineWork.total || 0}</span>
+                <span className="text-xs font-medium text-[#a3aed1] mb-1">consultas online</span>
+              </div>
+              <div>
+                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", (stats?.onlineWork.change || 0) >= 0 ? "bg-[#e6fff2] text-[#05c46b]" : "bg-[#ffe6e6] text-[#ff4b82]")}>
+                  {(stats?.onlineWork.change || 0) >= 0 ? "+" : ""}{stats?.onlineWork.change || 0}% respecto a ayer
                 </span>
               </div>
-              <div className="mt-4 flex items-end justify-between gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">{k.label}</p>
-                  <p className="font-display text-2xl font-semibold tracking-tight">{k.value}</p>
-                </div>
-                <div className={cn("w-24", k.tone)}><Sparkline data={k.spark} /></div>
+              <div className="mt-auto pt-4">
+                <Sparkline data={stats?.onlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorClass="text-[#05c46b]" />
               </div>
             </div>
-          );
-        })}
 
-        <div className="col-span-12 rounded-3xl glass-card p-6 shadow-sm lg:col-span-7">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Línea de tiempo</p>
-              <h3 className="mt-1 text-lg font-semibold">Próximas citas</h3>
+            {/* Monthly Payments */}
+            <div className="bg-white rounded-[2rem] p-5 shadow-sm flex flex-col">
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">Ingresos Mensuales</h3>
+                <MoreHorizontal className="h-4 w-4 text-[#a3aed1]" />
+              </div>
+              <div className="flex items-end gap-3 mb-1">
+                <span className="text-3xl font-bold text-[#2b3674]">${monthlyPayments.toFixed(2)}</span>
+                <span className="text-xs font-medium text-[#a3aed1] mb-1">este mes</span>
+              </div>
+              <div className="mt-auto pt-4">
+                <div className="h-0.5 w-full bg-[#4361ee] rounded-full opacity-50"></div>
+              </div>
             </div>
-            <Link to="/agenda" className="text-xs font-medium text-mauve hover:underline">Ver agenda →</Link>
           </div>
 
-          <div className="relative mt-6 pl-6">
-            <div className="absolute left-2 top-1 bottom-1 w-px bg-gradient-to-b from-mauve via-blush to-transparent" />
-            {filteredUpcoming.length === 0 && (
-              <p className="py-6 text-center text-sm text-muted-foreground">No hay citas programadas.</p>
-            )}
-            {filteredUpcoming.map((a) => {
-              const d = a.scheduled_at.slice(0, 10);
-              const dt = new Date(a.scheduled_at);
-              const pad = (n: number) => String(n).padStart(2, "0");
-              const time = `${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
-              return (
-                <div key={a.id} className="relative mb-5 last:mb-0">
-                  <div className="absolute -left-[18px] top-1.5 h-3 w-3 rounded-full border-2 border-background bg-gradient-to-br from-mauve to-mauve-soft shadow-sm" />
-                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/60 bg-card/50 p-3.5 transition-all duration-300 hover:bg-card hover:shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 rounded-xl bg-muted px-2.5 py-1 text-xs font-medium" suppressHydrationWarning>
-                        <Clock className="h-3 w-3 text-mauve" />
-                        {d === today ? "Hoy" : new Date(d + "T00:00:00").toLocaleDateString("es-ES", { day: "2-digit", month: "short" })} · {time}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold">{a.patient_name}</p>
-                        <p className="text-xs text-muted-foreground">{a.reason || "—"} · {doctorMap.get(a.doctor_id) || "Doctor"}</p>
-                      </div>
-                    </div>
-                    <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium capitalize", statusBg[a.status])}>
-                      {a.status}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="col-span-12 rounded-3xl glass-card p-6 shadow-sm lg:col-span-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Atendidos recientemente</p>
-              <h3 className="mt-1 text-lg font-semibold">Pacientes recientes</h3>
-            </div>
-            <Link to="/pacientes" className="text-xs font-medium text-mauve hover:underline">Ver todos →</Link>
-          </div>
-          <ul className="mt-5 space-y-2.5">
-            {filteredRecent.length === 0 && <li className="py-6 text-center text-sm text-muted-foreground">Aún no hay pacientes.</li>}
-            {filteredRecent.map((p) => (
-              <li key={p.id} className="flex items-center justify-between rounded-2xl p-2.5 transition-all duration-300 hover:bg-muted/60">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-mauve/80 to-blush text-sm font-semibold text-primary-foreground shadow-sm">
-                    {initials(p.full_name)}
+          {/* BOTTOM CARDS ROW */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            
+            {/* Scheduled Events */}
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-bold text-[#a3aed1] uppercase tracking-wider">Mis Eventos Programados</h3>
+                <button className="flex items-center gap-1 text-[#4361ee] font-bold text-xs bg-[#f4f7fe] px-3 py-1.5 rounded-lg">
+                  Hoy <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
+              
+              <div className="flex items-center gap-6 mt-2">
+                <DonutChart percentage={stats?.scheduledEvents.donutPercentage || 0} />
+                
+                <div className="flex flex-col gap-4 flex-1">
+                  <div>
+                    <div className="text-xl font-bold text-[#2b3674]">{stats?.scheduledEvents.consultations || 0}</div>
+                    <div className="text-[10px] font-bold text-[#a3aed1]">Consultas</div>
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{p.full_name}</p>
-                    <p className="text-[11px] text-muted-foreground" suppressHydrationWarning>
-                      {doctorMap.get(p.assigned_doctor_id ?? "") || "Sin asignar"}
-                    </p>
+                    <div className="text-xl font-bold text-[#2b3674]">{stats?.scheduledEvents.labs || 0}</div>
+                    <div className="text-[10px] font-bold text-[#a3aed1]">Análisis de Lab.</div>
+                  </div>
+                  <div>
+                    <div className="text-xl font-bold text-[#2b3674]">{stats?.scheduledEvents.invoices || 0}</div>
+                    <div className="text-[10px] font-bold text-[#a3aed1]">Facturas</div>
                   </div>
                 </div>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-[11px] font-medium", tagBg[p.status] || "bg-muted text-muted-foreground")}>
-                  {p.status}
-                </span>
-              </li>
-            ))}
-          </ul>
+              </div>
+            </div>
+
+            {/* Plans Done */}
+            <div className="bg-white rounded-[2rem] p-6 shadow-sm flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-bold text-[#a3aed1] uppercase tracking-wider">Mis Metas de Hoy</h3>
+                <button className="flex items-center gap-1 text-[#4361ee] font-bold text-xs bg-[#f4f7fe] px-3 py-1.5 rounded-lg">
+                  Hoy <ChevronDown className="h-3 w-3" />
+                </button>
+              </div>
+
+              <div className="space-y-5 flex-1">
+                {/* Progress 1 */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-2">
+                    <span className="text-[#2b3674]">Consultas</span>
+                    <span className="text-[#2b3674]">{stats?.plansDone.consultations || 0}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-[#f0f2f5] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#9a55ff] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.consultations || 0}%` }}></div>
+                  </div>
+                </div>
+                {/* Progress 2 */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-2">
+                    <span className="text-[#2b3674]">Análisis</span>
+                    <span className="text-[#2b3674]">{stats?.plansDone.labs || 0}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-[#f0f2f5] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#ff7f50] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.labs || 0}%` }}></div>
+                  </div>
+                </div>
+                {/* Progress 3 */}
+                <div>
+                  <div className="flex justify-between text-xs font-bold mb-2">
+                    <span className="text-[#2b3674]">Facturas Pagadas</span>
+                    <span className="text-[#2b3674]">{stats?.plansDone.invoices || 0}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-[#f0f2f5] rounded-full overflow-hidden">
+                    <div className="h-full bg-[#ff4b82] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.invoices || 0}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <button className="mt-6 w-full py-2.5 border-2 border-dashed border-[#d1d5db] text-[#a3aed1] font-bold text-xs rounded-xl hover:bg-gray-50 transition">
+                Añadir meta +
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN (Sidebar Profile & Calendar) */}
+        <div className="xl:col-span-4 flex flex-col gap-6">
+          
+          {/* PROFILE CARD */}
+          <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm relative pt-16">
+            <div className="absolute top-0 left-0 right-0 h-24 bg-[#4361ee] px-6 py-4 flex justify-between items-start text-white">
+              <span className="text-xs font-bold tracking-widest uppercase">Mi Perfil</span>
+              <Link to="/configuracion" className="bg-white/20 p-1.5 rounded-lg hover:bg-white/40 transition">
+                <Edit2 className="h-3 w-3" />
+              </Link>
+            </div>
+            
+            <div className="px-6 pb-6 relative">
+              <div className="h-20 w-20 bg-gray-200 border-4 border-white rounded-2xl mx-auto -mt-10 mb-3 overflow-hidden flex items-center justify-center relative z-10 shadow-sm">
+                 <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`} alt="Avatar" className="h-full w-full object-cover bg-blue-50" />
+              </div>
+              
+              <div className="text-center mb-6">
+                <h2 className="text-lg font-bold text-[#2b3674]">{displayName}</h2>
+                <p className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider mb-2">{profile?.specialty || roleDisplay}</p>
+                <div className="flex items-center justify-center gap-1 text-xs text-[#8e98bc] font-medium">
+                  <MapPin className="h-3 w-3" /> {clinic?.name || "Clínica"}
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-3 gap-2 text-center pt-4 border-t border-[#f0f2f5]">
+                <div>
+                  <p className="text-[9px] text-[#a3aed1] font-bold mb-1">Status</p>
+                  <p className="text-xs font-bold text-[#05c46b]">Activo</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-[#a3aed1] font-bold mb-1">MPPS</p>
+                  <p className="text-xs font-bold text-[#2b3674]">{profile?.mpps || "N/A"}</p>
+                </div>
+                <div>
+                  <p className="text-[9px] text-[#a3aed1] font-bold mb-1">Rol</p>
+                  <p className="text-xs font-bold text-[#2b3674] capitalize">{roleDisplay}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* CALENDAR & SCHEDULE WIDGET */}
+          <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm flex-1 flex flex-col">
+            
+            {/* Calendar Header */}
+            <div className="flex justify-between items-center bg-[#4361ee] text-white px-6 py-4">
+              <span className="text-xs font-bold uppercase tracking-widest">Mi Calendario</span>
+              <button className="flex items-center gap-1 bg-white/20 px-3 py-1.5 rounded-lg text-xs font-bold">
+                {today.toLocaleString("es-ES", { month: "long" })} <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+            
+            {/* Simple CSS Calendar Grid (One Row style with pill) */}
+            <div className="bg-[#f8f9fe] px-6 py-4 border-b border-[#f0f2f5]">
+              <div className="flex justify-between items-center">
+                {currentWeek.map((d) => (
+                  <div 
+                    key={d.day + d.date} 
+                    className={cn(
+                      "flex flex-col items-center justify-center w-12 py-2 rounded-[1rem]",
+                      d.active ? "bg-[#4361ee] text-white shadow-md" : "text-[#a3aed1] bg-transparent"
+                    )}
+                  >
+                    <span className="text-[10px] font-bold mb-1">{d.day}</span>
+                    <span className={cn(
+                      "text-sm font-bold",
+                      d.active ? "text-white" : "text-[#2b3674]"
+                    )}>{d.date}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="px-6 py-4 flex-1 flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">
+                  {today.toLocaleString("es-ES", { month: "long" }).toUpperCase()}, {today.getDate()}
+                </h3>
+                <MoreHorizontal className="h-4 w-4 text-[#a3aed1]" />
+              </div>
+
+              <div className="flex flex-col flex-1">
+                {todaysAppointments.length > 0 ? (
+                  todaysAppointments.map((app, i) => {
+                    const d = new Date(app.scheduled_at);
+                    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+                    const colors = ["#ff4b82", "#9a55ff", "#05c46b", "#4361ee"];
+                    const dotColor = colors[i % colors.length];
+                    return (
+                      <div key={app.id} className="relative flex flex-col pt-1 pb-4 border-b border-dashed border-[#e2e8f0] last:border-0">
+                        <div className="flex items-center gap-3 text-xs font-bold">
+                          <span className="w-12 text-left text-[#a3aed1] font-medium">{time}</span>
+                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                          <span className="text-[#2b3674] truncate flex-1">Consulta con {app.patient_name}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-10 text-center opacity-60">
+                    <CalendarClock className="h-10 w-10 text-[#a3aed1] mb-2" />
+                    <p className="text-sm font-bold text-[#2b3674]">Sin eventos para hoy</p>
+                    <p className="text-xs text-[#a3aed1] font-medium">No tienes citas programadas</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+
         </div>
       </div>
     </div>

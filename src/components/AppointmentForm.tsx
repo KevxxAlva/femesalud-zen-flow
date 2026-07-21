@@ -13,6 +13,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { useCreateAppointment, useUpdateAppointment, type Appointment } from "@/lib/api/appointments";
 import { usePaginatedPatients, usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
+import { useServices } from "@/lib/api/services";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2, Check, ChevronsUpDown } from "lucide-react";
@@ -47,16 +48,19 @@ export function AppointmentForm({
   const { user } = useAuthSession();
   const isAdmin = useIsAdmin();
   const { data: doctors = [] } = useDoctors();
+  const { data: services = [] } = useServices();
 
   const init = useMemo(() => splitDateTime(appointment?.scheduled_at, defaultDate), [appointment, defaultDate]);
   const [patient_id, setPatient] = useState(appointment?.patient_id ?? defaultPatientId ?? "");
-  const [doctor_id, setDoctorId] = useState(appointment?.doctor_id ?? user?.id ?? "");
+  const defaultDoctorId = useMemo(() => doctors.find(d => d.email === user?.email)?.id || doctors[0]?.id || "", [doctors, user]);
+  const [doctor_id, setDoctorId] = useState(appointment?.doctor_id ?? defaultDoctorId);
   const [date, setDate] = useState(init.date);
   const [time, setTime] = useState(init.time);
   const [reason, setReason] = useState(appointment?.reason ?? "");
   const [status, setStatus] = useState(appointment?.status ?? "programada");
   const [duration, setDuration] = useState(String(appointment?.duration_minutes ?? 30));
   const [price, setPrice] = useState(String(appointment?.price ?? 0));
+  const [selectedServiceId, setSelectedServiceId] = useState<string>("none");
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -82,7 +86,7 @@ export function AppointmentForm({
     if (open) {
       const initData = splitDateTime(appointment?.scheduled_at, defaultDate);
       setPatient(appointment?.patient_id ?? defaultPatientId ?? "");
-      setDoctorId(appointment?.doctor_id ?? user?.id ?? "");
+      setDoctorId(appointment?.doctor_id ?? defaultDoctorId);
       setDate(initData.date);
       setTime(initData.time);
       setReason(appointment?.reason ?? "");
@@ -90,14 +94,15 @@ export function AppointmentForm({
       setDuration(String(appointment?.duration_minutes ?? 30));
       setPrice(String(appointment?.price ?? 0));
     }
-  }, [open, appointment, defaultDate, defaultPatientId, user]);
+  }, [open, appointment, defaultDate, defaultPatientId, user, defaultDoctorId]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!patient_id) { toast.error("Selecciona un paciente"); return; }
-    const finalDoctor = isAdmin ? doctor_id : user?.id ?? "";
-    if (!finalDoctor) { toast.error("Falta doctor"); return; }
-    const scheduled_at = new Date(`${date}T${time}:00`).toISOString();
+    const finalDoctor = doctor_id;
+    if (!finalDoctor) { toast.error("Falta seleccionar un doctor"); return; }
+    // Avoid timezone shift by passing local ISO string without Z
+    const scheduled_at = `${date}T${time}:00`;
     const payload = {
       patient_id, doctor_id: finalDoctor, scheduled_at,
       duration_minutes: Number(duration) || 30,
@@ -183,15 +188,19 @@ export function AppointmentForm({
               </PopoverContent>
             </Popover>
           </div>
-          {isAdmin && (
-            <div className="grid gap-2">
-              <Label>Médico</Label>
-              <Select value={doctor_id || undefined} onValueChange={setDoctorId}>
-                <SelectTrigger><SelectValue placeholder="Selecciona doctor" /></SelectTrigger>
-                <SelectContent>{doctors.map((d) => <SelectItem key={d.id} value={d.id}>{d.full_name || d.email}</SelectItem>)}</SelectContent>
-              </Select>
-            </div>
-          )}
+          <div className="grid gap-2">
+            <Label>Médico</Label>
+            <Select value={doctor_id || undefined} onValueChange={setDoctorId}>
+              <SelectTrigger><SelectValue placeholder="Selecciona doctor" /></SelectTrigger>
+              <SelectContent>
+                {doctors.length === 0 ? (
+                  <SelectItem value="none" disabled>No hay doctores registrados</SelectItem>
+                ) : (
+                  doctors.map((d) => <SelectItem key={d.id} value={d.id}>{d.full_name || d.email}</SelectItem>)
+                )}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="grid gap-2">
               <Label htmlFor="date">Fecha</Label>
@@ -220,7 +229,33 @@ export function AppointmentForm({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="reason">Motivo</Label>
+            <Label>Tratamiento / Servicio</Label>
+            <Select 
+              value={selectedServiceId} 
+              onValueChange={(val) => {
+                setSelectedServiceId(val);
+                if (val !== "none") {
+                  const s = services.find(x => x.id_servicio === val);
+                  if (s) {
+                    setPrice(String(s.costo_base || 0));
+                    setReason(s.nombre_servicio);
+                  }
+                }
+              }}
+            >
+              <SelectTrigger><SelectValue placeholder="Selecciona tratamiento..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Ninguno (Consulta General)</SelectItem>
+                {services.map((s) => (
+                  <SelectItem key={s.id_servicio} value={s.id_servicio}>
+                    {s.nombre_servicio} {s.costo_base ? `($${s.costo_base})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="reason">Motivo o Detalles Adicionales</Label>
             <Input id="reason" value={reason ?? ""} onChange={(e) => setReason(e.target.value)} placeholder="Control, ecografía…" />
           </div>
           <DialogFooter>

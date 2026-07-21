@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useUpdateAppointment } from "@/lib/api/appointments";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultation, type VisitType } from "@/lib/api/consultations";
 import { usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
+import { useServices } from "@/lib/api/services";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { toast } from "sonner";
@@ -39,18 +41,20 @@ export function ConsultationForm({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  appointment?: { id: string; patient_id: string; patient_name?: string } | null;
+  appointment?: { id: string; patient_id: string; doctor_id?: string; patient_name?: string } | null;
 }) {
   const { data: existingConsultation, isLoading: loadingExisting } = useConsultationByAppointment(appointment?.id);
 
   const create = useCreateConsultation();
   const update = useUpdateConsultation();
-  const busy = create.isPending || update.isPending;
+  const updateApp = useUpdateAppointment();
+  const busy = create.isPending || update.isPending || updateApp.isPending;
 
   const isEdit = !!existingConsultation;
 
   const { data: patient } = usePatient(appointment?.patient_id);
   const { data: doctors = [] } = useDoctors();
+  const { data: services = [] } = useServices();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
 
@@ -294,7 +298,7 @@ export function ConsultationForm({
       const payload = {
         appointment_id: appointment.id,
         patient_id: appointment.patient_id,
-        doctor_id: null, // assigned by backend / auth user
+        doctor_id: appointment.doctor_id || null,
         visit_type: visitType,
         is_first_visit: isFirstVisit,
         subjective_exam: subjectiveExam || null,
@@ -344,18 +348,34 @@ export function ConsultationForm({
 
       if (isEdit && existingConsultation) {
         await update.mutateAsync({ id: existingConsultation.id, ...payload });
-        toast.success("Consulta clínica actualizada");
-        onOpenChange(false);
+        
+        if (appointment?.id) {
+          const service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
+          const servicePrice = service ? Number(service.costo_base) : 40;
+          await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
+          localStorage.setItem("pending_payment_appointment_id", appointment.id);
+          toast.success("Consulta actualizada y factura generada");
+          onOpenChange(false);
+          router.navigate({ to: "/facturacion" });
+        } else {
+          toast.success("Consulta clínica actualizada");
+          onOpenChange(false);
+        }
       } else {
         await create.mutateAsync(payload);
-        toast.success("Consulta clínica registrada con éxito");
+        
+        if (appointment?.id) {
+          const service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
+          const servicePrice = service ? Number(service.costo_base) : 40;
+          await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
+          localStorage.setItem("pending_payment_appointment_id", appointment.id);
+        }
 
-        // Set pending payment in localStorage
-        localStorage.setItem("pending_payment_appointment_id", appointment.id);
-
+        toast.success("Consulta clínica registrada y cita completada");
         onOpenChange(false);
         router.navigate({ to: "/facturacion" });
       }
+
 
       if (shouldPrint && payload.indications) {
         const patientData = patient;
@@ -401,37 +421,38 @@ export function ConsultationForm({
       }
 
       onOpenChange(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error guardando la consulta");
+    } catch (err: any) {
+      console.error("Consultation save error:", err);
+      toast.error(err?.message || JSON.stringify(err) || "Error guardando la consulta");
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col rounded-3xl p-6">
+      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col rounded-[2rem] p-6 text-[#2b3674]">
         <DialogHeader className="pb-2">
-          <DialogTitle>
+          <DialogTitle className="text-xl font-bold text-[#2b3674]">
             {isEdit ? "Editar Consulta Clínica" : "Registrar Nueva Consulta Clínica"}
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-xs text-[#a3aed1] font-medium">
             Registrar examen físico, diagnóstico y consumibles utilizados para{" "}
-            <span className="font-semibold text-mauve">{appointment?.patient_name}</span>.
+            <span className="font-semibold text-[#4361ee]">{appointment?.patient_name}</span>.
           </DialogDescription>
         </DialogHeader>
 
         {loadingExisting ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-mauve" />
+            <Loader2 className="h-8 w-8 animate-spin text-[#4361ee]" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-5 bg-muted/60 p-1 rounded-2xl mb-4">
-                <TabsTrigger value="anamnesis" className="rounded-xl font-medium text-xs">Anamnesis</TabsTrigger>
-                <TabsTrigger value="vitals" className="rounded-xl font-medium text-xs">Físico y Vitales</TabsTrigger>
-                <TabsTrigger value="special" className="rounded-xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
-                <TabsTrigger value="plan" className="rounded-xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
-                <TabsTrigger value="consumables" className="rounded-xl font-medium text-xs">Consumibles</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-5 bg-[#f4f7fe] p-1 rounded-2xl mb-4">
+                <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
+                <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
+                <TabsTrigger value="special" className="rounded-2xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
+                <TabsTrigger value="plan" className="rounded-2xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
+                <TabsTrigger value="consumables" className="rounded-2xl font-medium text-xs">Consumibles</TabsTrigger>
               </TabsList>
 
               <ScrollArea className="flex-1 pr-2">
@@ -442,7 +463,7 @@ export function ConsultationForm({
                       <div className="grid gap-2">
                         <Label htmlFor="c-visit-type">Tipo de asistencia</Label>
                         <Select value={visitType} onValueChange={(v: VisitType) => setVisitType(v)}>
-                          <SelectTrigger className="rounded-xl">
+                          <SelectTrigger className="rounded-2xl">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="rounded-2xl">
@@ -458,7 +479,7 @@ export function ConsultationForm({
                       <div className="grid gap-2">
                         <Label htmlFor="c-channel">Canal de contacto</Label>
                         <Select value={contactChannel} onValueChange={setContactChannel}>
-                          <SelectTrigger className="rounded-xl">
+                          <SelectTrigger className="rounded-2xl">
                             <SelectValue placeholder="Seleccionar canal..." />
                           </SelectTrigger>
                           <SelectContent className="rounded-2xl">
@@ -489,7 +510,7 @@ export function ConsultationForm({
                         value={subjectiveExam}
                         onChange={(e) => setSubjectiveExam(e.target.value)}
                         placeholder="Descripción subjetiva y antecedentes inmediatos expresados por la paciente..."
-                        className="rounded-xl min-h-[140px]"
+                        className="rounded-2xl min-h-[140px]"
                       />
                     </div>
                   </TabsContent>
@@ -497,7 +518,7 @@ export function ConsultationForm({
                   {/* TAB 2: VITALS & PHYSICAL EXAM */}
                   <TabsContent value="vitals" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Signos Vitales</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Signos Vitales</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-height">Estatura (cm)</Label>
@@ -507,7 +528,7 @@ export function ConsultationForm({
                             placeholder="Ej. 165"
                             value={heightCm}
                             onChange={(e) => setHeightCm(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -519,7 +540,7 @@ export function ConsultationForm({
                             placeholder="Ej. 62.5"
                             value={weightKg}
                             onChange={(e) => setWeightKg(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -528,7 +549,7 @@ export function ConsultationForm({
                             readOnly
                             value={bmi}
                             placeholder="Ingrese Peso y Talla"
-                            className="rounded-xl bg-muted/50 font-bold"
+                            className="rounded-2xl bg-muted/50 font-bold"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -538,7 +559,7 @@ export function ConsultationForm({
                             placeholder="Ej. 120/80"
                             value={bloodPressure}
                             onChange={(e) => setBloodPressure(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -549,7 +570,7 @@ export function ConsultationForm({
                             placeholder="LPM"
                             value={heartRate}
                             onChange={(e) => setHeartRate(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -560,7 +581,7 @@ export function ConsultationForm({
                             placeholder="RPM"
                             value={respiratoryRate}
                             onChange={(e) => setRespiratoryRate(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -572,42 +593,42 @@ export function ConsultationForm({
                             placeholder="Ej. 36.5"
                             value={temperature}
                             onChange={(e) => setTemperature(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Revisión por Sistemas / Examen Físico</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Revisión por Sistemas / Examen Físico</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-skin">Piel y faneras</Label>
-                          <Input id="c-skin" value={skin} onChange={(e) => setSkin(e.target.value)} placeholder="Normal, hidratada..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-skin" value={skin} onChange={(e) => setSkin(e.target.value)} placeholder="Normal, hidratada..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-headneck">Cabeza y cuello</Label>
-                          <Input id="c-headneck" value={headNeck} onChange={(e) => setHeadNeck(e.target.value)} placeholder="Móvil, sin adenopatías..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-headneck" value={headNeck} onChange={(e) => setHeadNeck(e.target.value)} placeholder="Móvil, sin adenopatías..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-breasts">Mamas</Label>
-                          <Input id="c-breasts" value={breasts} onChange={(e) => setBreasts(e.target.value)} placeholder="Simétricas, sin nódulos palpables..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-breasts" value={breasts} onChange={(e) => setBreasts(e.target.value)} placeholder="Simétricas, sin nódulos palpables..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-abdomen">Abdomen</Label>
-                          <Input id="c-abdomen" value={abdomen} onChange={(e) => setAbdomen(e.target.value)} placeholder="Blando, depresible, no doloroso..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-abdomen" value={abdomen} onChange={(e) => setAbdomen(e.target.value)} placeholder="Blando, depresible, no doloroso..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
                           <Label htmlFor="c-gyneco">Ginecológico</Label>
-                          <Input id="c-gyneco" value={gynecological} onChange={(e) => setGynecological(e.target.value)} placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-gyneco" value={gynecological} onChange={(e) => setGynecological(e.target.value)} placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-extremities">Extremidades</Label>
-                          <Input id="c-extremities" value={extremities} onChange={(e) => setExtremities(e.target.value)} placeholder="Simétricas, sin edemas..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-extremities" value={extremities} onChange={(e) => setExtremities(e.target.value)} placeholder="Simétricas, sin edemas..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-neuro">Neurológico</Label>
-                          <Input id="c-neuro" value={neurological} onChange={(e) => setNeurological(e.target.value)} placeholder="Lúcida, orientada..." className="rounded-xl text-xs h-9" />
+                          <Input id="c-neuro" value={neurological} onChange={(e) => setNeurological(e.target.value)} placeholder="Lúcida, orientada..." className="rounded-2xl text-xs h-9" />
                         </div>
                       </div>
                     </div>
@@ -616,7 +637,7 @@ export function ConsultationForm({
                   {/* TAB 3: COLPOSCOPY & OBSTETRICS */}
                   <TabsContent value="special" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Hallazgos Colposcópicos</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Hallazgos Colposcópicos</h3>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="grid gap-1.5 col-span-3">
                           <Label htmlFor="c-acetic">Test de Ácido Acético</Label>
@@ -625,7 +646,7 @@ export function ConsultationForm({
                             placeholder="Ej. Acetoblanco positivo..."
                             value={aceticAcidTest}
                             onChange={(e) => setAceticAcidTest(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -635,7 +656,7 @@ export function ConsultationForm({
                             placeholder="Ej. 12:00, 3:00"
                             value={aceticClockPosition}
                             onChange={(e) => setAceticClockPosition(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -645,7 +666,7 @@ export function ConsultationForm({
                             placeholder="Ej. Zona de transformación..."
                             value={aceticRelativePosition}
                             onChange={(e) => setAceticRelativePosition(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
 
@@ -656,7 +677,7 @@ export function ConsultationForm({
                             placeholder="Ej. Yodonegativo (Schiller positivo)..."
                             value={lugolTest}
                             onChange={(e) => setLugolTest(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -666,7 +687,7 @@ export function ConsultationForm({
                             placeholder="Ej. 6:00, 9:00"
                             value={lugolClockPosition}
                             onChange={(e) => setLugolClockPosition(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5 col-span-2">
@@ -676,7 +697,7 @@ export function ConsultationForm({
                             placeholder="Ej. Labio anterior..."
                             value={lugolRelativePosition}
                             onChange={(e) => setLugolRelativePosition(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                       </div>
@@ -684,8 +705,8 @@ export function ConsultationForm({
 
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Control de Embarazo (Obstetricia)</h3>
-                        <span className="text-[10px] text-muted-foreground bg-blush/20 text-blush-foreground px-2 py-0.5 rounded-full font-bold">Rellenar solo si aplica</span>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Control de Embarazo (Obstetricia)</h3>
+                        <span className="text-[10px] text-[#a3aed1] bg-blush/20 text-blush-foreground px-2 py-0.5 rounded-full font-bold">Rellenar solo si aplica</span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="grid gap-1.5">
@@ -695,7 +716,7 @@ export function ConsultationForm({
                             placeholder="Ej. 24.3 semanas"
                             value={gestationalAge}
                             onChange={(e) => setGestationalAge(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -706,7 +727,7 @@ export function ConsultationForm({
                             placeholder="Gramos"
                             value={fetalWeight}
                             onChange={(e) => setFetalWeight(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -716,7 +737,7 @@ export function ConsultationForm({
                             placeholder="Ej. 110/70"
                             value={obstetricBp}
                             onChange={(e) => setObstetricBp(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -727,7 +748,7 @@ export function ConsultationForm({
                             placeholder="cm"
                             value={uterineHeight}
                             onChange={(e) => setUterineHeight(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -737,7 +758,7 @@ export function ConsultationForm({
                             placeholder="Cefálica, Podálica, Transversa..."
                             value={presentation}
                             onChange={(e) => setPresentation(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -748,7 +769,7 @@ export function ConsultationForm({
                             placeholder="LPM"
                             value={fetalHeartRate}
                             onChange={(e) => setFetalHeartRate(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -758,7 +779,7 @@ export function ConsultationForm({
                             placeholder="Activos, presentes, atenuados..."
                             value={fetalMovements}
                             onChange={(e) => setFetalMovements(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -768,7 +789,7 @@ export function ConsultationForm({
                             placeholder="Ausente, grado I, grado II..."
                             value={edema}
                             onChange={(e) => setEdema(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                         <div className="grid gap-1.5">
@@ -778,7 +799,7 @@ export function ConsultationForm({
                             placeholder="Niega cefalea, zumbidos, sangrado..."
                             value={alarmSigns}
                             onChange={(e) => setAlarmSigns(e.target.value)}
-                            className="rounded-xl text-xs"
+                            className="rounded-2xl text-xs"
                           />
                         </div>
                       </div>
@@ -795,7 +816,7 @@ export function ConsultationForm({
                         onChange={(e) => setDiagnosis(e.target.value)}
                         placeholder="Diagnóstico clínico presuntivo o definitivo..."
                         required
-                        className="rounded-xl min-h-[90px]"
+                        className="rounded-2xl min-h-[90px]"
                       />
                     </div>
 
@@ -806,7 +827,7 @@ export function ConsultationForm({
                         value={indications}
                         onChange={(e) => setIndications(e.target.value)}
                         placeholder="Tratamientos médicos recetados, dosis, administración..."
-                        className="rounded-xl min-h-[90px]"
+                        className="rounded-2xl min-h-[90px]"
                       />
                     </div>
 
@@ -817,7 +838,7 @@ export function ConsultationForm({
                         value={complementaryExams}
                         onChange={(e) => setComplementaryExams(e.target.value)}
                         placeholder="Ecografías, perfil de laboratorios, citología..."
-                        className="rounded-xl min-h-[90px]"
+                        className="rounded-2xl min-h-[90px]"
                       />
                     </div>
 
@@ -829,7 +850,7 @@ export function ConsultationForm({
                           value={plan}
                           onChange={(e) => setPlan(e.target.value)}
                           placeholder="Recomendaciones generales, pautas de alarma..."
-                          className="rounded-xl min-h-[90px]"
+                          className="rounded-2xl min-h-[90px]"
                         />
                       </div>
                       <div className="grid gap-2 justify-between">
@@ -840,7 +861,7 @@ export function ConsultationForm({
                             type="date"
                             value={nextAppointmentDate}
                             onChange={(e) => setNextAppointmentDate(e.target.value)}
-                            className="rounded-xl"
+                            className="rounded-2xl"
                           />
                         </div>
                         <div className="flex items-center gap-1.5 p-3 rounded-2xl bg-amber-50 text-amber-800 border border-amber-200/50 text-[11px]">
@@ -855,15 +876,15 @@ export function ConsultationForm({
                   <TabsContent value="consumables" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl">
                       <div className="mb-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Consumibles Clínicos de Uso Común</h3>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">Ingresa las cantidades de los materiales clínicos utilizados en esta sesión.</p>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Consumibles Clínicos de Uso Común</h3>
+                        <p className="text-[11px] text-[#a3aed1] mt-0.5">Ingresa las cantidades de los materiales clínicos utilizados en esta sesión.</p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {COMMON_CONSUMABLES.map((item) => (
                           <div key={item.name} className="flex items-center justify-between bg-card p-3 rounded-2xl border border-border/40 shadow-sm">
                             <div className="min-w-0 pr-2">
                               <p className="text-xs font-bold truncate">{item.name}</p>
-                              <p className="text-[10px] text-muted-foreground">Unidad: {item.defaultUnit}</p>
+                              <p className="text-[10px] text-[#a3aed1]">Unidad: {item.defaultUnit}</p>
                             </div>
                             <Input
                               type="number"
@@ -872,7 +893,7 @@ export function ConsultationForm({
                               value={commonQuantities[item.name] ?? ""}
                               onChange={(e) => updateCommonQty(item.name, e.target.value)}
                               placeholder="0"
-                              className="w-20 text-center rounded-xl font-semibold text-xs"
+                              className="w-20 text-center rounded-2xl font-semibold text-xs"
                             />
                           </div>
                         ))}
@@ -882,38 +903,38 @@ export function ConsultationForm({
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
                       <div className="flex items-center justify-between border-b border-border/40 pb-2">
                         <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-mauve">Materiales Clínicos Adicionales</h3>
-                          <p className="text-[11px] text-muted-foreground mt-0.5">Agrega consumibles personalizados o medicamentos especiales utilizados.</p>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Materiales Clínicos Adicionales</h3>
+                          <p className="text-[11px] text-[#a3aed1] mt-0.5">Agrega consumibles personalizados o medicamentos especiales utilizados.</p>
                         </div>
                         <Button
                           type="button"
                           variant="outline"
                           size="sm"
                           onClick={addCustomConsumable}
-                          className="rounded-xl flex items-center gap-1 cursor-pointer"
+                          className="rounded-2xl flex items-center gap-1 cursor-pointer"
                         >
                           <Plus className="h-3.5 w-3.5" /> Agregar
                         </Button>
                       </div>
 
                       {customConsumables.length === 0 ? (
-                        <p className="text-xs text-muted-foreground text-center py-6">No se han registrado consumibles adicionales.</p>
+                        <p className="text-xs text-[#a3aed1] text-center py-6">No se han registrado consumibles adicionales.</p>
                       ) : (
                         <div className="space-y-3">
                           {customConsumables.map((c, idx) => (
                             <div key={idx} className="flex items-center gap-3 bg-card p-3 rounded-2xl border border-border/40 shadow-sm">
                               <div className="flex-1 grid grid-cols-3 gap-3">
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-muted-foreground">Nombre del material</Label>
+                                  <Label className="text-[10px] text-[#a3aed1]">Nombre del material</Label>
                                   <Input
                                     value={c.item_name}
                                     onChange={(e) => updateCustomConsumable(idx, "item_name", e.target.value)}
                                     placeholder="Ej. Esparadrapo"
-                                    className="rounded-xl text-xs h-9"
+                                    className="rounded-2xl text-xs h-9"
                                   />
                                 </div>
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-muted-foreground">Cantidad</Label>
+                                  <Label className="text-[10px] text-[#a3aed1]">Cantidad</Label>
                                   <Input
                                     type="number"
                                     min="0.01"
@@ -921,16 +942,16 @@ export function ConsultationForm({
                                     value={c.quantity}
                                     onChange={(e) => updateCustomConsumable(idx, "quantity", e.target.value)}
                                     placeholder="1"
-                                    className="rounded-xl text-xs h-9 text-center"
+                                    className="rounded-2xl text-xs h-9 text-center"
                                   />
                                 </div>
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-muted-foreground">Unidad</Label>
+                                  <Label className="text-[10px] text-[#a3aed1]">Unidad</Label>
                                   <Input
                                     value={c.unit}
                                     onChange={(e) => updateCustomConsumable(idx, "unit", e.target.value)}
                                     placeholder="Ej. U, cc, par, metros"
-                                    className="rounded-xl text-xs h-9"
+                                    className="rounded-2xl text-xs h-9"
                                   />
                                 </div>
                               </div>
@@ -939,7 +960,7 @@ export function ConsultationForm({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => removeCustomConsumable(idx)}
-                                className="text-destructive hover:bg-destructive/10 rounded-xl mt-5 h-9 w-9 shrink-0 cursor-pointer"
+                                className="text-destructive hover:bg-destructive/10 rounded-2xl mt-5 h-9 w-9 shrink-0 cursor-pointer"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -958,7 +979,7 @@ export function ConsultationForm({
                   variant="ghost"
                   onClick={() => onOpenChange(false)}
                   disabled={busy}
-                  className="rounded-xl"
+                  className="rounded-2xl"
                 >
                   Cancelar
                 </Button>
@@ -969,7 +990,7 @@ export function ConsultationForm({
                       variant="outline"
                       onClick={() => handleSave(true)}
                       disabled={busy}
-                      className="rounded-xl border-mauve text-mauve hover:bg-mauve/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
+                      className="rounded-2xl border-mauve text-[#4361ee] hover:bg-[#4361ee]/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
                     >
                       {busy ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -982,7 +1003,7 @@ export function ConsultationForm({
                   <Button
                     type="submit"
                     disabled={busy}
-                    className="rounded-xl bg-gradient-to-r from-mauve to-mauve-soft text-primary-foreground shadow-sm shadow-mauve/25 hover:opacity-95 px-6 h-9 text-xs font-semibold"
+                    className="rounded-2xl bg-[#4361ee] text-white hover:bg-[#3451d6] shadow-sm shadow-blue-500/20 hover:opacity-95 px-6 h-9 text-xs font-semibold"
                   >
                     {busy ? (
                       <span className="flex items-center gap-1.5">
@@ -1003,3 +1024,4 @@ export function ConsultationForm({
     </Dialog>
   );
 }
+

@@ -17,13 +17,16 @@ const DeleteUserSchema = z.object({
 async function ensureAdmin(userId: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   const { data, error } = await supabaseAdmin
-    .from("user_roles")
-    .select("role")
-    .eq("user_id", userId)
-    .eq("role", "admin")
+    .from("usuarios")
+    .select("roles(nombre_rol)")
+    .eq("auth_id", userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Solo los administradores pueden realizar esta acción");
+  
+  const roleName = Array.isArray(data?.roles) ? data?.roles[0]?.nombre_rol : (data?.roles as any)?.nombre_rol;
+  if (roleName?.toLowerCase() !== "admin") {
+     throw new Error("Solo los administradores pueden realizar esta acción");
+  }
 }
 
 export const adminCreateUser = createServerFn({ method: "POST" })
@@ -43,17 +46,50 @@ export const adminCreateUser = createServerFn({ method: "POST" })
     const newId = created.user?.id;
     if (!newId) throw new Error("No se pudo crear el usuario");
 
-    // Profile fields (trigger ya creó el perfil)
-    await supabaseAdmin
-      .from("profiles")
-      .update({ full_name: data.full_name, specialty: data.specialty ?? null })
-      .eq("id", newId);
+    let { data: usuario } = await supabaseAdmin
+      .from("usuarios")
+      .select("id_usuario")
+      .eq("auth_id", newId)
+      .maybeSingle();
 
-    // Si el rol pedido es admin, agregarlo (el trigger ya puso 'doctor')
-    if (data.role === "admin") {
+    if (!usuario) {
+      // Create the user explicitly
+      const { data: newUser, error: insertError } = await supabaseAdmin
+        .from("usuarios")
+        .insert({
+          auth_id: newId,
+          nombre_usuario: data.full_name,
+          id_rol: data.role === "admin" ? 1 : 2,
+          contrasena_hash: "auth" // Auth handled by Supabase
+        })
+        .select("id_usuario")
+        .single();
+      
+      if (insertError) {
+         throw new Error("Error al crear perfil de usuario: " + insertError.message);
+      }
+      usuario = newUser;
+    } else {
       await supabaseAdmin
-        .from("user_roles")
-        .insert({ user_id: newId, role: "admin" });
+        .from("usuarios")
+        .update({
+          nombre_usuario: data.full_name,
+          id_rol: data.role === "admin" ? 1 : 2
+        })
+        .eq("id_usuario", usuario.id_usuario);
+    }
+
+    if (usuario && data.role === "doctor") {
+       const parts = data.full_name.trim().split(" ");
+       const nombre = parts[0] || "";
+       const apellido = parts.slice(1).join(" ") || "";
+       
+       await supabaseAdmin.from("medicos").insert({
+         id_usuario: usuario.id_usuario,
+         nombre,
+         apellido,
+         email: data.email
+       });
     }
 
     return { id: newId };
@@ -71,8 +107,7 @@ export const adminDeleteUser = createServerFn({ method: "POST" })
       // Si el usuario no existe en Supabase Auth (ej. usuarios semilla insertados por SQL),
       // eliminamos sus registros públicos directamente para limpiar la base de datos y la interfaz.
       if (error.message.toLowerCase().includes("not found") || error.status === 404) {
-        await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
-        await supabaseAdmin.from("profiles").delete().eq("id", data.user_id);
+        await supabaseAdmin.from("usuarios").delete().eq("auth_id", data.user_id);
         return { ok: true };
       }
       throw new Error(error.message);

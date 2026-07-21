@@ -12,14 +12,21 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
+import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticated/support'
+import { Route as AuthenticatedStocksRouteImport } from './routes/_authenticated/stocks'
 import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
-import { Route as AuthenticatedPacientesRouteImport } from './routes/_authenticated/pacientes'
+import { Route as AuthenticatedPeripheralsRouteImport } from './routes/_authenticated/peripherals'
+import { Route as AuthenticatedMetodosPagoRouteImport } from './routes/_authenticated/metodos-pago'
 import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
 import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
+import { Route as AuthenticatedCuentasRouteImport } from './routes/_authenticated/cuentas'
 import { Route as AuthenticatedConfiguracionRouteImport } from './routes/_authenticated/configuracion'
+import { Route as AuthenticatedComprasRouteImport } from './routes/_authenticated/compras'
 import { Route as AuthenticatedAgendaRouteImport } from './routes/_authenticated/agenda'
+import { Route as AuthenticatedPacientesIndexRouteImport } from './routes/_authenticated/pacientes.index'
+import { Route as AuthenticatedPacientesPatientIdRouteImport } from './routes/_authenticated/pacientes.$patientId'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -35,6 +42,16 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedSupportRoute = AuthenticatedSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStocksRoute = AuthenticatedStocksRouteImport.update({
+  id: '/stocks',
+  path: '/stocks',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedServiciosRoute = AuthenticatedServiciosRouteImport.update({
   id: '/servicios',
   path: '/servicios',
@@ -45,11 +62,18 @@ const AuthenticatedReportesRoute = AuthenticatedReportesRouteImport.update({
   path: '/reportes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPacientesRoute = AuthenticatedPacientesRouteImport.update({
-  id: '/pacientes',
-  path: '/pacientes',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
+const AuthenticatedPeripheralsRoute =
+  AuthenticatedPeripheralsRouteImport.update({
+    id: '/peripherals',
+    path: '/peripherals',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMetodosPagoRoute =
+  AuthenticatedMetodosPagoRouteImport.update({
+    id: '/metodos-pago',
+    path: '/metodos-pago',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedHistoriasRoute = AuthenticatedHistoriasRouteImport.update({
   id: '/historias',
   path: '/historias',
@@ -66,55 +90,98 @@ const AuthenticatedDoctoresRoute = AuthenticatedDoctoresRouteImport.update({
   path: '/doctores',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedCuentasRoute = AuthenticatedCuentasRouteImport.update({
+  id: '/cuentas',
+  path: '/cuentas',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedConfiguracionRoute =
   AuthenticatedConfiguracionRouteImport.update({
     id: '/configuracion',
     path: '/configuracion',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedComprasRoute = AuthenticatedComprasRouteImport.update({
+  id: '/compras',
+  path: '/compras',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedAgendaRoute = AuthenticatedAgendaRouteImport.update({
   id: '/agenda',
   path: '/agenda',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPacientesIndexRoute =
+  AuthenticatedPacientesIndexRouteImport.update({
+    id: '/pacientes/',
+    path: '/pacientes/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPacientesPatientIdRoute =
+  AuthenticatedPacientesPatientIdRouteImport.update({
+    id: '/pacientes/$patientId',
+    path: '/pacientes/$patientId',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
+  '/compras': typeof AuthenticatedComprasRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/cuentas': typeof AuthenticatedCuentasRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/pacientes': typeof AuthenticatedPacientesRoute
+  '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
+  '/peripherals': typeof AuthenticatedPeripheralsRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
+  '/stocks': typeof AuthenticatedStocksRoute
+  '/support': typeof AuthenticatedSupportRoute
+  '/pacientes/$patientId': typeof AuthenticatedPacientesPatientIdRoute
+  '/pacientes/': typeof AuthenticatedPacientesIndexRoute
 }
 export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/agenda': typeof AuthenticatedAgendaRoute
+  '/compras': typeof AuthenticatedComprasRoute
   '/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/cuentas': typeof AuthenticatedCuentasRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
-  '/pacientes': typeof AuthenticatedPacientesRoute
+  '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
+  '/peripherals': typeof AuthenticatedPeripheralsRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
+  '/stocks': typeof AuthenticatedStocksRoute
+  '/support': typeof AuthenticatedSupportRoute
   '/': typeof AuthenticatedIndexRoute
+  '/pacientes/$patientId': typeof AuthenticatedPacientesPatientIdRoute
+  '/pacientes': typeof AuthenticatedPacientesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/agenda': typeof AuthenticatedAgendaRoute
+  '/_authenticated/compras': typeof AuthenticatedComprasRoute
   '/_authenticated/configuracion': typeof AuthenticatedConfiguracionRoute
+  '/_authenticated/cuentas': typeof AuthenticatedCuentasRoute
   '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
   '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
-  '/_authenticated/pacientes': typeof AuthenticatedPacientesRoute
+  '/_authenticated/metodos-pago': typeof AuthenticatedMetodosPagoRoute
+  '/_authenticated/peripherals': typeof AuthenticatedPeripheralsRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
+  '/_authenticated/stocks': typeof AuthenticatedStocksRoute
+  '/_authenticated/support': typeof AuthenticatedSupportRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/pacientes/$patientId': typeof AuthenticatedPacientesPatientIdRoute
+  '/_authenticated/pacientes/': typeof AuthenticatedPacientesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -122,38 +189,59 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/agenda'
+    | '/compras'
     | '/configuracion'
+    | '/cuentas'
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/pacientes'
+    | '/metodos-pago'
+    | '/peripherals'
     | '/reportes'
     | '/servicios'
+    | '/stocks'
+    | '/support'
+    | '/pacientes/$patientId'
+    | '/pacientes/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/auth'
     | '/agenda'
+    | '/compras'
     | '/configuracion'
+    | '/cuentas'
     | '/doctores'
     | '/facturacion'
     | '/historias'
-    | '/pacientes'
+    | '/metodos-pago'
+    | '/peripherals'
     | '/reportes'
     | '/servicios'
+    | '/stocks'
+    | '/support'
     | '/'
+    | '/pacientes/$patientId'
+    | '/pacientes'
   id:
     | '__root__'
     | '/_authenticated'
     | '/auth'
     | '/_authenticated/agenda'
+    | '/_authenticated/compras'
     | '/_authenticated/configuracion'
+    | '/_authenticated/cuentas'
     | '/_authenticated/doctores'
     | '/_authenticated/facturacion'
     | '/_authenticated/historias'
-    | '/_authenticated/pacientes'
+    | '/_authenticated/metodos-pago'
+    | '/_authenticated/peripherals'
     | '/_authenticated/reportes'
     | '/_authenticated/servicios'
+    | '/_authenticated/stocks'
+    | '/_authenticated/support'
     | '/_authenticated/'
+    | '/_authenticated/pacientes/$patientId'
+    | '/_authenticated/pacientes/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -184,6 +272,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/support': {
+      id: '/_authenticated/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof AuthenticatedSupportRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/stocks': {
+      id: '/_authenticated/stocks'
+      path: '/stocks'
+      fullPath: '/stocks'
+      preLoaderRoute: typeof AuthenticatedStocksRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/servicios': {
       id: '/_authenticated/servicios'
       path: '/servicios'
@@ -198,11 +300,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedReportesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/pacientes': {
-      id: '/_authenticated/pacientes'
-      path: '/pacientes'
-      fullPath: '/pacientes'
-      preLoaderRoute: typeof AuthenticatedPacientesRouteImport
+    '/_authenticated/peripherals': {
+      id: '/_authenticated/peripherals'
+      path: '/peripherals'
+      fullPath: '/peripherals'
+      preLoaderRoute: typeof AuthenticatedPeripheralsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/metodos-pago': {
+      id: '/_authenticated/metodos-pago'
+      path: '/metodos-pago'
+      fullPath: '/metodos-pago'
+      preLoaderRoute: typeof AuthenticatedMetodosPagoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/historias': {
@@ -226,11 +335,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDoctoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/cuentas': {
+      id: '/_authenticated/cuentas'
+      path: '/cuentas'
+      fullPath: '/cuentas'
+      preLoaderRoute: typeof AuthenticatedCuentasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/configuracion': {
       id: '/_authenticated/configuracion'
       path: '/configuracion'
       fullPath: '/configuracion'
       preLoaderRoute: typeof AuthenticatedConfiguracionRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/compras': {
+      id: '/_authenticated/compras'
+      path: '/compras'
+      fullPath: '/compras'
+      preLoaderRoute: typeof AuthenticatedComprasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/agenda': {
@@ -240,31 +363,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAgendaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pacientes/': {
+      id: '/_authenticated/pacientes/'
+      path: '/pacientes'
+      fullPath: '/pacientes/'
+      preLoaderRoute: typeof AuthenticatedPacientesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/pacientes/$patientId': {
+      id: '/_authenticated/pacientes/$patientId'
+      path: '/pacientes/$patientId'
+      fullPath: '/pacientes/$patientId'
+      preLoaderRoute: typeof AuthenticatedPacientesPatientIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAgendaRoute: typeof AuthenticatedAgendaRoute
+  AuthenticatedComprasRoute: typeof AuthenticatedComprasRoute
   AuthenticatedConfiguracionRoute: typeof AuthenticatedConfiguracionRoute
+  AuthenticatedCuentasRoute: typeof AuthenticatedCuentasRoute
   AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
   AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
-  AuthenticatedPacientesRoute: typeof AuthenticatedPacientesRoute
+  AuthenticatedMetodosPagoRoute: typeof AuthenticatedMetodosPagoRoute
+  AuthenticatedPeripheralsRoute: typeof AuthenticatedPeripheralsRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
+  AuthenticatedStocksRoute: typeof AuthenticatedStocksRoute
+  AuthenticatedSupportRoute: typeof AuthenticatedSupportRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedPacientesPatientIdRoute: typeof AuthenticatedPacientesPatientIdRoute
+  AuthenticatedPacientesIndexRoute: typeof AuthenticatedPacientesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAgendaRoute: AuthenticatedAgendaRoute,
+  AuthenticatedComprasRoute: AuthenticatedComprasRoute,
   AuthenticatedConfiguracionRoute: AuthenticatedConfiguracionRoute,
+  AuthenticatedCuentasRoute: AuthenticatedCuentasRoute,
   AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
   AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
-  AuthenticatedPacientesRoute: AuthenticatedPacientesRoute,
+  AuthenticatedMetodosPagoRoute: AuthenticatedMetodosPagoRoute,
+  AuthenticatedPeripheralsRoute: AuthenticatedPeripheralsRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,
+  AuthenticatedStocksRoute: AuthenticatedStocksRoute,
+  AuthenticatedSupportRoute: AuthenticatedSupportRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedPacientesPatientIdRoute: AuthenticatedPacientesPatientIdRoute,
+  AuthenticatedPacientesIndexRoute: AuthenticatedPacientesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
