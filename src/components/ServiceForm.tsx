@@ -62,48 +62,48 @@ export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
           <div className="space-y-2">
-            <Label htmlFor="nombre_servicio" className="text-xs font-bold text-[#2b3674]">NOMBRE DEL SERVICIO *</Label>
+            <Label htmlFor="nombre_servicio" className="text-xs font-bold text-foreground">NOMBRE DEL SERVICIO *</Label>
             <Input 
               id="nombre_servicio" 
               placeholder="Ej. Limpieza Dental" 
               {...register("nombre_servicio", { required: "El nombre es obligatorio" })} 
-              className="bg-gray-50 border-gray-200 text-sm focus-visible:ring-blue-500"
+              className="bg-muted border-gray-200 text-sm focus-visible:ring-blue-500"
             />
-            {errors.nombre_servicio && <span className="text-xs text-red-500">{errors.nombre_servicio.message}</span>}
+            {errors.nombre_servicio && <span className="text-xs text-destructive">{errors.nombre_servicio.message}</span>}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="costo_base" className="text-xs font-bold text-[#2b3674]">COSTO BASE ($) *</Label>
+              <Label htmlFor="costo_base" className="text-xs font-bold text-foreground">COSTO BASE ($) *</Label>
               <Input 
                 id="costo_base" 
                 type="number" 
                 step="0.01"
                 placeholder="0.00" 
                 {...register("costo_base", { required: "El costo base es obligatorio", valueAsNumber: true })} 
-                className="bg-gray-50 border-gray-200 text-sm focus-visible:ring-blue-500"
+                className="bg-muted border-gray-200 text-sm focus-visible:ring-blue-500"
               />
-              {errors.costo_base && <span className="text-xs text-red-500">{errors.costo_base.message}</span>}
+              {errors.costo_base && <span className="text-xs text-destructive">{errors.costo_base.message}</span>}
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="codigo_medico" className="text-xs font-bold text-[#2b3674]">CÓDIGO MÉDICO</Label>
+              <Label htmlFor="codigo_medico" className="text-xs font-bold text-foreground">CÓDIGO MÉDICO</Label>
               <Input 
                 id="codigo_medico" 
                 placeholder="Ej. SER-001" 
                 {...register("codigo_medico")} 
-                className="bg-gray-50 border-gray-200 text-sm focus-visible:ring-blue-500"
+                className="bg-muted border-gray-200 text-sm focus-visible:ring-blue-500"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="descripcion" className="text-xs font-bold text-[#2b3674]">DESCRIPCIÓN</Label>
+            <Label htmlFor="descripcion" className="text-xs font-bold text-foreground">DESCRIPCIÓN</Label>
             <Textarea 
               id="descripcion" 
               placeholder="Descripción detallada del servicio..." 
               {...register("descripcion")} 
-              className="bg-gray-50 border-gray-200 text-sm focus-visible:ring-blue-500 resize-none h-24"
+              className="bg-muted border-gray-200 text-sm focus-visible:ring-blue-500 resize-none h-24"
             />
           </div>
 
@@ -112,14 +112,14 @@ export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
               type="button" 
               variant="outline" 
               onClick={() => onOpenChange(false)}
-              className="rounded-xl border-gray-200 text-gray-500"
+              className="rounded-xl border-gray-200 text-muted-foreground"
             >
               Cancelar
             </Button>
             <Button 
               type="submit" 
               disabled={isPending}
-              className="rounded-xl bg-[#4361ee] hover:bg-[#3b55d9] text-white shadow-md shadow-blue-500/20"
+              className="rounded-xl bg-primary hover:bg-[#3b55d9] text-primary-foreground shadow-md shadow-primary/20"
             >
               {isPending ? "Guardando..." : service ? "Guardar Cambios" : "Añadir Servicio"}
             </Button>

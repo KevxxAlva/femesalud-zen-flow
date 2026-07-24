@@ -105,39 +105,39 @@ function DoctoresAdmin() {
   };
 
   return (
-    <div className="bg-white rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
+    <div className="bg-card rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
       {/* TOP HEADER */}
       <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <button className="text-[#a3aed1] hover:text-[#2b3674]"><ChevronLeft className="h-5 w-5" /></button>
-          <h1 className="text-xl font-bold text-[#2b3674]">Personal</h1>
+          <button className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></button>
+          <h1 className="text-xl font-bold text-foreground">Personal</h1>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
-          <div className="flex items-center gap-2 rounded-full bg-gray-50 border border-gray-100 px-4 py-2.5 w-full">
-            <Search className="h-4 w-4 text-[#a3aed1]" />
+          <div className="flex items-center gap-2 rounded-full bg-muted border border-gray-100 px-4 py-2.5 w-full">
+            <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar personal..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-[#a3aed1] text-[#2b3674]"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
             />
-            {q && <button onClick={() => setQ("")} className="text-[#a3aed1] hover:text-[#2b3674]"><X className="h-4 w-4" /></button>}
+            {q && <button onClick={() => setQ("")} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
           </div>
         </div>
         <div className="flex items-center gap-4 hidden md:flex">
-          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
             <Plus className="h-3.5 w-3.5" /> Añadir Personal
           </button>
         </div>
       </header>
 
       {/* SECONDARY TOOLBAR */}
-      <div className="flex flex-wrap items-center justify-between mb-4 border-b border-[#f0f2f5] pb-4 mt-2">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#a3aed1]">
+      <div className="flex flex-wrap items-center justify-between mb-4 border-b border-border/40 pb-4 mt-2">
+        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
           <Users className="h-4 w-4" /> {filtered.length} miembros
         </div>
         <div className="flex items-center gap-3 md:hidden">
-          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+          <button onClick={() => setOpenCreate(true)} className="flex items-center gap-2 bg-black text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
             <Plus className="h-3.5 w-3.5" /> Añadir Personal
           </button>
         </div>
@@ -147,7 +147,7 @@ function DoctoresAdmin() {
       <div className="flex-1 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#f8f9fb] text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">
+            <tr className="bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <th className="p-4 w-12 rounded-tl-xl"><input type="checkbox" className="rounded border-gray-300" /></th>
               <th className="p-4">Nombre <span className="ml-1">↕</span></th>
               <th className="p-4">Correo <span className="ml-1">↕</span></th>
@@ -158,29 +158,29 @@ function DoctoresAdmin() {
           </thead>
           <tbody className="text-sm">
             {isLoading ? (
-              <tr><td colSpan={6} className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#a3aed1]" /></td></tr>
+              <tr><td colSpan={6} className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></td></tr>
             ) : paginated.length === 0 ? (
-              <tr><td colSpan={6} className="p-12 text-center text-[#a3aed1] font-medium">No se encontró personal.</td></tr>
+              <tr><td colSpan={6} className="p-12 text-center text-muted-foreground font-medium">No se encontró personal.</td></tr>
             ) : (
               paginated.map((p) => {
                 const isAdmin = p.roles.includes("admin");
                 const isDoctor = p.roles.includes("doctor");
                 const isMe = p.id === me?.id;
                 return (
-                  <tr key={p.id} className="border-b border-[#f0f2f5] hover:bg-gray-50/50 transition group">
+                  <tr key={p.id} className="border-b border-border/40 hover:bg-muted/50 transition group">
                     <td className="p-4"><input type="checkbox" className="rounded border-gray-300" /></td>
                     <td className="p-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-[#2b3674] text-[10px] font-bold">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-foreground text-[10px] font-bold">
                           {initials(p.full_name || p.email)}
                         </div>
-                        <span className="font-bold text-[#2b3674]">{p.full_name || "—"} {isMe && <span className="text-[10px] text-gray-400 font-normal ml-1">(tú)</span>}</span>
+                        <span className="font-bold text-foreground">{p.full_name || "—"} {isMe && <span className="text-[10px] text-gray-400 font-normal ml-1">(tú)</span>}</span>
                       </div>
                     </td>
-                    <td className="p-4 text-[#a3aed1] font-medium">
+                    <td className="p-4 text-muted-foreground font-medium">
                       {p.email}
                     </td>
-                    <td className="p-4 text-[#2b3674] font-bold text-xs">
+                    <td className="p-4 text-foreground font-bold text-xs">
                       {p.specialty || "—"}
                     </td>
                     <td className="p-4">
@@ -193,11 +193,11 @@ function DoctoresAdmin() {
                             {r === "admin" ? <Shield className="h-2.5 w-2.5" /> : <Stethoscope className="h-2.5 w-2.5" />} {r}
                           </span>
                         ))}
-                        {p.roles.length === 0 && <span className="text-[9px] bg-gray-50 text-gray-400 px-2 py-1 rounded-full border border-gray-100">Ninguno</span>}
+                        {p.roles.length === 0 && <span className="text-[9px] bg-muted text-gray-400 px-2 py-1 rounded-full border border-gray-100">Ninguno</span>}
                       </div>
                     </td>
                     <td className="p-4">
-                      <div className="flex items-center gap-3 text-[#a3aed1]">
+                      <div className="flex items-center gap-3 text-muted-foreground">
                         <button
                           onClick={() => handleToggleAdmin(p)}
                           disabled={isMe || toggle.isPending}
@@ -219,7 +219,7 @@ function DoctoresAdmin() {
                         <button 
                           onClick={() => setToDelete(p)} 
                           disabled={isMe}
-                          className="hover:text-red-500 disabled:opacity-30"
+                          className="hover:text-destructive disabled:opacity-30"
                           title="Eliminar Usuario"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -235,13 +235,13 @@ function DoctoresAdmin() {
       </div>
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#f0f2f5]">
-          <p className="text-xs text-[#a3aed1] font-medium">
-            Mostrando <span className="font-bold text-[#2b3674]">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(filtered.length, currentPage * itemsPerPage)}</span> de <span className="font-bold text-[#2b3674]">{filtered.length}</span> miembros
+        <div className="mt-4 flex items-center justify-between pt-4 border-t border-border/40">
+          <p className="text-xs text-muted-foreground font-medium">
+            Mostrando <span className="font-bold text-foreground">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(filtered.length, currentPage * itemsPerPage)}</span> de <span className="font-bold text-foreground">{filtered.length}</span> miembros
           </p>
           <div className="flex gap-1">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-border/40 text-muted-foreground hover:bg-muted disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-border/40 text-muted-foreground hover:bg-muted disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       )}

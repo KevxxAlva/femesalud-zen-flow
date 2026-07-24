@@ -128,13 +128,13 @@ export function useMonthlyPayments() {
 
       const { data, error } = await supabase
         .from("facturas")
-        .select("total, estado_pago")
+        .select("total_general, estado_pago")
         .gte("fecha_emision", startOfMonth.toISOString());
         
       if (error) throw error;
       
       const paidInvoices = (data || []).filter(i => i.estado_pago === "pagado" || i.estado_pago === "Paid");
-      const total = paidInvoices.reduce((sum, f) => sum + (Number(f.total) || 0), 0);
+      const total = paidInvoices.reduce((sum, f) => sum + (Number(f.total_general) || 0), 0);
       return total;
     }
   });

@@ -111,57 +111,57 @@ export function PatientsPage() {
   };
 
   return (
-    <div className="bg-white rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
+    <div className="bg-card rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
       {/* TOP HEADER */}
       <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
-          <button className="text-[#a3aed1] hover:text-[#2b3674]"><ChevronLeft className="h-5 w-5" /></button>
-          <h1 className="text-xl font-bold text-[#2b3674]">Pacientes</h1>
+          <button className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></button>
+          <h1 className="text-xl font-bold text-foreground">Pacientes</h1>
         </div>
         <div className="flex-1 max-w-xl mx-auto">
-          <div className="flex items-center gap-2 rounded-full bg-gray-50 border border-gray-100 px-4 py-2.5 w-full">
-            <Search className="h-4 w-4 text-[#a3aed1]" />
+          <div className="flex items-center gap-2 rounded-full bg-muted border border-gray-100 px-4 py-2.5 w-full">
+            <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Buscar paciente..."
-              className="w-full bg-transparent text-sm outline-none placeholder:text-[#a3aed1] text-[#2b3674]"
+              className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground text-foreground"
             />
-            {q && <button onClick={() => setQ("")} className="text-[#a3aed1] hover:text-[#2b3674]"><X className="h-4 w-4" /></button>}
+            {q && <button onClick={() => setQ("")} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>}
           </div>
         </div>
         <div className="flex items-center gap-4 hidden md:flex">
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-2 ml-2">
-              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${myProfile?.full_name}`} className="h-8 w-8 rounded-full bg-blue-50" />
+              <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${myProfile?.full_name}`} className="h-8 w-8 rounded-full bg-primary/10" />
               <div className="hidden lg:block">
-                <p className="text-xs font-bold text-[#2b3674]">{myProfile?.full_name}</p>
-                <p className="text-[10px] text-[#a3aed1]">{myProfile?.roles?.[0] === "admin" ? "Super admin" : "Doctor"}</p>
+                <p className="text-xs font-bold text-foreground">{myProfile?.full_name}</p>
+                <p className="text-[10px] text-muted-foreground">{myProfile?.roles?.[0] === "admin" ? "Super admin" : "Doctor"}</p>
               </div>
-              <ChevronDown className="h-4 w-4 text-[#a3aed1]" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </div>
           </div>
         </div>
       </header>
 
       {/* SECONDARY TOOLBAR / TABS */}
-      <div className="flex flex-wrap items-center justify-between border-b border-[#f0f2f5] pb-0 mb-6">
+      <div className="flex flex-wrap items-center justify-between border-b border-border/40 pb-0 mb-6">
         <div className="flex gap-6">
-          <button onClick={() => setStatus("Todos")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "Todos" ? "border-black text-black" : "border-transparent text-[#a3aed1] hover:text-[#2b3674]")}>Todos</button>
-          <button onClick={() => setStatus("activo")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "activo" ? "border-black text-black" : "border-transparent text-[#a3aed1] hover:text-[#2b3674]")}>Activos</button>
-          <button onClick={() => setStatus("alta")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "alta" ? "border-black text-black" : "border-transparent text-[#a3aed1] hover:text-[#2b3674]")}>De Alta</button>
+          <button onClick={() => setStatus("Todos")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "Todos" ? "border-black text-black" : "border-transparent text-muted-foreground hover:text-foreground")}>Todos</button>
+          <button onClick={() => setStatus("activo")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "activo" ? "border-black text-black" : "border-transparent text-muted-foreground hover:text-foreground")}>Activos</button>
+          <button onClick={() => setStatus("alta")} className={cn("pb-3 text-sm font-bold border-b-2 transition-colors", status === "alta" ? "border-black text-black" : "border-transparent text-muted-foreground hover:text-foreground")}>De Alta</button>
         </div>
       </div>
 
       <div className="flex flex-wrap items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-sm font-bold text-[#a3aed1]">
+        <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
           <Users className="h-4 w-4" /> {totalCount} pacientes
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl hover:bg-gray-50">
+          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted">
             <Filter className="h-3.5 w-3.5" /> Filtros
           </button>
-          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="flex items-center gap-2 bg-black text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
             <Plus className="h-3.5 w-3.5" /> Añadir Paciente
           </button>
         </div>
@@ -171,7 +171,7 @@ export function PatientsPage() {
       <div className="flex-1 overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#f8f9fb] text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">
+            <tr className="bg-muted text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
               <th className="p-4 w-12 rounded-tl-xl"><input type="checkbox" className="rounded border-gray-300" /></th>
               <th className="p-4">Nombre del Paciente <span className="ml-1">↕</span></th>
               <th className="p-4">ID / DNI <span className="ml-1">↕</span></th>
@@ -183,38 +183,38 @@ export function PatientsPage() {
           </thead>
           <tbody className="text-sm">
             {isLoading ? (
-              <tr><td colSpan={7} className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-[#a3aed1]" /></td></tr>
+              <tr><td colSpan={7} className="p-12 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-muted-foreground" /></td></tr>
             ) : patients.length === 0 ? (
-              <tr><td colSpan={7} className="p-12 text-center text-[#a3aed1] font-medium">No se encontraron pacientes.</td></tr>
+              <tr><td colSpan={7} className="p-12 text-center text-muted-foreground font-medium">No se encontraron pacientes.</td></tr>
             ) : (
               paginatedPatients.map((p) => (
-                <tr key={p.id} className="border-b border-[#f0f2f5] hover:bg-gray-50/50 transition group">
+                <tr key={p.id} className="border-b border-border/40 hover:bg-muted/50 transition group">
                   <td className="p-4"><input type="checkbox" className="rounded border-gray-300" /></td>
-                  <td className="p-4 font-bold text-[#2b3674] flex items-center gap-2">
+                  <td className="p-4 font-bold text-foreground flex items-center gap-2">
                     {p.full_name}
-                    {p.status === "nuevo" && <span className="bg-gray-100 text-gray-500 text-[9px] px-1.5 py-0.5 rounded-md uppercase">Nuevo</span>}
+                    {p.status === "nuevo" && <span className="bg-muted text-muted-foreground text-[9px] px-1.5 py-0.5 rounded-md uppercase">Nuevo</span>}
                   </td>
-                  <td className="p-4 text-[#a3aed1] font-medium">DNI {p.document_id || "—"}</td>
+                  <td className="p-4 text-muted-foreground font-medium">DNI {p.document_id || "—"}</td>
                   <td className="p-4">
-                    <p className="text-[#2b3674] font-bold text-xs flex items-center gap-1"><Phone className="h-3 w-3 text-[#a3aed1]"/> {p.phone || "—"}</p>
+                    <p className="text-foreground font-bold text-xs flex items-center gap-1"><Phone className="h-3 w-3 text-muted-foreground"/> {p.phone || "—"}</p>
                   </td>
                   <td className="p-4">
-                    <span className="bg-blue-50 text-blue-500 border border-blue-100 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
+                    <span className="bg-primary/10 text-primary border border-blue-100 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
                       {p.birth_date ? `${new Date().getFullYear() - new Date(p.birth_date).getFullYear()} AÑOS` : "DESCONOCIDO"}
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-1.5 text-[#2b3674] font-bold text-xs">
-                      <span className={cn("h-2 w-2 rounded-full", p.status === "activo" ? "bg-green-500" : p.status === "nuevo" ? "bg-blue-500" : p.status === "alta" ? "bg-gray-400" : "bg-purple-500")}></span>
+                    <div className="flex items-center gap-1.5 text-foreground font-bold text-xs">
+                      <span className={cn("h-2 w-2 rounded-full", p.status === "activo" ? "bg-green-500" : p.status === "nuevo" ? "bg-primary/100" : p.status === "alta" ? "bg-gray-400" : "bg-purple-500")}></span>
                       {statusLabel(p.status)}
                     </div>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-3 text-[#a3aed1]">
-                      <Link to={`/pacientes/${p.id}`} className="hover:text-[#4361ee] font-bold text-xs tracking-wide uppercase">Ver</Link>
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <Link to={`/pacientes/${p.id}`} className="hover:text-primary font-bold text-xs tracking-wide uppercase">Ver</Link>
                       <div className="h-3 w-px bg-gray-200"></div>
-                      <button onClick={() => { setEditing(p); setFormOpen(true); }} className="hover:text-[#2b3674]"><Pencil className="h-4 w-4" /></button>
-                      <button onClick={() => setToDelete(p)} className="hover:text-red-500"><Trash2 className="h-4 w-4" /></button>
+                      <button onClick={() => { setEditing(p); setFormOpen(true); }} className="hover:text-foreground"><Pencil className="h-4 w-4" /></button>
+                      <button onClick={() => setToDelete(p)} className="hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   </td>
                 </tr>
@@ -225,13 +225,13 @@ export function PatientsPage() {
       </div>
 
       {totalPages > 1 && (
-        <div className="mt-4 flex items-center justify-between pt-4 border-t border-[#f0f2f5]">
-          <p className="text-xs text-[#a3aed1] font-medium">
-            Mostrando <span className="font-bold text-[#2b3674]">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(totalCount, currentPage * itemsPerPage)}</span> de <span className="font-bold text-[#2b3674]">{totalCount}</span> pacientes
+        <div className="mt-4 flex items-center justify-between pt-4 border-t border-border/40">
+          <p className="text-xs text-muted-foreground font-medium">
+            Mostrando <span className="font-bold text-foreground">{(currentPage - 1) * itemsPerPage + 1} - {Math.min(totalCount, currentPage * itemsPerPage)}</span> de <span className="font-bold text-foreground">{totalCount}</span> pacientes
           </p>
           <div className="flex gap-1">
-            <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
-            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-[#f0f2f5] text-[#a3aed1] hover:bg-gray-50 disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
+            <button disabled={currentPage === 1} onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-border/40 text-muted-foreground hover:bg-muted disabled:opacity-50"><ChevronLeft className="h-4 w-4" /></button>
+            <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))} className="h-8 w-8 flex items-center justify-center rounded-lg border border-border/40 text-muted-foreground hover:bg-muted disabled:opacity-50"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       )}

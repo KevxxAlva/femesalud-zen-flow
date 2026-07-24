@@ -29,8 +29,8 @@ export const Route = createFileRoute('/_authenticated/pacientes/$patientId')({
 
 const tagBg: Record<string, string> = {
   "activo": "bg-green-100 text-green-700",
-  "nuevo": "bg-blue-100 text-blue-700",
-  "alta": "bg-gray-100 text-gray-700",
+  "nuevo": "bg-blue-100 text-primary",
+  "alta": "bg-muted text-gray-700",
   "reposo": "bg-purple-100 text-purple-700",
 };
 
@@ -146,7 +146,7 @@ function PatientDetailRoute() {
   return (
     <div className="flex h-screen bg-muted/20 overflow-hidden">
       <AppSidebar />
-      <div className="flex-1 flex flex-col min-h-0 bg-white m-2 rounded-[2rem] shadow-sm border border-border/40 overflow-y-auto">
+      <div className="flex-1 flex flex-col min-h-0 bg-card m-2 rounded-[2rem] shadow-sm border border-border/40 overflow-y-auto">
         
         <div className="p-6 md:p-8 max-w-6xl mx-auto w-full">
           <div className="flex items-center gap-4 mb-6">
@@ -156,7 +156,7 @@ function PatientDetailRoute() {
               </Button>
             </Link>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[#2b3674]">Detalle de Historia Clínica</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">Detalle de Historia Clínica</h1>
               <p className="text-sm text-muted-foreground mt-0.5">
                 Visualización de datos generales, antecedentes y registro de consultas.
               </p>
@@ -189,7 +189,7 @@ function PatientDetailRoute() {
               {getInitials(viewing.full_name)}
             </div>
             <div>
-              <p className="text-lg font-bold text-[#2b3674]">{viewing.full_name}</p>
+              <p className="text-lg font-bold text-foreground">{viewing.full_name}</p>
               <div className="flex items-center gap-2 mt-1.5">
                 <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-semibold", tagBg[viewing.status] || "bg-muted")}>{statusLabel(viewing.status)}</span>
                 {viewing.historia_number && (
@@ -218,78 +218,78 @@ function PatientDetailRoute() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Nombre Completo</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.full_name}</span>
+                    <span className="font-semibold text-foreground">{viewing.full_name}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Cédula / Identificación</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.document_id || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.document_id || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Fecha de Nacimiento</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.birth_date || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.birth_date || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Edad</span>
-                    <span className="font-semibold text-[#2b3674]">
+                    <span className="font-semibold text-foreground">
                       {viewing.birth_date ? `${new Date().getFullYear() - new Date(viewing.birth_date).getFullYear()} años` : "—"}
                     </span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Teléfono</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.phone || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.phone || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Correo Electrónico</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.email || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.email || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Lugar de Nacimiento</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.birthplace || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.birthplace || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Estado Civil</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.marital_status || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.marital_status || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Grado de Instrucción</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.education_level || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.education_level || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Ocupación</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.occupation || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.occupation || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Etnia</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.ethnicity || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.ethnicity || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Fecha Primera Cita</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.first_visit_date || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.first_visit_date || "—"}</span>
                   </div>
                   <div className="col-span-1 md:col-span-2 lg:col-span-3">
                     <span className="text-xs text-muted-foreground block mb-1">Dirección</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.address || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.address || "—"}</span>
                   </div>
                   <div className="col-span-1 md:col-span-2 lg:col-span-3">
                     <span className="text-xs text-muted-foreground block mb-1">Médico Asignado</span>
-                    <span className="font-semibold text-[#2b3674]">{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</span>
+                    <span className="font-semibold text-foreground">{doctorMap.get(viewing.assigned_doctor_id ?? "") || "Sin asignar"}</span>
                   </div>
                   {viewing.consultation_reason && (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-muted/30 p-4 rounded-2xl">
                       <span className="text-xs text-muted-foreground block mb-2">Motivo de Consulta</span>
-                      <span className="font-medium text-sm text-[#2b3674] whitespace-pre-wrap">{viewing.consultation_reason}</span>
+                      <span className="font-medium text-sm text-foreground whitespace-pre-wrap">{viewing.consultation_reason}</span>
                     </div>
                   )}
                   {viewing.current_illness && (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3 bg-muted/30 p-4 rounded-2xl">
                       <span className="text-xs text-muted-foreground block mb-2">Enfermedad Actual</span>
-                      <span className="font-medium text-sm text-[#2b3674] whitespace-pre-wrap">{viewing.current_illness}</span>
+                      <span className="font-medium text-sm text-foreground whitespace-pre-wrap">{viewing.current_illness}</span>
                     </div>
                   )}
                   {viewing.notes && (
                     <div className="col-span-1 md:col-span-2 lg:col-span-3">
                       <span className="text-xs text-muted-foreground block mb-2">Notas generales</span>
-                      <span className="font-medium text-sm text-[#2b3674] whitespace-pre-wrap">{viewing.notes}</span>
+                      <span className="font-medium text-sm text-foreground whitespace-pre-wrap">{viewing.notes}</span>
                     </div>
                   )}
                 </div>
@@ -302,19 +302,19 @@ function PatientDetailRoute() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-muted/20 border border-border/40 p-5 rounded-3xl">
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Madre</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.family_history?.mother || "Niega / Sano"}</span>
+                      <span className="font-semibold text-foreground">{viewing.family_history?.mother || "Niega / Sano"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Padre</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.family_history?.father || "Niega / Sano"}</span>
+                      <span className="font-semibold text-foreground">{viewing.family_history?.father || "Niega / Sano"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Hermanos</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.family_history?.siblings || "Niega / Sano"}</span>
+                      <span className="font-semibold text-foreground">{viewing.family_history?.siblings || "Niega / Sano"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Hijos</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.family_history?.children || "Niega / Sano"}</span>
+                      <span className="font-semibold text-foreground">{viewing.family_history?.children || "Niega / Sano"}</span>
                     </div>
                   </div>
                 </div>
@@ -324,23 +324,23 @@ function PatientDetailRoute() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm bg-muted/20 border border-border/40 p-5 rounded-3xl">
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Tabaco</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.personal_history?.tobacco || "NIEGA"}</span>
+                      <span className="font-semibold text-foreground">{viewing.personal_history?.tobacco || "NIEGA"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Alcohol</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.personal_history?.alcohol || "NIEGA"}</span>
+                      <span className="font-semibold text-foreground">{viewing.personal_history?.alcohol || "NIEGA"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Drogas</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.personal_history?.drugs || "NIEGA"}</span>
+                      <span className="font-semibold text-foreground">{viewing.personal_history?.drugs || "NIEGA"}</span>
                     </div>
                     <div>
                       <span className="text-xs text-muted-foreground block mb-1">Patología de Base</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.personal_history?.base_pathology || "Niega"}</span>
+                      <span className="font-semibold text-foreground">{viewing.personal_history?.base_pathology || "Niega"}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-xs text-muted-foreground block mb-1">Quirúrgicos / Operaciones</span>
-                      <span className="font-semibold text-[#2b3674]">{viewing.personal_history?.surgical || "Niega"}</span>
+                      <span className="font-semibold text-foreground">{viewing.personal_history?.surgical || "Niega"}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-xs text-muted-foreground block mb-1">Alérgicos</span>
@@ -355,35 +355,35 @@ function PatientDetailRoute() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm bg-muted/20 border border-border/40 p-6 rounded-3xl">
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Menarquía (Edad primera menstruación)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.menarche || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.menarche || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Sexarquía (Edad inicio relaciones sexuales)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.sexarche || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.sexarche || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Ciclo Menstrual</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.menstrual_cycle || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.menstrual_cycle || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Dismenorrea (Menstruación dolorosa)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.dysmenorrhea || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.dysmenorrhea || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">NPS (Número parejas sexuales)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.nps || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.nps || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">ITS (Infecciones de Transmisión Sexual)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.its || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.its || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Última Citología</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.cytology || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.cytology || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Anticonceptivos</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.gynecological_data?.contraceptives || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.gynecological_data?.contraceptives || "—"}</span>
                   </div>
                 </div>
               </TabsContent>
@@ -412,27 +412,27 @@ function PatientDetailRoute() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-6 text-sm bg-muted/20 border border-border/40 p-6 rounded-3xl">
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">PIG (Período Intergenésico)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.pig || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.pig || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Embarazos Múltiples</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.em ?? "0"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.em ?? "0"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Embarazos Ectópicos</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.ee ?? "0"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.ee ?? "0"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Complicaciones Obstétricas</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.complications || "Ninguna"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.complications || "Ninguna"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">FUM (Fecha Última Menstruación)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.fum || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.fum || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">EG (Edad Gestacional)</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.eg || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.eg || "—"}</span>
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">FPP (Fecha Probable de Parto)</span>
@@ -440,11 +440,11 @@ function PatientDetailRoute() {
                   </div>
                   <div>
                     <span className="text-xs text-muted-foreground block mb-1">Número de Consultas Control</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.num_consultations || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.num_consultations || "—"}</span>
                   </div>
                   <div className="col-span-2">
                     <span className="text-xs text-muted-foreground block mb-1">Vacunas</span>
-                    <span className="font-semibold text-[#2b3674]">{viewing.obstetric_data?.vaccines || "—"}</span>
+                    <span className="font-semibold text-foreground">{viewing.obstetric_data?.vaccines || "—"}</span>
                   </div>
                 </div>
               </TabsContent>

@@ -160,7 +160,7 @@ export function FacturacionPage() {
   const handleEditOpen = (app: AppointmentWithPatient, forceConfirm = false) => {
     setSelectedApp(app);
     setNewPrice(String(app.price || 0));
-    setNewStatus(app.status);
+    setNewStatus(forceConfirm ? "completada" : app.status);
     setNewPaymentMethod(app.payment_method || "");
     setNewPaymentReference(app.payment_reference || "");
     setIsConfirmMode(forceConfirm || (app.status === "completada" && !app.payment_method));
@@ -174,8 +174,8 @@ export function FacturacionPage() {
         id: selectedApp.id,
         price: Number(newPrice),
         status: newStatus,
-        payment_method: newStatus === "completada" ? (newPaymentMethod || null) : null,
-        payment_reference: newStatus === "completada" ? (newPaymentReference || null) : null,
+        payment_method: newPaymentMethod || null,
+        payment_reference: newPaymentReference || null,
       });
       toast.success("Facturación actualizada");
       setEditOpen(false);
@@ -606,7 +606,7 @@ export function FacturacionPage() {
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        {a.status === "completada" && !a.payment_method ? (
+                        {!a.payment_method ? (
                           <Button
                             variant="outline"
                             size="sm"

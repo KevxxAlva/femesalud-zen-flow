@@ -509,7 +509,7 @@ export function HistoriasPage() {
                                     <span className={cn(
                                       "px-2 py-0.5 rounded text-[10px] font-semibold shrink-0 uppercase",
                                       c.visit_type === "EMERGENCIA" ? "bg-destructive/15 text-destructive" :
-                                      c.visit_type === "CONSULTA_NUEVA" ? "bg-blue-50 text-blue-700 border border-blue-100" :
+                                      c.visit_type === "CONSULTA_NUEVA" ? "bg-primary/10 text-primary border border-blue-100" :
                                       "bg-sage/20 text-sage-foreground"
                                     )}>
                                       {c.visit_type}

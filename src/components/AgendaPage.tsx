@@ -130,7 +130,7 @@ export function AgendaPage() {
       if (app.status?.toLowerCase() === 'completada') {
         theme = { bg: "bg-green-50", border: "border-green-400", text: "text-green-700" };
       } else {
-        theme = { bg: "bg-blue-50", border: "border-blue-300", text: "text-[#4361ee]" };
+        theme = { bg: "bg-primary/10", border: "border-blue-300", text: "text-primary" };
       }
       
       return {
@@ -160,14 +160,14 @@ export function AgendaPage() {
 
   return (
     <>
-      <div className="bg-white rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans text-[#2b3674] flex flex-col">
+      <div className="bg-card rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans text-foreground flex flex-col">
         
         {/* HEADER */}
         <header className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-[#4361ee] tracking-tight">Agenda</h1>
+          <h1 className="text-primaryxl font-bold text-primary tracking-tight">Agenda</h1>
           <button 
             onClick={() => { setDefaultFormDate(formatToYMD(new Date())); setEditingApp(null); setFormOpen(true); }}
-            className="flex items-center gap-2 bg-[#4361ee] text-white px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-[#3451d6] transition-colors"
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-[#3451d6] transition-colors"
           >
             <Plus className="h-4 w-4" strokeWidth={3} /> Nueva Cita
           </button>
@@ -178,22 +178,22 @@ export function AgendaPage() {
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none">
-                  <Filter className="h-4 w-4 text-[#a3aed1]" /> Filtro
-                  {statusFilter !== "todas" && <span className="bg-[#4361ee] w-2 h-2 rounded-full absolute top-1 right-1"></span>}
+                <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted focus:outline-none">
+                  <Filter className="h-4 w-4 text-muted-foreground" /> Filtro
+                  {statusFilter !== "todas" && <span className="bg-primary w-2 h-2 rounded-full absolute top-1 right-1"></span>}
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-48 rounded-xl">
                 <DropdownMenuItem onClick={() => setStatusFilter("todas")} className="text-xs font-bold cursor-pointer">Todas (Activas)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("programada")} className="text-xs font-bold cursor-pointer">Solo Programadas</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("completada")} className="text-xs font-bold cursor-pointer">Solo Completadas</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("cancelada")} className="text-xs font-bold cursor-pointer text-red-500 hover:text-red-600 focus:text-red-600">Ver Canceladas</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("cancelada")} className="text-xs font-bold cursor-pointer text-destructive hover:text-destructive focus:text-destructive">Ver Canceladas</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none">
-                  <Clock className="h-4 w-4 text-[#a3aed1]" /> {calendarView} <span className="ml-1 text-[10px] text-[#a3aed1]">▼</span>
+                <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted focus:outline-none">
+                  <Clock className="h-4 w-4 text-muted-foreground" /> {calendarView} <span className="ml-1 text-[10px] text-muted-foreground">▼</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-40 rounded-xl">
@@ -202,8 +202,8 @@ export function AgendaPage() {
                 <DropdownMenuItem onClick={() => setCalendarView("Diaria")} className="text-xs font-bold cursor-pointer">Diaria</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50">
-              <Download className="h-4 w-4 text-[#a3aed1]" /> Descargar Datos
+            <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted">
+              <Download className="h-4 w-4 text-muted-foreground" /> Descargar Datos
             </button>
           </div>
           <div className="flex items-center gap-3">
@@ -219,23 +219,23 @@ export function AgendaPage() {
                     placeholder="Buscar paciente..."
                     className="w-full h-9 pl-9 pr-3 text-xs border border-[#4361ee] rounded-full focus:outline-none focus:ring-1 focus:ring-[#4361ee]"
                   />
-                  <Search className="h-4 w-4 text-[#4361ee] absolute left-3 top-2.5" />
+                  <Search className="h-4 w-4 text-primary absolute left-3 top-2.5" />
                 </div>
               ) : (
-                <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 shrink-0 flex items-center justify-center border border-[#f0f2f5] rounded-full text-[#a3aed1] hover:bg-gray-50 focus:outline-none">
+                <button onClick={() => setIsSearchOpen(true)} className="h-9 w-9 shrink-0 flex items-center justify-center border border-border/40 rounded-full text-muted-foreground hover:bg-muted focus:outline-none">
                   <Search className="h-4 w-4" />
                 </button>
               )}
             </div>
             <Link to="/support">
-              <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50">
-                <LifeBuoy className="h-4 w-4 text-[#a3aed1]" /> Soporte
+              <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted">
+                <LifeBuoy className="h-4 w-4 text-muted-foreground" /> Soporte
               </button>
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-xs font-bold text-[#2b3674] border border-[#f0f2f5] rounded-xl px-4 py-2 hover:bg-gray-50 focus:outline-none focus:ring-0">
-                  <Grid className="h-4 w-4 text-[#a3aed1]" /> Diseño
+                <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted focus:outline-none focus:ring-0">
+                  <Grid className="h-4 w-4 text-muted-foreground" /> Diseño
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 rounded-xl">
@@ -257,12 +257,12 @@ export function AgendaPage() {
             {/* Appointment Calendar */}
             <div>
               <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold text-sm tracking-wide text-[#2b3674]">Calendario de Citas</h2>
+                <h2 className="font-bold text-sm tracking-wide text-foreground">Calendario de Citas</h2>
                 <div className="flex gap-1">
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-6 w-6 flex items-center justify-center bg-[#4361ee] text-white rounded-full hover:opacity-90">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))} className="h-6 w-6 flex items-center justify-center bg-primary text-primary-foreground rounded-full hover:opacity-90">
                     <ChevronLeft className="h-3 w-3" />
                   </button>
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-6 w-6 flex items-center justify-center bg-gray-100 text-gray-400 rounded-full hover:bg-gray-200">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))} className="h-6 w-6 flex items-center justify-center bg-muted text-gray-400 rounded-full hover:bg-gray-200">
                     <ChevronRight className="h-3 w-3" />
                   </button>
                 </div>
@@ -270,7 +270,7 @@ export function AgendaPage() {
 
               <div className="grid grid-cols-7 text-center gap-y-3 gap-x-1">
                 {WEEKDAYS_SHORT.map(d => (
-                  <div key={d} className="text-[10px] font-bold text-[#a3aed1]">{d}</div>
+                  <div key={d} className="text-[10px] font-bold text-muted-foreground">{d}</div>
                 ))}
                 {monthDays.map((d, i) => {
                   const isCurrentMonth = d.getMonth() === currentDate.getMonth();
@@ -282,8 +282,8 @@ export function AgendaPage() {
                       className={cn(
                         "h-8 w-8 mx-auto flex items-center justify-center text-xs font-bold rounded-full cursor-pointer transition-colors",
                         !isCurrentMonth && "text-gray-300",
-                        isCurrentMonth && !isSelected && "text-[#2b3674] hover:bg-gray-100",
-                        isSelected && "bg-[#4361ee] text-white shadow-md"
+                        isCurrentMonth && !isSelected && "text-foreground hover:bg-muted",
+                        isSelected && "bg-primary text-primary-foreground shadow-md"
                       )}
                     >
                       {d.getDate()}
@@ -293,18 +293,18 @@ export function AgendaPage() {
               </div>
             </div>
 
-            <hr className="border-[#f0f2f5]" />
+            <hr className="border-border/40" />
 
             {/* Doctor Appointment List */}
             <div className="flex-1 flex flex-col">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="font-bold text-sm tracking-wide text-[#2b3674]">Lista de Citas Médicas</h2>
-                <button className="text-[#a3aed1] border border-[#f0f2f5] p-1 rounded-lg"><MoreHorizontal className="h-4 w-4" /></button>
+                <h2 className="font-bold text-sm tracking-wide text-foreground">Lista de Citas Médicas</h2>
+                <button className="text-muted-foreground border border-border/40 p-1 rounded-lg"><MoreHorizontal className="h-4 w-4" /></button>
               </div>
 
               <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] pr-2">
                 {gridEvents.length === 0 ? (
-                  <div className="text-center text-xs text-[#a3aed1] mt-10">No hay citas en este rango de fechas.</div>
+                  <div className="text-center text-xs text-muted-foreground mt-10">No hay citas en este rango de fechas.</div>
                 ) : (
                   gridEvents.slice(0, 10).map((app) => {
                     const safeIso = app.scheduled_at.replace(" ", "T");
@@ -312,17 +312,17 @@ export function AgendaPage() {
                     const end = new Date(d.getTime() + (app.duration_minutes || 60) * 60000);
                     const pad = (n: number) => String(n).padStart(2, '0');
                     return (
-                      <div key={app.id} onClick={() => { setEditingApp(app); setFormOpen(true); }} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-[#f4f7fe] rounded-xl transition">
+                      <div key={app.id} onClick={() => { setEditingApp(app); setFormOpen(true); }} className="flex items-center justify-between group cursor-pointer p-2 hover:bg-muted/50 rounded-xl transition">
                         <div className="flex items-center gap-3">
-                          <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${app.patient_name}`} alt={app.patient_name} className="h-10 w-10 rounded-full bg-blue-50 border-2 border-white shadow-sm" />
+                          <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${app.patient_name}`} alt={app.patient_name} className="h-10 w-10 rounded-full bg-primary/10 border-2 border-white shadow-sm" />
                           <div className="overflow-hidden max-w-[120px]">
-                            <p className="text-xs font-bold text-[#2b3674] group-hover:text-[#4361ee] transition truncate">{app.patient_name}</p>
-                            <p className="text-[10px] font-medium text-[#a3aed1] uppercase tracking-wider truncate">{app.reason || "Cita"}</p>
+                            <p className="text-xs font-bold text-foreground group-hover:text-primary transition truncate">{app.patient_name}</p>
+                            <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider truncate">{app.reason || "Cita"}</p>
                           </div>
                         </div>
                         <div className="text-right shrink-0">
-                          <Clock className="h-3 w-3 text-[#a3aed1] ml-auto mb-0.5" />
-                          <p className="text-[10px] font-bold text-[#2b3674]">{pad(d.getHours())}:{pad(d.getMinutes())} - {pad(end.getHours())}:{pad(end.getMinutes())}</p>
+                          <Clock className="h-3 w-3 text-muted-foreground ml-auto mb-0.5" />
+                          <p className="text-[10px] font-bold text-foreground">{pad(d.getHours())}:{pad(d.getMinutes())} - {pad(end.getHours())}:{pad(end.getMinutes())}</p>
                         </div>
                       </div>
                     );
@@ -330,47 +330,47 @@ export function AgendaPage() {
                 )}
               </div>
 
-              <button className="mt-4 w-full bg-[#4361ee] text-white text-xs font-bold py-3 rounded-2xl hover:bg-[#3451d6] transition shadow-md shadow-blue-500/20">
+              <button className="mt-4 w-full bg-primary text-primary-foreground text-xs font-bold py-3 rounded-2xl hover:bg-[#3451d6] transition shadow-md shadow-primary/20">
                 Ver Todo
               </button>
             </div>
           </aside>
 
           {/* MAIN WEEK GRID */}
-          <section className="flex-1 border border-[#f0f2f5] rounded-3xl flex flex-col overflow-hidden shadow-sm relative">
+          <section className="flex-1 border border-border/40 rounded-3xl flex flex-col overflow-hidden shadow-sm relative">
             
             {/* Grid Toolbar */}
-            <div className="flex flex-wrap items-center justify-between p-4 border-b border-[#f0f2f5] bg-white z-20 relative">
+            <div className="flex flex-wrap items-center justify-between p-4 border-b border-border/40 bg-card z-20 relative">
               <div className="flex items-center gap-4">
-                <h2 className="text-base font-bold text-[#2b3674]">
+                <h2 className="text-base font-bold text-foreground">
                   {MONTHS_ES[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </h2>
-                <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-[#4361ee] bg-[#f4f7fe] px-3 py-1 rounded-lg">Hoy</button>
-                <div className="flex items-center gap-1 text-[#a3aed1]">
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() - 7 * 86400000))} className="hover:bg-gray-100 p-1 rounded-md"><ChevronLeft className="h-4 w-4" /></button>
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() + 7 * 86400000))} className="hover:bg-gray-100 p-1 rounded-md"><ChevronRight className="h-4 w-4" /></button>
+                <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-primary bg-muted/50 px-3 py-1 rounded-lg">Hoy</button>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() - 7 * 86400000))} className="hover:bg-muted p-1 rounded-md"><ChevronLeft className="h-4 w-4" /></button>
+                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() + 7 * 86400000))} className="hover:bg-muted p-1 rounded-md"><ChevronRight className="h-4 w-4" /></button>
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-xs font-bold text-[#a3aed1]">
-                <button className="hover:text-[#2b3674]">Ninguno</button>
-                <button className="hover:text-[#2b3674]">Prioridad</button>
-                <button className="hover:text-[#2b3674]">Límite</button>
+              <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
+                <button className="hover:text-foreground">Ninguno</button>
+                <button className="hover:text-foreground">Prioridad</button>
+                <button className="hover:text-foreground">Límite</button>
                 <div className="h-4 w-px bg-gray-200 mx-1"></div>
-                <button className="hover:text-[#2b3674]"><Video className="h-4 w-4" /></button>
-                <button className="hover:text-[#2b3674]"><Network className="h-4 w-4" /></button>
+                <button className="hover:text-foreground"><Video className="h-4 w-4" /></button>
+                <button className="hover:text-foreground"><Network className="h-4 w-4" /></button>
               </div>
             </div>
 
             {/* Timetable Body Container */}
-            <div className="flex-1 overflow-y-auto relative bg-white">
+            <div className="flex-1 overflow-y-auto relative bg-card">
               
               {calendarView === "Mensual" ? (
-                <div className="flex flex-col min-h-full bg-white relative">
+                <div className="flex flex-col min-h-full bg-card relative">
                   {/* Monthly Header */}
-                  <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-[#f0f2f5] bg-white">
+                  <div className="sticky top-0 z-20 grid grid-cols-7 border-b border-border/40 bg-card">
                     {WEEKDAYS_SHORT.map((dayName, i) => (
-                      <div key={i} className="text-center py-3 border-r border-[#f0f2f5] last:border-0">
-                        <p className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">{dayName}</p>
+                      <div key={i} className="text-center py-3 border-r border-border/40 last:border-0">
+                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{dayName}</p>
                       </div>
                     ))}
                   </div>
@@ -392,13 +392,13 @@ export function AgendaPage() {
                           key={i} 
                           onClick={() => { setDefaultFormDate(formatToYMD(d)); setEditingApp(null); setFormOpen(true); }}
                           className={cn(
-                            "border-r border-b border-[#f0f2f5] p-2 min-h-[120px] transition hover:bg-gray-50/50 cursor-pointer overflow-hidden flex flex-col", 
-                            !isCurrentMonth && "bg-gray-50/30 opacity-50", 
-                            isToday && "bg-[#f8f9fe]/50"
+                            "border-r border-b border-border/40 p-2 min-h-[120px] transition hover:bg-muted/50 cursor-pointer overflow-hidden flex flex-col", 
+                            !isCurrentMonth && "bg-muted/30 opacity-50", 
+                            isToday && "bg-muted/50"
                           )}
                         >
                           <div className="flex justify-between items-center mb-1 shrink-0">
-                            <span className={cn("text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full", isToday ? "bg-[#4361ee] text-white" : "text-[#2b3674]")}>
+                            <span className={cn("text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full", isToday ? "bg-primary text-primary-foreground" : "text-foreground")}>
                               {d.getDate()}
                             </span>
                           </div>
@@ -408,7 +408,7 @@ export function AgendaPage() {
                               if (ev.status?.toLowerCase() === 'completada') {
                                 theme = { bg: "bg-green-100 text-green-700 hover:bg-green-200" };
                               } else {
-                                theme = { bg: "bg-blue-100 text-blue-700 hover:bg-blue-200" };
+                                theme = { bg: "bg-blue-100 text-primary hover:bg-blue-200" };
                               }
                               return (
                                 <div 
@@ -429,14 +429,14 @@ export function AgendaPage() {
               ) : (
                 <>
                   {/* Days Header */}
-              <div className="sticky top-0 z-20 flex bg-white border-b border-[#f0f2f5]">
-                <div className="w-16 shrink-0 border-r border-[#f0f2f5] bg-white flex items-center justify-center">
-                  <span className="text-[10px] font-bold text-[#a3aed1]">GMT-4</span>
+              <div className="sticky top-0 z-20 flex bg-card border-b border-border/40">
+                <div className="w-16 shrink-0 border-r border-border/40 bg-card flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-muted-foreground">GMT-4</span>
                 </div>
                 <div className={cn("flex-1 grid", calendarView === "Diaria" ? "grid-cols-1" : "grid-cols-7")}>
                   {daysToRender.map((d, i) => (
-                    <div key={i} className="text-center py-3 border-r border-[#f0f2f5] last:border-0">
-                      <p className="text-[10px] font-bold text-[#a3aed1] uppercase tracking-wider">{WEEKDAYS_SHORT[d.getDay() === 0 ? 6 : d.getDay() - 1]} {d.getDate()}</p>
+                    <div key={i} className="text-center py-3 border-r border-border/40 last:border-0">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{WEEKDAYS_SHORT[d.getDay() === 0 ? 6 : d.getDay() - 1]} {d.getDate()}</p>
                     </div>
                   ))}
                 </div>
@@ -445,10 +445,10 @@ export function AgendaPage() {
               {/* Grid Lines & Events Container */}
               <div className="flex relative">
                 {/* Y-Axis Hours */}
-                <div className="w-16 shrink-0 border-r border-[#f0f2f5] bg-white relative z-10">
+                <div className="w-16 shrink-0 border-r border-border/40 bg-card relative z-10">
                   {HOURS.map((h, i) => (
                     <div key={h} className={cn("border-b border-transparent relative flex items-start justify-center pt-2", compactMode ? "h-12" : "h-24")}>
-                      {i > 0 && <span className={cn("text-[10px] font-bold text-[#a3aed1] bg-white px-1", compactMode ? "-mt-3" : "-mt-4")}>{h < 12 ? h : h === 12 ? 12 : h - 12} {h < 12 ? 'AM' : 'PM'}</span>}
+                      {i > 0 && <span className={cn("text-[10px] font-bold text-muted-foreground bg-card px-1", compactMode ? "-mt-3" : "-mt-4")}>{h < 12 ? h : h === 12 ? 12 : h - 12} {h < 12 ? 'AM' : 'PM'}</span>}
                     </div>
                   ))}
                 </div>
@@ -458,7 +458,7 @@ export function AgendaPage() {
                   {/* Background horizontal lines */}
                   <div className="absolute inset-0 pointer-events-none flex flex-col">
                      {HOURS.map((h, i) => (
-                       <div key={h} className={cn("w-full", compactMode ? "h-12" : "h-24", i > 0 && "border-t border-[#f0f2f5]")}></div>
+                       <div key={h} className={cn("w-full", compactMode ? "h-12" : "h-24", i > 0 && "border-t border-border/40")}></div>
                      ))}
                   </div>
 
@@ -470,7 +470,7 @@ export function AgendaPage() {
                       <div 
                         key={colIndex} 
                         onClick={() => { setDefaultFormDate(formatToYMD(d)); setEditingApp(null); setFormOpen(true); }}
-                        className={cn("border-r border-[#f0f2f5] last:border-0 relative h-full min-h-[800px] cursor-pointer hover:bg-gray-50/50 transition-colors", isToday && "bg-[#f8f9fe]/50")}
+                        className={cn("border-r border-border/40 last:border-0 relative h-full min-h-[800px] cursor-pointer hover:bg-muted/50 transition-colors", isToday && "bg-muted/50")}
                       >
                         {/* Render Events for this day */}
                         {gridEvents.filter(ev => ev.dayIndex === actualDayIndex).map((ev) => {
@@ -499,13 +499,13 @@ export function AgendaPage() {
                               {/* Edit Schedule Popover */}
                               <PopoverContent align="start" side="right" className="w-64 p-0 rounded-2xl shadow-xl border-border/40 z-50">
                                 <div className="px-4 py-3 flex justify-between items-center border-b border-border/40">
-                                  <span className="text-xs font-bold text-[#2b3674] tracking-wide">Editar Horario</span>
+                                  <span className="text-xs font-bold text-foreground tracking-wide">Editar Horario</span>
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <button className="text-[#a3aed1] hover:text-[#2b3674]"><MoreHorizontal className="h-4 w-4" /></button>
+                                      <button className="text-muted-foreground hover:text-foreground"><MoreHorizontal className="h-4 w-4" /></button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end" className="w-40 rounded-xl">
-                                      <DropdownMenuItem className="text-xs font-bold text-red-500 focus:text-red-600 cursor-pointer" onClick={(e) => { e.stopPropagation(); deleteApp(ev.id); }}>
+                                      <DropdownMenuItem className="text-xs font-bold text-destructive focus:text-destructive cursor-pointer" onClick={(e) => { e.stopPropagation(); deleteApp(ev.id); }}>
                                         Eliminar Cita
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
@@ -515,34 +515,34 @@ export function AgendaPage() {
                                   <div className="flex gap-3 text-sm">
                                     <div className="mt-0.5 shrink-0"><div className="h-3 w-3 rounded-full border-2 border-[#4361ee]"></div></div>
                                     <div className="flex-1">
-                                      <p className="font-bold text-[#2b3674] leading-tight">{ev.patient_name}</p>
-                                      <p className="text-[10px] text-[#4361ee] font-medium mt-0.5 cursor-pointer hover:underline">Añadir Descripción</p>
+                                      <p className="font-bold text-foreground leading-tight">{ev.patient_name}</p>
+                                      <p className="text-[10px] text-primary font-medium mt-0.5 cursor-pointer hover:underline">Añadir Descripción</p>
                                     </div>
                                   </div>
                                   <div className="flex gap-3 text-sm">
-                                    <Clock className="h-4 w-4 text-[#a3aed1] shrink-0 mt-0.5" />
+                                    <Clock className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                                     <div className="flex-1">
-                                      <p className="font-bold text-[#2b3674] text-xs">Añadir Hora</p>
-                                      <p className="text-[10px] text-[#4361ee] font-medium mt-0.5">
+                                      <p className="font-bold text-foreground text-xs">Añadir Hora</p>
+                                      <p className="text-[10px] text-primary font-medium mt-0.5">
                                         {timeOnly(ev.scheduled_at.replace(" ", "T"))} → {timeOnly(new Date(new Date(ev.scheduled_at.replace(" ", "T")).getTime() + ev.durationHours * 3600000).toISOString())}
                                       </p>
                                     </div>
-                                    <button className="text-[#a3aed1]"><Network className="h-4 w-4" /></button>
+                                    <button className="text-muted-foreground"><Network className="h-4 w-4" /></button>
                                   </div>
                                   <div className="flex gap-3 text-sm">
-                                    <Users className="h-4 w-4 text-[#a3aed1] shrink-0 mt-0.5" />
+                                    <Users className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
                                     <div className="flex-1">
-                                      <p className="font-bold text-[#2b3674] text-xs">Añadir Invitados</p>
+                                      <p className="font-bold text-foreground text-xs">Añadir Invitados</p>
                                       <div className="flex items-center gap-1 mt-1">
-                                        <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${ev.patient_name}`} className="h-4 w-4 rounded-full bg-blue-50" />
-                                        <p className="text-[9px] text-[#a3aed1] font-bold">1 Asiste, 1 Esperando</p>
+                                        <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${ev.patient_name}`} className="h-4 w-4 rounded-full bg-primary/10" />
+                                        <p className="text-[9px] text-muted-foreground font-bold">1 Asiste, 1 Esperando</p>
                                       </div>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="p-3 border-t border-border/40 flex justify-end gap-2 bg-gray-50/50 rounded-b-2xl">
-                                  <button onClick={() => { setEditingApp(ev); setFormOpen(true); }} className="text-xs font-bold text-[#2b3674] hover:bg-gray-200 px-4 py-2 rounded-xl transition">Editar</button>
-                                  <button onClick={() => { setConsultationApp(ev); setConsultationOpen(true); }} className={`text-xs font-bold text-white px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition ${ev.status?.toLowerCase() === 'completada' ? 'bg-[#05c46b] hover:bg-[#04b060]' : 'bg-[#4361ee] hover:bg-[#3f37c9]'}`}>
+                                <div className="p-3 border-t border-border/40 flex justify-end gap-2 bg-muted/50 rounded-b-2xl">
+                                  <button onClick={() => { setEditingApp(ev); setFormOpen(true); }} className="text-xs font-bold text-foreground hover:bg-gray-200 px-4 py-2 rounded-xl transition">Editar</button>
+                                  <button onClick={() => { setConsultationApp(ev); setConsultationOpen(true); }} className={`text-xs font-bold text-primary-foreground px-4 py-2 rounded-xl shadow-sm flex items-center gap-1.5 transition ${ev.status?.toLowerCase() === 'completada' ? 'bg-[#05c46b] hover:bg-[#04b060]' : 'bg-primary hover:bg-[#3f37c9]'}`}>
                                     <Stethoscope className="h-3.5 w-3.5" /> 
                                     {ev.status?.toLowerCase() === 'completada' ? 'Ver / Editar Consulta' : 'Iniciar Consulta'}
                                   </button>

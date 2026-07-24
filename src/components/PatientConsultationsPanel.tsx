@@ -7,7 +7,7 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   if (isLoading) {
-    return <div className="py-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-[#a3aed1]" /></div>;
+    return <div className="py-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
   if (consultations.length === 0) {
@@ -31,11 +31,11 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
               className="p-4 flex items-center justify-between cursor-pointer hover:bg-muted/30 transition select-none"
             >
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 bg-[#4361ee]/10 text-[#4361ee] rounded-xl flex items-center justify-center">
+                <div className="h-10 w-10 bg-primary/10 text-primary rounded-xl flex items-center justify-center">
                   <Stethoscope className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-[#2b3674] capitalize">
+                  <h4 className="font-bold text-sm text-foreground capitalize">
                     {c.visit_type === "PRIMERA_VEZ" ? "Consulta Primera Vez" : 
                      c.visit_type === "CONTROL" ? "Consulta de Control" : 
                      c.visit_type === "EMERGENCIA" ? "Consulta de Emergencia" : c.visit_type || "Consulta Clínica"}
@@ -62,11 +62,11 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                       <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <FileText className="h-3.5 w-3.5" /> Motivo de Consulta / Síntomas
                       </h5>
-                      <p className="text-[#2b3674] whitespace-pre-wrap">{c.subjective_exam || "No especificado."}</p>
+                      <p className="text-foreground whitespace-pre-wrap">{c.subjective_exam || "No especificado."}</p>
                     </div>
                     
                     {/* Examen Físico y Signos Vitales */}
-                    <div className="bg-white p-4 rounded-xl border border-border/40 shadow-sm">
+                    <div className="bg-card p-4 rounded-xl border border-border/40 shadow-sm">
                       <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-3">Signos Vitales</h5>
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         {c.weight_kg && <div className="flex gap-2 items-center"><Scaling className="h-4 w-4 text-muted-foreground"/> <span className="font-semibold">{c.weight_kg} kg</span></div>}
@@ -79,7 +79,7 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                       {c.gynecological && (
                         <div className="mt-4 pt-4 border-t border-border/50">
                           <h6 className="font-semibold text-xs text-muted-foreground mb-1">Examen Físico / Ginecológico</h6>
-                          <p className="text-[#2b3674] whitespace-pre-wrap">{c.gynecological}</p>
+                          <p className="text-foreground whitespace-pre-wrap">{c.gynecological}</p>
                         </div>
                       )}
                     </div>
@@ -88,16 +88,16 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                   {/* Columna Derecha */}
                   <div className="space-y-6">
                     {/* Diagnóstico y Plan */}
-                    <div className="bg-[#4361ee]/5 p-4 rounded-xl border border-[#4361ee]/10 shadow-sm">
-                      <h5 className="text-xs font-bold text-[#4361ee] uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <div className="bg-primary/5 p-4 rounded-xl border border-[#4361ee]/10 shadow-sm">
+                      <h5 className="text-xs font-bold text-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
                         <Activity className="h-3.5 w-3.5" /> Diagnóstico
                       </h5>
-                      <p className="text-[#2b3674] font-medium whitespace-pre-wrap mb-4">{c.diagnosis || "No especificado."}</p>
+                      <p className="text-foreground font-medium whitespace-pre-wrap mb-4">{c.diagnosis || "No especificado."}</p>
                       
-                      <h5 className="text-xs font-bold text-[#4361ee] uppercase tracking-wider mb-2">
+                      <h5 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
                          Plan y Tratamiento
                       </h5>
-                      <p className="text-[#2b3674] whitespace-pre-wrap">{c.plan || c.indications || "No especificado."}</p>
+                      <p className="text-foreground whitespace-pre-wrap">{c.plan || c.indications || "No especificado."}</p>
                     </div>
 
                     {/* Exámenes y Consumibles */}
@@ -107,7 +107,7 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                           <h5 className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1 flex items-center gap-1.5">
                             <TestTube className="h-3.5 w-3.5" /> Exámenes Complementarios
                           </h5>
-                          <p className="text-[#2b3674]">{c.complementary_exams}</p>
+                          <p className="text-foreground">{c.complementary_exams}</p>
                         </div>
                       )}
 
@@ -118,9 +118,9 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                           </h5>
                           <ul className="space-y-1">
                             {c.consumables.map((item, idx) => (
-                              <li key={idx} className="flex justify-between items-center text-xs bg-white px-3 py-1.5 rounded-lg border border-border/40 shadow-sm">
-                                <span className="font-medium text-[#2b3674]">{item.item_name}</span>
-                                <span className="bg-gray-100 text-muted-foreground px-2 py-0.5 rounded-md font-semibold">{item.quantity} und</span>
+                              <li key={idx} className="flex justify-between items-center text-xs bg-card px-3 py-1.5 rounded-lg border border-border/40 shadow-sm">
+                                <span className="font-medium text-foreground">{item.item_name}</span>
+                                <span className="bg-muted text-muted-foreground px-2 py-0.5 rounded-md font-semibold">{item.quantity} und</span>
                               </li>
                             ))}
                           </ul>

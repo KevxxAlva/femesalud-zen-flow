@@ -350,7 +350,8 @@ export function ConsultationForm({
         await update.mutateAsync({ id: existingConsultation.id, ...payload });
         
         if (appointment?.id) {
-          const service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
+          let service = services.find(s => appointment.reason && appointment.reason.toLowerCase().includes(s.nombre_servicio.toLowerCase()));
+          if (!service) service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
           const servicePrice = service ? Number(service.costo_base) : 40;
           await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
           localStorage.setItem("pending_payment_appointment_id", appointment.id);
@@ -365,7 +366,8 @@ export function ConsultationForm({
         await create.mutateAsync(payload);
         
         if (appointment?.id) {
-          const service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
+          let service = services.find(s => appointment.reason && appointment.reason.toLowerCase().includes(s.nombre_servicio.toLowerCase()));
+          if (!service) service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
           const servicePrice = service ? Number(service.costo_base) : 40;
           await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
           localStorage.setItem("pending_payment_appointment_id", appointment.id);
@@ -429,25 +431,25 @@ export function ConsultationForm({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col rounded-[2rem] p-6 text-[#2b3674]">
+      <DialogContent className="sm:max-w-4xl h-[90vh] flex flex-col rounded-[2rem] p-6 text-foreground">
         <DialogHeader className="pb-2">
-          <DialogTitle className="text-xl font-bold text-[#2b3674]">
+          <DialogTitle className="text-xl font-bold text-foreground">
             {isEdit ? "Editar Consulta Clínica" : "Registrar Nueva Consulta Clínica"}
           </DialogTitle>
-          <DialogDescription className="text-xs text-[#a3aed1] font-medium">
+          <DialogDescription className="text-xs text-muted-foreground font-medium">
             Registrar examen físico, diagnóstico y consumibles utilizados para{" "}
-            <span className="font-semibold text-[#4361ee]">{appointment?.patient_name}</span>.
+            <span className="font-semibold text-primary">{appointment?.patient_name}</span>.
           </DialogDescription>
         </DialogHeader>
 
         {loadingExisting ? (
           <div className="flex-1 flex items-center justify-center">
-            <Loader2 className="h-8 w-8 animate-spin text-[#4361ee]" />
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-5 bg-[#f4f7fe] p-1 rounded-2xl mb-4">
+              <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-2xl mb-4">
                 <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
                 <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
                 <TabsTrigger value="special" className="rounded-2xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
@@ -518,7 +520,7 @@ export function ConsultationForm({
                   {/* TAB 2: VITALS & PHYSICAL EXAM */}
                   <TabsContent value="vitals" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Signos Vitales</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Signos Vitales</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-height">Estatura (cm)</Label>
@@ -600,7 +602,7 @@ export function ConsultationForm({
                     </div>
 
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Revisión por Sistemas / Examen Físico</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Revisión por Sistemas / Examen Físico</h3>
                       <div className="grid grid-cols-2 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-skin">Piel y faneras</Label>
@@ -637,7 +639,7 @@ export function ConsultationForm({
                   {/* TAB 3: COLPOSCOPY & OBSTETRICS */}
                   <TabsContent value="special" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Hallazgos Colposcópicos</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Hallazgos Colposcópicos</h3>
                       <div className="grid grid-cols-3 gap-4">
                         <div className="grid gap-1.5 col-span-3">
                           <Label htmlFor="c-acetic">Test de Ácido Acético</Label>
@@ -705,8 +707,8 @@ export function ConsultationForm({
 
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Control de Embarazo (Obstetricia)</h3>
-                        <span className="text-[10px] text-[#a3aed1] bg-blush/20 text-blush-foreground px-2 py-0.5 rounded-full font-bold">Rellenar solo si aplica</span>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Control de Embarazo (Obstetricia)</h3>
+                        <span className="text-[10px] text-muted-foreground bg-blush/20 text-blush-foreground px-2 py-0.5 rounded-full font-bold">Rellenar solo si aplica</span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         <div className="grid gap-1.5">
@@ -876,15 +878,15 @@ export function ConsultationForm({
                   <TabsContent value="consumables" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl">
                       <div className="mb-4">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Consumibles Clínicos de Uso Común</h3>
-                        <p className="text-[11px] text-[#a3aed1] mt-0.5">Ingresa las cantidades de los materiales clínicos utilizados en esta sesión.</p>
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Consumibles Clínicos de Uso Común</h3>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Ingresa las cantidades de los materiales clínicos utilizados en esta sesión.</p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {COMMON_CONSUMABLES.map((item) => (
                           <div key={item.name} className="flex items-center justify-between bg-card p-3 rounded-2xl border border-border/40 shadow-sm">
                             <div className="min-w-0 pr-2">
                               <p className="text-xs font-bold truncate">{item.name}</p>
-                              <p className="text-[10px] text-[#a3aed1]">Unidad: {item.defaultUnit}</p>
+                              <p className="text-[10px] text-muted-foreground">Unidad: {item.defaultUnit}</p>
                             </div>
                             <Input
                               type="number"
@@ -903,8 +905,8 @@ export function ConsultationForm({
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
                       <div className="flex items-center justify-between border-b border-border/40 pb-2">
                         <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-[#4361ee]">Materiales Clínicos Adicionales</h3>
-                          <p className="text-[11px] text-[#a3aed1] mt-0.5">Agrega consumibles personalizados o medicamentos especiales utilizados.</p>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Materiales Clínicos Adicionales</h3>
+                          <p className="text-[11px] text-muted-foreground mt-0.5">Agrega consumibles personalizados o medicamentos especiales utilizados.</p>
                         </div>
                         <Button
                           type="button"
@@ -918,14 +920,14 @@ export function ConsultationForm({
                       </div>
 
                       {customConsumables.length === 0 ? (
-                        <p className="text-xs text-[#a3aed1] text-center py-6">No se han registrado consumibles adicionales.</p>
+                        <p className="text-xs text-muted-foreground text-center py-6">No se han registrado consumibles adicionales.</p>
                       ) : (
                         <div className="space-y-3">
                           {customConsumables.map((c, idx) => (
                             <div key={idx} className="flex items-center gap-3 bg-card p-3 rounded-2xl border border-border/40 shadow-sm">
                               <div className="flex-1 grid grid-cols-3 gap-3">
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-[#a3aed1]">Nombre del material</Label>
+                                  <Label className="text-[10px] text-muted-foreground">Nombre del material</Label>
                                   <Input
                                     value={c.item_name}
                                     onChange={(e) => updateCustomConsumable(idx, "item_name", e.target.value)}
@@ -934,7 +936,7 @@ export function ConsultationForm({
                                   />
                                 </div>
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-[#a3aed1]">Cantidad</Label>
+                                  <Label className="text-[10px] text-muted-foreground">Cantidad</Label>
                                   <Input
                                     type="number"
                                     min="0.01"
@@ -946,7 +948,7 @@ export function ConsultationForm({
                                   />
                                 </div>
                                 <div className="grid gap-1">
-                                  <Label className="text-[10px] text-[#a3aed1]">Unidad</Label>
+                                  <Label className="text-[10px] text-muted-foreground">Unidad</Label>
                                   <Input
                                     value={c.unit}
                                     onChange={(e) => updateCustomConsumable(idx, "unit", e.target.value)}
@@ -990,7 +992,7 @@ export function ConsultationForm({
                       variant="outline"
                       onClick={() => handleSave(true)}
                       disabled={busy}
-                      className="rounded-2xl border-mauve text-[#4361ee] hover:bg-[#4361ee]/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
+                      className="rounded-2xl border-mauve text-primary hover:bg-primary/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
                     >
                       {busy ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -1003,7 +1005,7 @@ export function ConsultationForm({
                   <Button
                     type="submit"
                     disabled={busy}
-                    className="rounded-2xl bg-[#4361ee] text-white hover:bg-[#3451d6] shadow-sm shadow-blue-500/20 hover:opacity-95 px-6 h-9 text-xs font-semibold"
+                    className="rounded-2xl bg-primary text-primary-foreground hover:bg-[#3451d6] shadow-sm shadow-primary/20 hover:opacity-95 px-6 h-9 text-xs font-semibold"
                   >
                     {busy ? (
                       <span className="flex items-center gap-1.5">
