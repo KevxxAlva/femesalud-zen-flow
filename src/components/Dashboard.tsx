@@ -11,52 +11,71 @@ import { useDashboardStats, useMonthlyPayments } from "@/lib/api/dashboard";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, PieChart, Pie, Cell } from "recharts";
 
-function Sparkline({ data, colorClass }: { data: number[]; colorClass: string }) {
-  const w = 100, h = 30;
-  const max = Math.max(...data, 1);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const pts = data.map((v, i) => `${(i / Math.max(data.length - 1, 1)) * w},${h - ((v - min) / range) * h}`).join(" ");
+function MiniAreaChart({ data, colorVar, gradientId }: { data: number[]; colorVar: string; gradientId: string }) {
+  const chartData = useMemo(() => data.map((val, i) => ({ index: i, value: val })), [data]);
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className={cn("h-10 w-full mt-2", colorClass)} preserveAspectRatio="none">
-      <polyline points={pts} fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={chartData}>
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="5%" stopColor={colorVar} stopOpacity={0.5}/>
+            <stop offset="95%" stopColor={colorVar} stopOpacity={0}/>
+          </linearGradient>
+        </defs>
+        <Tooltip 
+          cursor={false}
+          contentStyle={{ borderRadius: '0.5rem', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-card)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '4px 8px', fontSize: '12px', fontWeight: 'bold' }}
+          formatter={(value: number) => [value, 'Total']}
+          labelFormatter={() => ''}
+        />
+        <Area type="monotone" dataKey="value" stroke={colorVar} strokeWidth={2.5} fillOpacity={1} fill={`url(#${gradientId})`} />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 
 function DonutChart({ percentage }: { percentage: number }) {
-  const radius = 36;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+  const data = useMemo(() => [
+    { name: "Ocupado", value: percentage },
+    { name: "Libre", value: 100 - percentage }
+  ], [percentage]);
 
   return (
-    <div className="relative flex items-center justify-center">
-      <svg width="120" height="120" className="transform -rotate-90">
-        {/* Background track */}
-        <circle cx="60" cy="60" r={radius} stroke="currentColor" className="stroke-muted" strokeWidth="12" fill="none" />
-        
-        {/* Colored Segments to mimic the image (Pink, Purple, Cyan) */}
-        {/* For simplicity, we use a single gradient or solid color, but the image has multi-colored segments */}
-        <circle 
-          cx="60" cy="60" r={radius} 
-          stroke="url(#gradient)" 
-          strokeWidth="12" 
-          fill="none" 
-          strokeDasharray={circumference} 
-          strokeDashoffset={strokeDashoffset} 
-          strokeLinecap="round" 
-        />
-        <defs>
-          <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#ff4b82" />
-            <stop offset="50%" stopColor="#9a55ff" />
-            <stop offset="100%" stopColor="#00e1f2" />
-          </linearGradient>
-        </defs>
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center">
-        <span className="text-2xl font-bold text-foreground">{percentage}%</span>
+    <div className="relative flex items-center justify-center w-[120px] h-[120px]">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <defs>
+            <linearGradient id="pieGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="var(--color-primary)" />
+              <stop offset="100%" stopColor="var(--color-secondary)" />
+            </linearGradient>
+          </defs>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={46}
+            outerRadius={60}
+            startAngle={90}
+            endAngle={-270}
+            dataKey="value"
+            stroke="none"
+            cornerRadius={10}
+          >
+            <Cell fill="url(#pieGradient)" />
+            <Cell fill="var(--color-muted)" opacity={0.3} />
+          </Pie>
+          <Tooltip 
+            formatter={(value: number) => [`${value}%`, '']}
+            contentStyle={{ borderRadius: '0.5rem', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-card)', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)', padding: '4px 8px', fontSize: '12px', fontWeight: 'bold' }}
+            itemStyle={{ color: "var(--color-foreground)" }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute flex flex-col items-center justify-center pointer-events-none">
+        <span className="text-2xl font-display font-bold text-foreground">{percentage}%</span>
         <span className="text-[9px] font-bold text-muted-foreground tracking-wider">OCUPACIÓN</span>
       </div>
     </div>
@@ -71,7 +90,7 @@ export function Dashboard() {
   const { data: recentPatients = [] } = useRecentPatients(5);
   const { data: totalPatients = 0 } = usePatientsCountByDateRange();
   const { data: stats } = useDashboardStats();
-  const { data: monthlyPayments = 0 } = useMonthlyPayments();
+  const { data: monthlyData = { total: 0, paymentsByDay: [] } } = useMonthlyPayments();
   const { data: clinic } = useClinicInfo();
   
   // Real data
@@ -200,13 +219,13 @@ export function Dashboard() {
         <div className="xl:col-span-8 flex flex-col gap-6">
           
           {/* HERO BANNER */}
-          <div className="relative bg-primary rounded-3xl p-8 overflow-hidden text-primary-foreground shadow-lg flex justify-between items-center h-48">
+          <div className="relative bg-gradient-to-br from-primary to-primary/80 rounded-3xl p-8 overflow-hidden text-primary-foreground shadow-xl shadow-primary/20 flex justify-between items-center h-48 border border-white/10">
             <div className="relative z-10">
-              <div className="flex items-center gap-2 bg-card/20 w-max px-3 py-1.5 rounded-full backdrop-blur-sm mb-4">
+              <div className="flex items-center gap-2 bg-black/10 w-max px-3 py-1.5 rounded-full backdrop-blur-md mb-4 border border-white/10 shadow-sm">
                 <span className="text-xs font-medium">📅 {today.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} {today.toLocaleTimeString("en-US", { hour: '2-digit', minute: '2-digit' })}</span>
               </div>
-              <h1 className="text-primaryxl font-bold mb-1">¡Buen día, {displayName}!</h1>
-              <p className="text-primary-foreground/80 font-medium">¡Que tengas un excelente {today.toLocaleDateString("es-ES", { weekday: "long" })}!</p>
+              <h1 className="font-display text-4xl font-bold mb-1 tracking-tight">¡Buen día, {displayName}!</h1>
+              <p className="text-primary-foreground/90 font-medium">¡Que tengas un excelente {today.toLocaleDateString("es-ES", { weekday: "long" })}!</p>
             </div>
             
             {/* Abstract Doctor Illustration using CSS/Icons */}
@@ -234,52 +253,71 @@ export function Dashboard() {
           {/* 3 WORK CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Total Patients */}
-            <div className="bg-card rounded-[2rem] p-5 shadow-sm flex flex-col">
+            <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pacientes Registrados</h3>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex items-end gap-3 mb-1">
-                <span className="text-primaryxl font-bold text-foreground">{totalPatients}</span>
+                <span className="font-display text-4xl font-bold text-foreground tracking-tight">{totalPatients}</span>
                 <span className="text-xs font-medium text-muted-foreground mb-1">en el sistema</span>
               </div>
-              <div className="mt-auto pt-4">
-                <Sparkline data={stats?.offlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorClass="text-primary" />
+              <div className="mt-auto pt-4 h-16 w-full -mb-2">
+                <MiniAreaChart data={stats?.offlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorVar="var(--color-primary)" gradientId="colorOffline" />
               </div>
             </div>
 
             {/* Online Work */}
-            <div className="bg-card rounded-[2rem] p-5 shadow-sm flex flex-col">
+            <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Citas Online</h3>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex items-end gap-3 mb-1">
-                <span className="text-primaryxl font-bold text-foreground">{stats?.onlineWork.total || 0}</span>
+                <span className="font-display text-4xl font-bold text-foreground tracking-tight">{stats?.onlineWork.total || 0}</span>
                 <span className="text-xs font-medium text-muted-foreground mb-1">consultas online</span>
               </div>
               <div>
-                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", (stats?.onlineWork.change || 0) >= 0 ? "bg-[#e6fff2] text-[#05c46b]" : "bg-[#ffe6e6] text-[#ff4b82]")}>
+                <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded", (stats?.onlineWork.change || 0) >= 0 ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-destructive/10 text-destructive")}>
                   {(stats?.onlineWork.change || 0) >= 0 ? "+" : ""}{stats?.onlineWork.change || 0}% respecto a ayer
                 </span>
               </div>
-              <div className="mt-auto pt-4">
-                <Sparkline data={stats?.onlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorClass="text-[#05c46b]" />
+              <div className="mt-auto pt-4 h-16 w-full -mb-2">
+                <MiniAreaChart data={stats?.onlineWork.sparkline || [0, 0, 0, 0, 0, 0, 0]} colorVar="var(--color-secondary)" gradientId="colorOnline" />
               </div>
             </div>
 
             {/* Monthly Payments */}
-            <div className="bg-card rounded-[2rem] p-5 shadow-sm flex flex-col">
+            <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ingresos Mensuales</h3>
                 <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
               </div>
               <div className="flex items-end gap-3 mb-1">
-                <span className="text-primaryxl font-bold text-foreground">${monthlyPayments.toFixed(2)}</span>
+                <span className="font-display text-4xl font-bold text-foreground tracking-tight">${monthlyData.total.toFixed(2)}</span>
                 <span className="text-xs font-medium text-muted-foreground mb-1">este mes</span>
               </div>
-              <div className="mt-auto pt-4">
-                <div className="h-0.5 w-full bg-primary rounded-full opacity-50"></div>
+              <div className="mt-auto pt-4 h-24 w-full">
+                {monthlyData.paymentsByDay.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={monthlyData.paymentsByDay}>
+                      <defs>
+                        <linearGradient id="colorPayments" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="var(--color-primary)" stopOpacity={0.5}/>
+                          <stop offset="95%" stopColor="var(--color-primary)" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <Tooltip 
+                        contentStyle={{ borderRadius: '1rem', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-card)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+                        formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ingresos']}
+                        labelFormatter={(label) => `Día: ${new Date(label).toLocaleDateString()}`}
+                      />
+                      <Area type="monotone" dataKey="amount" stroke="var(--color-primary)" strokeWidth={2} fillOpacity={1} fill="url(#colorPayments)" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full w-full bg-muted/20 rounded-xl flex items-center justify-center text-muted-foreground text-xs font-medium">Sin datos de ingresos</div>
+                )}
               </div>
             </div>
           </div>
@@ -288,10 +326,10 @@ export function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             
             {/* Scheduled Events */}
-            <div className="bg-card rounded-[2rem] p-6 shadow-sm flex flex-col">
+            <div className="glass-card rounded-[2rem] p-6 shadow-lg shadow-black/5 flex flex-col">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mis Eventos Programados</h3>
-                <button className="flex items-center gap-1 text-primary font-bold text-xs bg-muted/50 px-3 py-1.5 rounded-lg">
+                <button className="flex items-center gap-1 text-primary font-bold text-xs bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition">
                   Hoy <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
@@ -301,26 +339,26 @@ export function Dashboard() {
                 
                 <div className="flex flex-col gap-4 flex-1">
                   <div>
-                    <div className="text-xl font-bold text-foreground">{stats?.scheduledEvents.consultations || 0}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground">Consultas</div>
+                    <div className="text-xl font-bold text-foreground font-display">{stats?.scheduledEvents.consultations || 0}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">Consultas</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-foreground">{stats?.scheduledEvents.labs || 0}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground">Análisis de Lab.</div>
+                    <div className="text-xl font-bold text-foreground font-display">{stats?.scheduledEvents.labs || 0}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">Análisis de Lab.</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold text-foreground">{stats?.scheduledEvents.invoices || 0}</div>
-                    <div className="text-[10px] font-bold text-muted-foreground">Facturas</div>
+                    <div className="text-xl font-bold text-foreground font-display">{stats?.scheduledEvents.invoices || 0}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">Facturas</div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Plans Done */}
-            <div className="bg-card rounded-[2rem] p-6 shadow-sm flex flex-col">
+            <div className="glass-card rounded-[2rem] p-6 shadow-lg shadow-black/5 flex flex-col">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Mis Metas de Hoy</h3>
-                <button className="flex items-center gap-1 text-primary font-bold text-xs bg-muted/50 px-3 py-1.5 rounded-lg">
+                <button className="flex items-center gap-1 text-primary font-bold text-xs bg-primary/10 px-3 py-1.5 rounded-lg hover:bg-primary/20 transition">
                   Hoy <ChevronDown className="h-3 w-3" />
                 </button>
               </div>
@@ -333,7 +371,7 @@ export function Dashboard() {
                     <span className="text-foreground">{stats?.plansDone.consultations || 0}%</span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-[#9a55ff] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.consultations || 0}%` }}></div>
+                    <div className="h-full bg-primary rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.consultations || 0}%` }}></div>
                   </div>
                 </div>
                 {/* Progress 2 */}
@@ -343,7 +381,7 @@ export function Dashboard() {
                     <span className="text-foreground">{stats?.plansDone.labs || 0}%</span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ff7f50] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.labs || 0}%` }}></div>
+                    <div className="h-full bg-secondary rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.labs || 0}%` }}></div>
                   </div>
                 </div>
                 {/* Progress 3 */}
@@ -353,7 +391,7 @@ export function Dashboard() {
                     <span className="text-foreground">{stats?.plansDone.invoices || 0}%</span>
                   </div>
                   <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                    <div className="h-full bg-[#ff4b82] rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.invoices || 0}%` }}></div>
+                    <div className="h-full bg-foreground/50 rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.invoices || 0}%` }}></div>
                   </div>
                 </div>
               </div>
@@ -369,38 +407,38 @@ export function Dashboard() {
         <div className="xl:col-span-4 flex flex-col gap-6">
           
           {/* PROFILE CARD */}
-          <div className="bg-card rounded-[2rem] overflow-hidden shadow-sm relative pt-16">
-            <div className="absolute top-0 left-0 right-0 h-24 bg-primary px-6 py-4 flex justify-between items-start text-primary-foreground">
+          <div className="glass-card rounded-[2rem] overflow-hidden shadow-lg shadow-black/5 relative pt-16">
+            <div className="absolute top-0 left-0 right-0 h-24 bg-gradient-to-r from-primary to-primary/90 px-6 py-4 flex justify-between items-start text-primary-foreground border-b border-primary/20">
               <span className="text-xs font-bold tracking-widest uppercase">Mi Perfil</span>
-              <Link to="/configuracion" className="bg-card/20 p-1.5 rounded-lg hover:bg-card/40 transition">
+              <Link to="/configuracion" className="bg-black/10 p-1.5 rounded-lg hover:bg-black/20 transition">
                 <Edit2 className="h-3 w-3" />
               </Link>
             </div>
             
             <div className="px-6 pb-6 relative">
-              <div className="h-20 w-20 bg-gray-200 border-4 border-white rounded-2xl mx-auto -mt-10 mb-3 overflow-hidden flex items-center justify-center relative z-10 shadow-sm">
-                 <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`} alt="Avatar" className="h-full w-full object-cover bg-primary/10" />
+              <div className="h-20 w-20 bg-card border-4 border-card rounded-2xl mx-auto -mt-10 mb-3 overflow-hidden flex items-center justify-center relative z-10 shadow-md">
+                 <img src={`https://api.dicebear.com/7.x/notionists/svg?seed=${displayName}`} alt="Avatar" className="h-full w-full object-cover bg-primary/5" />
               </div>
               
               <div className="text-center mb-6">
-                <h2 className="text-lg font-bold text-foreground">{displayName}</h2>
+                <h2 className="text-lg font-display font-bold text-foreground">{displayName}</h2>
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">{profile?.specialty || roleDisplay}</p>
-                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground font-medium">
+                <div className="flex items-center justify-center gap-1 text-xs text-primary font-bold">
                   <MapPin className="h-3 w-3" /> {clinic?.name || "Clínica"}
                 </div>
               </div>
               
               <div className="grid grid-cols-3 gap-2 text-center pt-4 border-t border-border/40">
                 <div>
-                  <p className="text-[9px] text-muted-foreground font-bold mb-1">Status</p>
-                  <p className="text-xs font-bold text-[#05c46b]">Activo</p>
+                  <p className="text-[9px] text-muted-foreground font-bold mb-1 uppercase tracking-wider">Status</p>
+                  <p className="text-xs font-bold text-emerald-500 dark:text-emerald-400">Activo</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-muted-foreground font-bold mb-1">MPPS</p>
-                  <p className="text-xs font-bold text-foreground">{profile?.mpps || "N/A"}</p>
+                  <p className="text-[9px] text-muted-foreground font-bold mb-1 uppercase tracking-wider">MPPS</p>
+                  <p className="text-xs font-bold text-foreground font-mono">{profile?.mpps || "N/A"}</p>
                 </div>
                 <div>
-                  <p className="text-[9px] text-muted-foreground font-bold mb-1">Rol</p>
+                  <p className="text-[9px] text-muted-foreground font-bold mb-1 uppercase tracking-wider">Rol</p>
                   <p className="text-xs font-bold text-foreground capitalize">{roleDisplay}</p>
                 </div>
               </div>
@@ -408,12 +446,12 @@ export function Dashboard() {
           </div>
 
           {/* CALENDAR & SCHEDULE WIDGET */}
-          <div className="bg-card rounded-[2rem] overflow-hidden shadow-sm flex-1 flex flex-col">
+          <div className="glass-card rounded-[2rem] overflow-hidden shadow-lg shadow-black/5 flex-1 flex flex-col">
             
             {/* Calendar Header */}
-            <div className="flex justify-between items-center bg-primary text-primary-foreground px-6 py-4">
+            <div className="flex justify-between items-center bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-6 py-4 border-b border-primary/20">
               <span className="text-xs font-bold uppercase tracking-widest">Mi Calendario</span>
-              <button className="flex items-center gap-1 bg-card/20 px-3 py-1.5 rounded-lg text-xs font-bold">
+              <button className="flex items-center gap-1 bg-black/10 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black/20 transition">
                 {today.toLocaleString("es-ES", { month: "long" })} <ChevronDown className="h-3 w-3" />
               </button>
             </div>
@@ -453,10 +491,10 @@ export function Dashboard() {
                   todaysAppointments.map((app, i) => {
                     const d = new Date(app.scheduled_at);
                     const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
-                    const colors = ["#ff4b82", "#9a55ff", "#05c46b", "#4361ee"];
-                    const dotColor = colors[i % colors.length];
+                    const isEven = i % 2 === 0;
+                    const dotColor = isEven ? "var(--color-primary)" : "var(--color-secondary)";
                     return (
-                      <div key={app.id} className="relative flex flex-col pt-1 pb-4 border-b border-dashed border-border/40 last:border-0">
+                      <div key={app.id} className="relative flex flex-col pt-1 pb-4 border-b border-dashed border-border/40 last:border-0 hover:bg-muted/30 transition-colors -mx-4 px-4 rounded-xl">
                         <div className="flex items-center gap-3 text-xs font-bold">
                           <span className="w-12 text-left text-muted-foreground font-medium">{time}</span>
                           <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />

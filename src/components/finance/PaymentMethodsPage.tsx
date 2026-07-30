@@ -6,10 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { usePaymentMethods, useCreatePaymentMethod, useUpdatePaymentMethod, useDeletePaymentMethod, type PaymentMethod } from "@/lib/api/paymentMethods";
+import { useAccounts } from "@/lib/api/accounts";
 import { toast } from "sonner";
 
 export function PaymentMethodsPage() {
   const { data: methods = [], isLoading } = usePaymentMethods();
+  const { data: accounts = [] } = useAccounts();
   const createMethod = useCreatePaymentMethod();
   const updateMethod = useUpdatePaymentMethod();
   const deleteMethod = useDeletePaymentMethod();
@@ -46,6 +48,7 @@ export function PaymentMethodsPage() {
     const methodData = {
       name: fd.get("name") as string,
       category: fd.get("category") as string,
+      account_id: (fd.get("account_id") as string) || undefined,
       status: fd.get("status") as "Active" | "Inactive",
     };
     
@@ -114,6 +117,7 @@ export function PaymentMethodsPage() {
               <th className="p-4 w-12 rounded-tl-xl"><input type="checkbox" className="rounded border-gray-300" /></th>
               <th className="p-4">Nombre del Método <span className="ml-1">↕</span></th>
               <th className="p-4">Categoría <span className="ml-1">↕</span></th>
+              <th className="p-4">Cuenta Vinculada <span className="ml-1">↕</span></th>
               <th className="p-4">Estado <span className="ml-1">↕</span></th>
               <th className="p-4 rounded-tr-xl">Acción <span className="ml-1">↕</span></th>
             </tr>
@@ -127,6 +131,9 @@ export function PaymentMethodsPage() {
                   <td className="p-4"><input type="checkbox" className="rounded border-gray-300" /></td>
                   <td className="p-4 font-bold text-foreground">{m.name}</td>
                   <td className="p-4 text-muted-foreground font-medium">{m.category}</td>
+                  <td className="p-4 text-muted-foreground font-medium">
+                    {accounts.find(a => a.id === m.account_id)?.name || <span className="text-destructive/80 italic text-xs">Ninguna</span>}
+                  </td>
                   <td className="p-4">
                     <span className={cn(
                       "text-[10px] font-bold px-2.5 py-1 rounded-full tracking-wide",
@@ -179,6 +186,15 @@ export function PaymentMethodsPage() {
                   <option value="Bank">Transferencia Bancaria</option>
                   <option value="Digital Wallet">Billetera Digital</option>
                   <option value="Cash">Efectivo</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="account_id" className="text-xs font-bold text-foreground">CUENTA VINCULADA</Label>
+                <select id="account_id" name="account_id" defaultValue={editing?.account_id || ""} className="w-full h-10 px-3 py-2 rounded-md bg-muted border border-gray-200 text-sm outline-none">
+                  <option value="">-- Sin Cuenta --</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.balance}$)</option>
+                  ))}
                 </select>
               </div>
               <div className="space-y-2">

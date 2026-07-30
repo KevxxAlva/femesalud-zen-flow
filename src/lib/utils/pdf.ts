@@ -1,22 +1,7 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
-
-async function loadLogoBase64(url: string): Promise<string> {
-  try {
-    const response = await fetch(url);
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  } catch (error) {
-    console.error("Failed to load logo", error);
-    return "";
-  }
-}
+import { getClinicPdfConfig, drawPdfHeader, drawPdfWatermark, drawPdfFooter } from "./pdfConfig";
 
 export const generateFichaPDF = async (patient: any, doctorMap: Map<string, string>, clinic?: any, patientNotes: any[] = []) => {
   try {
@@ -24,36 +9,15 @@ export const generateFichaPDF = async (patient: any, doctorMap: Map<string, stri
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    const logoBase64 = await loadLogoBase64("/logo.png");
-
-    doc.setFont("times", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(60, 60, 60);
-
-    const clinicAddress1 = clinic?.address_line1 || "Calle las Flores entre González Padrón y Shettino, Número 16.";
-    const clinicAddress2 = clinic?.address_line2 || "Valle de la Pascua, Estado Guárico.";
-    const clinicPhone = clinic?.phone || "0412/8299890 0424/4609387";
-    const clinicName = clinic?.name || "Femesalud";
-    const clinicRif = clinic?.rif || "";
-
-    doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
-    doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
-    const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
-    doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
-
-    doc.setFont("times", "normal");
-    doc.setFontSize(12.5);
-    doc.setTextColor(0);
-    doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
-    doc.setFont("times", "italic");
-    doc.setFontSize(17.5);
-    doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
+    const config = await getClinicPdfConfig();
+    drawPdfWatermark(doc, config, pageWidth, pageHeight);
+    drawPdfHeader(doc, config, pageWidth);
 
     const today = new Date();
     const topDay = String(today.getDate()).padStart(2, "0");
     const topMonth = String(today.getMonth() + 1).padStart(2, "0");
     const topYear = String(today.getFullYear());
-    doc.setFont("times", "normal");
+    doc.setFont(config.customFontFamily, "normal");
     doc.setFontSize(10.5);
     doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 40, 155, { align: "right" });
 
@@ -201,13 +165,11 @@ export const generateFichaPDF = async (patient: any, doctorMap: Map<string, stri
         console.error("Error drawing watermark:", watermarkErr);
       }
       doc.setFont("times", "normal");
-      doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`FemeSalud — Generado el ${new Date().toLocaleString("es-ES")}`, 40, pageHeight - 20);
-      doc.text(`Página ${i} de ${pageCount}`, pageWidth - 40, pageHeight - 20, { align: "right" });
     }
 
-    doc.save(`Ficha_${patient.full_name.replace(/\s+/g, "_")}.pdf`);
+    drawPdfFooter(doc, config, pageWidth, pageHeight);
+    
+    doc.save(`Historia_${patient.full_name || "Paciente"}.pdf`);
     toast.success("Ficha médica exportada");
   } catch (err) {
     toast.error(err instanceof Error ? err.message : "Error al exportar");

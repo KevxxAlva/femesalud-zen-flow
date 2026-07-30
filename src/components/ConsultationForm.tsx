@@ -13,26 +13,16 @@ import { useConsultationByAppointment, useCreateConsultation, useUpdateConsultat
 import { usePatient } from "@/lib/api/patients";
 import { useDoctors } from "@/lib/api/profiles";
 import { useServices } from "@/lib/api/services";
+import { useStocks } from "@/lib/api/inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { toast } from "sonner";
 import { useRouter } from "@tanstack/react-router";
-import { Loader2, Plus, Trash2, ShieldAlert, Printer } from "lucide-react";
+import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2 } from "lucide-react";
+import { CLINICAL_TEMPLATES, PRESCRIPTION_TEMPLATES } from "@/lib/constants/clinicalTemplates";
 
 const CONTACT_CHANNELS = ["WhatsApp", "Instagram", "Facebook", "Radio", "Recomendado", "Prensa", "Volante", "Otro"];
 
-const COMMON_CONSUMABLES = [
-  { name: "Kit de citología", defaultUnit: "U" },
-  { name: "Gel de ultrasonido", defaultUnit: "cc" },
-  { name: "Impresión de eco", defaultUnit: "U" },
-  { name: "Papel camilla", defaultUnit: "m" },
-  { name: "Guantes de examen", defaultUnit: "par" },
-  { name: "Guantes estériles", defaultUnit: "par" },
-  { name: "Gasas", defaultUnit: "U" },
-  { name: "Espéculo desechable", defaultUnit: "U" },
-  { name: "Jeringas", defaultUnit: "U" },
-  { name: "Baja lengua", defaultUnit: "U" },
-];
 
 export function ConsultationForm({
   open,
@@ -55,8 +45,16 @@ export function ConsultationForm({
   const { data: patient } = usePatient(appointment?.patient_id);
   const { data: doctors = [] } = useDoctors();
   const { data: services = [] } = useServices();
+  const { data: stocks = [] } = useStocks();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const router = useRouter();
+
+  const dynamicConsumables = useMemo(() => {
+    return stocks
+      .filter(s => ["Consumables", "Medical Supplies", "Consumibles", "Suministros Médicos"].includes(s.category))
+      .map(s => ({ name: s.name, defaultUnit: "U" }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [stocks]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -129,6 +127,29 @@ export function ConsultationForm({
     return "";
   }, [weightKg, heightCm]);
 
+  const applyClinicalTemplate = (templateId: string) => {
+    if (!templateId) return;
+    const t = CLINICAL_TEMPLATES.find(x => x.id === templateId);
+    if (t) {
+      setSubjectiveExam(t.subjective);
+      setBreasts(t.breasts);
+      setAbdomen(t.abdomen);
+      setGynecological(t.gynecological);
+      setDiagnosis(t.diagnosis);
+      setPlan(t.plan);
+      toast.success(`Plantilla "${t.name}" aplicada con éxito`);
+    }
+  };
+
+  const applyPrescriptionTemplate = (templateId: string) => {
+    if (!templateId) return;
+    const t = PRESCRIPTION_TEMPLATES.find(x => x.id === templateId);
+    if (t) {
+      setIndications(t.indications);
+      toast.success(`Receta "${t.name}" aplicada con éxito`);
+    }
+  };
+
   // Load existing consultation data
   useEffect(() => {
     if (open) {
@@ -181,7 +202,7 @@ export function ConsultationForm({
         const customs: { item_name: string; quantity: string; unit: string }[] = [];
 
         (existingConsultation.consumables ?? []).forEach((c) => {
-          const isCommon = COMMON_CONSUMABLES.some((item) => item.name === c.item_name);
+          const isCommon = dynamicConsumables.some((item) => item.name === c.item_name);
           if (isCommon) {
             commonMap[c.item_name] = String(c.quantity);
           } else {
@@ -238,7 +259,7 @@ export function ConsultationForm({
         setCustomConsumables([]);
       }
     }
-  }, [open, existingConsultation]);
+  }, [open, existingConsultation]); // Removed dynamicConsumables to prevent infinite render loops
 
   const addCustomConsumable = () => {
     setCustomConsumables([...customConsumables, { item_name: "", quantity: "1", unit: "U" }]);
@@ -274,7 +295,7 @@ export function ConsultationForm({
       Object.entries(commonQuantities).forEach(([name, qtyStr]) => {
         const qty = parseFloat(qtyStr);
         if (!isNaN(qty) && qty > 0) {
-          const item = COMMON_CONSUMABLES.find((c) => c.name === name);
+          const item = dynamicConsumables.find((c) => c.name === name);
           consumables.push({
             item_name: name,
             quantity: qty,
@@ -447,17 +468,32 @@ export function ConsultationForm({
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-hidden p-6 flex flex-col min-h-0 bg-background/50 relative">
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-5 bg-muted/50 p-1 rounded-2xl mb-4">
-                <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
-                <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
-                <TabsTrigger value="special" className="rounded-2xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
-                <TabsTrigger value="plan" className="rounded-2xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
-                <TabsTrigger value="consumables" className="rounded-2xl font-medium text-xs">Consumibles</TabsTrigger>
-              </TabsList>
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
+                <TabsList className="grid w-full max-w-2xl grid-cols-5 bg-muted/50 p-1 rounded-2xl">
+                  <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
+                  <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
+                  <TabsTrigger value="special" className="rounded-2xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
+                  <TabsTrigger value="plan" className="rounded-2xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
+                  <TabsTrigger value="consumables" className="rounded-2xl font-medium text-xs">Consumibles</TabsTrigger>
+                </TabsList>
+                <div className="flex items-center gap-2">
+                  <Wand2 className="h-4 w-4 text-primary" />
+                  <Select onValueChange={applyClinicalTemplate}>
+                    <SelectTrigger className="w-[200px] h-8 text-xs rounded-xl bg-white/50">
+                      <SelectValue placeholder="Autocompletar..." />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {CLINICAL_TEMPLATES.map(t => (
+                        <SelectItem key={t.id} value={t.id} className="text-xs">{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-              <ScrollArea className="flex-1 pr-2">
+              <ScrollArea className="flex-1 -mx-6 px-6">
                 <div className="py-1">
                   {/* TAB 1: ANAMNESIS */}
                   <TabsContent value="anamnesis" className="grid gap-4 mt-0">
@@ -823,7 +859,19 @@ export function ConsultationForm({
                     </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="c-indications">Indicaciones / Receta</Label>
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="c-indications">Indicaciones / Receta</Label>
+                        <Select onValueChange={applyPrescriptionTemplate}>
+                          <SelectTrigger className="w-[180px] h-7 text-xs rounded-xl bg-muted/50 border-0">
+                            <SelectValue placeholder="Cargar receta rápida..." />
+                          </SelectTrigger>
+                          <SelectContent className="rounded-xl">
+                            {PRESCRIPTION_TEMPLATES.map(t => (
+                              <SelectItem key={t.id} value={t.id} className="text-xs">{t.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                       <Textarea
                         id="c-indications"
                         value={indications}
@@ -882,7 +930,7 @@ export function ConsultationForm({
                         <p className="text-[11px] text-muted-foreground mt-0.5">Ingresa las cantidades de los materiales clínicos utilizados en esta sesión.</p>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {COMMON_CONSUMABLES.map((item) => (
+                        {dynamicConsumables.map((item) => (
                           <div key={item.name} className="flex items-center justify-between bg-card p-3 rounded-2xl border border-border/40 shadow-sm">
                             <div className="min-w-0 pr-2">
                               <p className="text-xs font-bold truncate">{item.name}</p>

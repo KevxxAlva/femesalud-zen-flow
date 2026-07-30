@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { logAuditAction } from "@/lib/api/audit";
+import { usePaymentMethods } from "@/lib/api/paymentMethods";
 
 type Invoice = {
   id_factura: number;
@@ -29,6 +31,8 @@ export function SalesPage() {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("");
   const [paymentReference, setPaymentReference] = useState("");
+
+  const { data: methods = [] } = usePaymentMethods();
 
   const { data: facturas = [], isLoading } = useQuery({
     queryKey: ["facturas"],
@@ -88,15 +92,41 @@ export function SalesPage() {
 
       if (payError) throw payError;
 
+      // 3. Update financial account
+      const { data: pm } = await supabase.from("payment_methods").select("account_id").eq("name", paymentMethod).maybeSingle();
+      if (pm?.account_id) {
+        const { data: acc } = await supabase.from("financial_accounts").select("balance").eq("id", pm.account_id).maybeSingle();
+        if (acc) {
+           await supabase.from("financial_accounts").update({ balance: acc.balance + invoice.total_general }).eq("id", pm.account_id);
+        }
+      }
+
       return invData;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["facturas"] });
+      queryClient.invalidateQueries({ queryKey: ["financial_accounts"] });
       toast.success("Pago confirmado exitosamente");
       setConfirmOpen(false);
     },
-    onError: (error) => {
+    onError: (error: any) => {
       toast.error(`Error al confirmar pago: ${error.message}`);
+    }
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const { error } = await supabase.from("facturas").delete().eq("id_factura", id);
+      if (error) throw error;
+      
+      await logAuditAction("DELETE", "INVOICE", id.toString(), { message: "Factura eliminada desde SalesPage" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["facturas"] });
+      toast.success("Factura eliminada");
+    },
+    onError: (err: any) => {
+      toast.error("Error al eliminar la factura: " + err.message);
     }
   });
 
@@ -208,8 +238,17 @@ export function SalesPage() {
                           Confirmar
                         </button>
                       )}
-                      <button className="hover:text-foreground"><Pencil className="h-4 w-4" /></button>
-                      <button className="hover:text-destructive"><Trash2 className="h-4 w-4" /></button>
+                      <button className="hover:text-foreground cursor-pointer"><Pencil className="h-4 w-4" /></button>
+                      <button 
+                        className="hover:text-destructive cursor-pointer"
+                        onClick={() => {
+                          if (window.confirm(`¿Estás segura de que deseas eliminar la factura INV-${f.id_factura.toString().padStart(4, '0')}?`)) {
+                            deleteMutation.mutate(f.id_factura);
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -236,24 +275,25 @@ export function SalesPage() {
                   <SelectValue placeholder="Seleccione un método..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  <SelectItem value="Efectivo">Efectivo</SelectItem>
-                  <SelectItem value="Pago Móvil">Pago Móvil</SelectItem>
-                  <SelectItem value="Transferencia">Transferencia</SelectItem>
-                  <SelectItem value="Punto de Venta">Punto de Venta / Tarjeta</SelectItem>
-                  <SelectItem value="Divisas">Divisas (Dólares)</SelectItem>
+                  {methods.filter(m => m.status === "Active").map(m => (
+                    <SelectItem key={m.id} value={m.name}>{m.name}</SelectItem>
+                  ))}
+                  {methods.length === 0 && (
+                     <SelectItem value="Efectivo">Efectivo</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
 
-            {paymentMethod && paymentMethod !== "Efectivo" && paymentMethod !== "Divisas" && (
-              <div className="grid gap-2 animate-fade-in">
-                <Label htmlFor="referencia">Número de Referencia</Label>
-                <Input 
-                  id="referencia" 
-                  placeholder="Ej. Código de transferencia..." 
+            {paymentMethod && methods.find(m => m.name === paymentMethod)?.category !== "Cash" && (
+              <div className="grid gap-2">
+                <Label htmlFor="referencia">Referencia</Label>
+                <Input
+                  id="referencia"
+                  placeholder="Ej. 12345678"
                   value={paymentReference}
                   onChange={(e) => setPaymentReference(e.target.value)}
-                  className="rounded-xl bg-background/50" 
+                  className="rounded-xl bg-background/50"
                 />
               </div>
             )}

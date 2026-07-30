@@ -128,14 +128,40 @@ export function useMonthlyPayments() {
 
       const { data, error } = await supabase
         .from("facturas")
-        .select("total_general, estado_pago")
+        .select("total_general, estado_pago, fecha_emision")
         .gte("fecha_emision", startOfMonth.toISOString());
         
       if (error) throw error;
       
-      const paidInvoices = (data || []).filter(i => i.estado_pago === "pagado" || i.estado_pago === "Paid");
+      const paidInvoices = (data || []).filter(i => i.estado_pago === "pagado" || i.estado_pago === "Paid" || i.estado_pago === "paid");
+      
+      // Calculate total
       const total = paidInvoices.reduce((sum, f) => sum + (Number(f.total_general) || 0), 0);
-      return total;
+      
+      // Calculate by day for charts
+      const dailyMap: Record<string, number> = {};
+      const today = new Date();
+      const numDays = today.getDate(); // Up to today
+      
+      for (let i = 1; i <= numDays; i++) {
+        const d = new Date(today.getFullYear(), today.getMonth(), i);
+        dailyMap[d.toISOString().slice(0, 10)] = 0;
+      }
+      
+      paidInvoices.forEach(inv => {
+        if (!inv.fecha_emision) return;
+        const dateStr = inv.fecha_emision.slice(0, 10);
+        if (dailyMap[dateStr] !== undefined) {
+          dailyMap[dateStr] += (Number(inv.total_general) || 0);
+        }
+      });
+      
+      const paymentsByDay = Object.keys(dailyMap).sort().map(date => ({
+        date,
+        amount: dailyMap[date]
+      }));
+
+      return { total, paymentsByDay };
     }
   });
 }

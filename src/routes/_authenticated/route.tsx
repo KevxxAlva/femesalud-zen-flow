@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect, useRouter } from "@tanstack/react-ro
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/AppSidebar";
+import { CommandMenu } from "@/components/CommandMenu";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -35,6 +36,7 @@ function AuthenticatedLayout() {
       <main className={`px-4 pt-20 pb-6 md:pr-6 md:py-6 md:pt-6 h-full min-h-screen transition-all duration-300 ${isCollapsed ? "md:ml-[80px]" : "md:ml-[260px]"}`}>
         <Outlet />
       </main>
+      <CommandMenu />
     </div>
   );
 }

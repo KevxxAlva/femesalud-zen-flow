@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { logAuditAction } from "@/lib/api/audit";
 
 export type PatientStatus = "activo" | "en_tratamiento" | "alta" | "nuevo";
 
@@ -303,6 +304,9 @@ export function useDeletePatient() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("pacientes").delete().eq("id_paciente", parseInt(id));
       if (error) throw error;
+
+      // Log audit action silently
+      await logAuditAction("DELETE", "PATIENT", id, { message: "Paciente eliminado" });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });

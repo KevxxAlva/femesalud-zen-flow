@@ -5,6 +5,7 @@ export type PaymentMethod = {
   id: string;
   name: string;
   category: string;
+  account_id?: string;
   status: "Active" | "Inactive";
 };
 
@@ -29,7 +30,12 @@ export function useCreatePaymentMethod() {
     mutationFn: async (method: Omit<PaymentMethod, "id">) => {
       const { data, error } = await supabase
         .from("payment_methods")
-        .insert(method)
+        .insert({
+          name: method.name,
+          category: method.category,
+          account_id: method.account_id || null,
+          status: method.status
+        })
         .select()
         .single();
       if (error) throw error;
@@ -50,6 +56,7 @@ export function useUpdatePaymentMethod() {
         .update({
           name: method.name,
           category: method.category,
+          account_id: method.account_id || null,
           status: method.status,
         })
         .eq("id", method.id)

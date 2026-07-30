@@ -8,6 +8,12 @@ export interface ClinicInfo {
   address_line2: string;
   phone: string;
   rif: string;
+  recipe_logo_url?: string;
+  recipe_primary_color?: string;
+  recipe_header_text?: string;
+  recipe_footer_text?: string;
+  recipe_font_family?: string;
+  recipe_clinic_type?: string;
   updated_at: string;
 }
 

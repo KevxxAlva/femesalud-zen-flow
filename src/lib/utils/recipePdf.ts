@@ -68,7 +68,7 @@ export const generateRecipePDF = async (
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    const logoBase64 = await loadLogoBase64("/logo.png");
+
 
     // Query clinic info
     let clinicAddress1 = "Calle las Flores entre González Padrón y Shettino, Número 16.";
@@ -76,6 +76,12 @@ export const generateRecipePDF = async (
     let clinicPhone = "0412/8299890 0424/4609387";
     let clinicName = "Femesalud";
     let clinicRif = "";
+    
+    // Custom Config
+    let customHeaderText = "";
+    let customFontFamily = "times"; // default serif
+    let customLogoUrl = "";
+    let customFooterText = "";
 
     try {
       const { data } = await supabase.from("clinic_info").select("*").eq("id", 1).maybeSingle();
@@ -85,6 +91,14 @@ export const generateRecipePDF = async (
         clinicPhone = data.phone;
         clinicName = data.name;
         clinicRif = data.rif;
+        
+        customHeaderText = data.recipe_header_text || "";
+        customFooterText = data.recipe_footer_text || "";
+        customLogoUrl = data.recipe_logo_url || "";
+        
+        if (data.recipe_font_family === "font-sans") customFontFamily = "helvetica";
+        else if (data.recipe_font_family === "font-mono") customFontFamily = "courier";
+        else customFontFamily = "times";
       }
     } catch (e) {
       console.error("Error fetching clinic info for PDF:", e);
@@ -149,35 +163,61 @@ export const generateRecipePDF = async (
         : "Médico Especialista";
     }
 
+    // Load logo if exists
+    const logoBase64 = customLogoUrl ? customLogoUrl : await loadLogoBase64("/logo.png");
+
     // Draw header on Page 1
     const drawHeader = () => {
       // Font Setup
-      doc.setFont("times", "normal");
-      doc.setFontSize(8.5);
-      doc.setTextColor(60, 60, 60);
-
+      doc.setFont(customFontFamily, "normal");
+      
       // Top Header Info
-      doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
-      doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
-      const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
-      doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
+      if (customHeaderText) {
+        doc.setFontSize(11);
+        doc.setTextColor(0, 0, 0);
+        const lines = customHeaderText.split("\\n");
+        let yPos = 50;
+        lines.forEach(line => {
+          doc.text(line, pageWidth / 2, yPos, { align: "center" });
+          yPos += 15;
+        });
+      } else {
+        doc.setFontSize(8.5);
+        doc.setTextColor(60, 60, 60);
+        doc.text(clinicAddress1, pageWidth / 2, 45, { align: "center" });
+        doc.text(clinicAddress2, pageWidth / 2, 57, { align: "center" });
+        const headerLine3 = clinicRif ? `Teléfono: ${clinicPhone} | RIF: ${clinicRif}` : `Teléfono: ${clinicPhone}`;
+        doc.text(headerLine3, pageWidth / 2, 69, { align: "center" });
+  
+        // Consultorio Header
+        doc.setFont(customFontFamily, "normal");
+        doc.setFontSize(12.5);
+        doc.setTextColor(0);
+        doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
+        doc.setFont(customFontFamily, "italic");
+        doc.setFontSize(17.5);
+        doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
+      }
 
-      // Consultorio Header
-      doc.setFont("times", "normal");
-      doc.setFontSize(12.5);
-      doc.setTextColor(0);
-      doc.text("Consultorio Ginecológico Obstétrico", pageWidth / 2, 105, { align: "center" });
-      doc.setFont("times", "italic");
-      doc.setFontSize(17.5);
-      doc.text(clinicName, pageWidth / 2, 122, { align: "center" });
+      // Watermark
+      if (customLogoUrl) {
+        try {
+          doc.setGState(new (doc as any).GState({ opacity: 0.1 }));
+          // center of page
+          doc.addImage(customLogoUrl, "PNG", (pageWidth - 250) / 2, (pageHeight - 250) / 2, 250, 250);
+          doc.setGState(new (doc as any).GState({ opacity: 1.0 }));
+        } catch (e) {
+          console.error("Could not draw watermark", e);
+        }
+      }
 
       // Date Format: Valle de la Pascua, DD / MM / AAAA
-      doc.setFont("times", "normal");
+      doc.setFont(customFontFamily, "normal");
       doc.setFontSize(10.5);
       doc.text(`Valle de la Pascua,   ${topDay}   /   ${topMonth}   /   ${topYear}`, pageWidth - 70, 155, { align: "right" });
 
       // Title (centered & underlined)
-      doc.setFont("times", "bold");
+      doc.setFont(customFontFamily, "bold");
       doc.setFontSize(13);
       doc.text("RÉCIPE / INDICACIONES", pageWidth / 2, 195, { align: "center" });
       const titleWidth = doc.getTextWidth("RÉCIPE / INDICACIONES");
@@ -185,21 +225,21 @@ export const generateRecipePDF = async (
       doc.setLineWidth(0.5);
       doc.line(pageWidth / 2 - titleWidth / 2, 198, pageWidth / 2 + titleWidth / 2, 198);
 
-      // Patient Name and Age lines (same as constancias)
-      doc.setFont("times", "normal");
+      // Patient Name and Age lines
+      doc.setFont(customFontFamily, "normal");
       doc.setFontSize(11);
       doc.setTextColor(0);
       doc.text("Paciente:", 70, 240);
       doc.line(120, 240, 390, 240);
-      doc.setFont("times", "bold");
+      doc.setFont(customFontFamily, "bold");
       doc.setFontSize(11.5);
       doc.text(patient.full_name, (120 + 390) / 2, 236, { align: "center" });
 
-      doc.setFont("times", "normal");
+      doc.setFont(customFontFamily, "normal");
       doc.setFontSize(11);
       doc.text("Edad:", 405, 240);
       doc.line(435, 240, 525, 240);
-      doc.setFont("times", "bold");
+      doc.setFont(customFontFamily, "bold");
       doc.setFontSize(11.5);
       doc.text(calculateAge(patient.birth_date), (435 + 525) / 2, 236, { align: "center" });
 
@@ -219,19 +259,19 @@ export const generateRecipePDF = async (
         ciLabel = "C.I. ";
       }
 
-      doc.setFont("times", "normal");
+      doc.setFont(customFontFamily, "normal");
       doc.setFontSize(11);
       doc.text(ciLabel, 70, 275);
       const labelWidth = doc.getTextWidth(ciLabel);
       const lineStartX = 70 + labelWidth + 5;
       const lineEndX = 280;
       doc.line(lineStartX, 275, lineEndX, 275);
-      doc.setFont("times", "bold");
+      doc.setFont(customFontFamily, "bold");
       doc.setFontSize(11.5);
       doc.text(displayCI, (lineStartX + lineEndX) / 2, 271, { align: "center" });
 
       // Rx body title
-      doc.setFont("times", "bold");
+      doc.setFont(customFontFamily, "bold");
       doc.setFontSize(11.5);
       doc.text("Indicaciones:", 70, 310);
     };
@@ -239,7 +279,7 @@ export const generateRecipePDF = async (
     drawHeader();
 
     // Body Text wrap at 455 pt (70 pt margin left/right)
-    doc.setFont("times", "normal");
+    doc.setFont(customFontFamily, "normal");
     doc.setFontSize(11);
     doc.setTextColor(30, 30, 30);
     const lines = doc.splitTextToSize(indicationsText, 455);
@@ -253,7 +293,7 @@ export const generateRecipePDF = async (
         doc.addPage();
         
         // Draw running header on next pages
-        doc.setFont("times", "bold");
+        doc.setFont(customFontFamily, "bold");
         doc.setFontSize(8.5);
         doc.setTextColor(140, 140, 140);
         doc.text(`Paciente: ${patient.full_name} | Fecha: ${topDay}/${topMonth}/${topYear}`, 70, 35);
@@ -263,7 +303,7 @@ export const generateRecipePDF = async (
         doc.line(70, 40, pageWidth - 70, 40);
 
         currentY = 60;
-        doc.setFont("times", "normal");
+        doc.setFont(customFontFamily, "normal");
         doc.setFontSize(11);
         doc.setTextColor(30, 30, 30);
       }
@@ -282,11 +322,11 @@ export const generateRecipePDF = async (
     doc.line(pageWidth / 2 - 100, sigY, pageWidth / 2 + 100, sigY);
     doc.setLineDashPattern([], 0); // Restore solid line
 
-    doc.setFont("times", "bold");
+    doc.setFont(customFontFamily, "bold");
     doc.setFontSize(11.5);
     doc.text(doctorName, pageWidth / 2, sigY + 16, { align: "center" });
 
-    doc.setFont("times", "normal");
+    doc.setFont(customFontFamily, "normal");
     doc.setFontSize(10.5);
     doc.text(finalSpecialty, pageWidth / 2, sigY + 29, { align: "center" });
 
@@ -305,7 +345,7 @@ export const generateRecipePDF = async (
       try {
         if (logoBase64) {
           doc.saveGraphicsState();
-          const gState = new (doc as any).GState({ opacity: 0.04 });
+          const gState = new (doc as any).GState({ opacity: 0.1 });
           doc.setGState(gState);
           // Logo centered: width 550, height 550
           const imgWidth = 550;
@@ -319,9 +359,21 @@ export const generateRecipePDF = async (
         console.error("Error drawing watermark:", e);
       }
 
-      // Page numbers if multi-page
+      // Footer Text and Page numbers if multi-page
+      if (customFooterText) {
+        doc.setFont(customFontFamily, "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(100, 100, 100);
+        const footerLines = customFooterText.split("\\n");
+        let fY = pageHeight - 30;
+        footerLines.forEach(line => {
+          doc.text(line, pageWidth / 2, fY, { align: "center" });
+          fY += 10;
+        });
+      }
+
       if (totalPages > 1) {
-        doc.setFont("times", "normal");
+        doc.setFont(customFontFamily, "normal");
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(`Página ${i} de ${totalPages}`, pageWidth - 70, pageHeight - 20, { align: "right" });

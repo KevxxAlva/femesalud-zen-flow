@@ -14,6 +14,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
+import { PatientFilesTab } from "@/components/PatientFilesTab";
 
 export function HistoriasPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -464,11 +465,12 @@ export function HistoriasPage() {
               </div>
 
               <Tabs defaultValue="timeline" className="flex-1 flex flex-col min-h-0">
-                <TabsList className="grid w-full grid-cols-4 bg-muted/60 p-1 rounded-2xl mb-4">
+                <TabsList className="grid w-full grid-cols-5 bg-muted/60 p-1 rounded-2xl mb-4">
                   <TabsTrigger value="timeline" className="rounded-xl font-medium text-xs">Cronología de Consultas</TabsTrigger>
                   <TabsTrigger value="gyn-obs" className="rounded-xl font-medium text-xs">Ginecología y Obstetricia</TabsTrigger>
                   <TabsTrigger value="base" className="rounded-xl font-medium text-xs">Antecedentes Clínicos</TabsTrigger>
                   <TabsTrigger value="info" className="rounded-xl font-medium text-xs">Ficha de Identificación</TabsTrigger>
+                  <TabsTrigger value="files" className="rounded-xl font-medium text-xs">Archivos</TabsTrigger>
                 </TabsList>
 
                 <ScrollArea className="flex-1 pr-1">
@@ -793,6 +795,11 @@ export function HistoriasPage() {
                         </div>
                       )}
                     </div>
+                  </TabsContent>
+
+                  {/* TAB 5: FILES */}
+                  <TabsContent value="files" className="space-y-6 mt-0 outline-none p-2">
+                    <PatientFilesTab patientId={selectedPatient.id} />
                   </TabsContent>
                 </ScrollArea>
               </Tabs>

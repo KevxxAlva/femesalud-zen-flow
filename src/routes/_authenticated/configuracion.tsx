@@ -1,14 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Settings, User as UserIcon, Building, Save, Loader2, Shield } from "lucide-react";
+import { Settings, User as UserIcon, Building, Save, Loader2, Shield, Search, ClipboardList } from "lucide-react";
 import { useAuthSession, useIsAdmin, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useUpdateProfile } from "@/lib/api/profiles";
-import { useClinicInfo, useUpdateClinicInfo } from "@/lib/api/clinic";
+import { useAuditLogs } from "@/lib/api/audit";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { RecipeDesigner } from "@/components/settings/RecipeDesigner";
+import { FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
   head: () => ({ meta: [{ title: "Configuración — FemeSalud" }] }),
@@ -22,8 +24,6 @@ function ConfiguracionPage() {
   const isAdmin = useIsAdmin();
 
   const updateProfile = useUpdateProfile();
-  const { data: clinic, isLoading: loadingClinic } = useClinicInfo();
-  const updateClinic = useUpdateClinicInfo();
 
   // Profile Form State
   const [profileName, setProfileName] = useState("");
@@ -31,13 +31,6 @@ function ConfiguracionPage() {
   const [profileUniversity, setProfileUniversity] = useState("");
   const [profileMpps, setProfileMpps] = useState("");
   const [profileCmc, setProfileCmc] = useState("");
-
-  // Clinic Form State
-  const [clinicName, setClinicName] = useState("");
-  const [clinicAddress1, setClinicAddress1] = useState("");
-  const [clinicAddress2, setClinicAddress2] = useState("");
-  const [clinicPhone, setClinicPhone] = useState("");
-  const [clinicRif, setClinicRif] = useState("");
 
   // Sync profile data when loaded
   useEffect(() => {
@@ -49,17 +42,6 @@ function ConfiguracionPage() {
       setProfileCmc(profile.cmc || "");
     }
   }, [profile]);
-
-  // Sync clinic data when loaded
-  useEffect(() => {
-    if (clinic) {
-      setClinicName(clinic.name || "");
-      setClinicAddress1(clinic.address_line1 || "");
-      setClinicAddress2(clinic.address_line2 || "");
-      setClinicPhone(clinic.phone || "");
-      setClinicRif(clinic.rif || "");
-    }
-  }, [clinic]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,22 +61,6 @@ function ConfiguracionPage() {
     }
   };
 
-  const handleSaveClinic = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await updateClinic.mutateAsync({
-        name: clinicName.trim(),
-        address_line1: clinicAddress1.trim(),
-        address_line2: clinicAddress2.trim(),
-        phone: clinicPhone.trim(),
-        rif: clinicRif.trim(),
-      });
-      toast.success("Datos de la clínica actualizados");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al actualizar datos de la clínica");
-    }
-  };
-
   const initials = (name: string) => {
     return (name || "?")
       .split(" ")
@@ -105,7 +71,6 @@ function ConfiguracionPage() {
   };
 
   const isProfileLoading = loadingProfile || updateProfile.isPending;
-  const isClinicLoading = loadingClinic || updateClinic.isPending;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-2 font-sans text-foreground">
@@ -117,16 +82,23 @@ function ConfiguracionPage() {
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-muted/50 p-1 rounded-2xl mb-6 max-w-md">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-muted/50 p-1 rounded-2xl mb-6 max-w-2xl h-auto flex-wrap">
           <TabsTrigger value="profile" className="rounded-xl font-bold text-xs flex items-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground">
             <UserIcon className="h-4 w-4" /> Mi Perfil
           </TabsTrigger>
           <TabsTrigger
-            value="clinic"
-            className="rounded-xl font-bold text-xs flex items-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground"
+            value="audit"
+            className="rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground"
             disabled={!isAdmin && !loadingProfile}
           >
-            <Building className="h-4 w-4" /> Datos de la Clínica
+            <ClipboardList className="h-4 w-4" /> Auditoría
+          </TabsTrigger>
+          <TabsTrigger
+            value="recipe"
+            className="rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground"
+            disabled={!isAdmin && !loadingProfile}
+          >
+            <FileText className="h-4 w-4" /> Recetario
           </TabsTrigger>
         </TabsList>
 
@@ -251,119 +223,75 @@ function ConfiguracionPage() {
           </div>
         </TabsContent>
 
-        {/* TAB 2: CLINIC DETAILS */}
+
+        {/* TAB 3: AUDITORIA */}
         {isAdmin && (
-          <TabsContent value="clinic" className="outline-none space-y-4">
-            <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm relative overflow-hidden">
-              <div className="absolute right-0 top-0 w-32 h-32 bg-primary/5 rounded-full blur-2xl -mr-10 -mt-10" />
-
-              <form onSubmit={handleSaveClinic} className="space-y-6">
-                <div className="pb-4 border-b border-border/40">
-                  <h3 className="font-bold text-lg text-foreground flex items-center gap-2">
-                    <Building className="h-5 w-5 text-primary" /> Datos Generales de la Clínica
-                  </h3>
-                  <p className="text-xs text-muted-foreground font-medium mt-1">
-                    Esta información aparecerá impresa en los récipes, constancias y facturas generadas por el sistema.
-                  </p>
-                </div>
-
-                {/* Form Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="clinic-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Nombre Comercial
-                    </Label>
-                    <Input
-                      id="clinic-name"
-                      value={clinicName}
-                      onChange={(e) => setClinicName(e.target.value)}
-                      required
-                      disabled={isClinicLoading}
-                      placeholder="Ej. Femesalud"
-                      className="rounded-xl h-11 border-border/40 focus:border-[#4361ee] focus:ring-[#4361ee]/20 font-medium text-foreground shadow-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="clinic-address1" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Dirección (Línea 1)
-                    </Label>
-                    <Input
-                      id="clinic-address1"
-                      value={clinicAddress1}
-                      onChange={(e) => setClinicAddress1(e.target.value)}
-                      required
-                      disabled={isClinicLoading}
-                      placeholder="Ej. Calle las Flores entre González Padrón y Shettino, Número 16."
-                      className="rounded-xl h-11 border-border/40 focus:border-[#4361ee] focus:ring-[#4361ee]/20 font-medium text-foreground shadow-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="clinic-address2" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Dirección (Línea 2 - Ciudad, Estado)
-                    </Label>
-                    <Input
-                      id="clinic-address2"
-                      value={clinicAddress2}
-                      onChange={(e) => setClinicAddress2(e.target.value)}
-                      required
-                      disabled={isClinicLoading}
-                      placeholder="Ej. Valle de la Pascua, Estado Guárico."
-                      className="rounded-xl h-11 border-border/40 focus:border-[#4361ee] focus:ring-[#4361ee]/20 font-medium text-foreground shadow-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="clinic-phone" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Teléfonos de Contacto
-                    </Label>
-                    <Input
-                      id="clinic-phone"
-                      value={clinicPhone}
-                      onChange={(e) => setClinicPhone(e.target.value)}
-                      required
-                      disabled={isClinicLoading}
-                      placeholder="Ej. 0412/8299890 0424/4609387"
-                      className="rounded-xl h-11 border-border/40 focus:border-[#4361ee] focus:ring-[#4361ee]/20 font-medium text-foreground shadow-sm"
-                    />
-                  </div>
-
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="clinic-rif" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      Registro de Información Fiscal (RIF)
-                    </Label>
-                    <Input
-                      id="clinic-rif"
-                      value={clinicRif}
-                      onChange={(e) => setClinicRif(e.target.value)}
-                      required
-                      disabled={isClinicLoading}
-                      placeholder="Ej. J-12345678-9"
-                      className="rounded-xl h-11 border-border/40 focus:border-[#4361ee] focus:ring-[#4361ee]/20 font-medium text-foreground shadow-sm"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4">
-                  <Button
-                    type="submit"
-                    disabled={isClinicLoading}
-                    className="rounded-xl bg-primary text-primary-foreground hover:bg-[#3451d6] shadow-sm h-11 px-6 flex items-center gap-2 font-bold text-sm"
-                  >
-                    {isClinicLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    Guardar Datos Clínicos
-                  </Button>
-                </div>
-              </form>
-            </div>
+          <TabsContent value="audit" className="outline-none space-y-4">
+            <AuditLogSection />
           </TabsContent>
         )}
+      
+      {/* TAB 4: RECIPES */}
+      <TabsContent value="recipe" className="outline-none space-y-4">
+        <RecipeDesigner />
+      </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function AuditLogSection() {
+  const { data: logs = [], isLoading } = useAuditLogs(100);
+
+  return (
+    <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
+      <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+        <Shield className="h-5 w-5" /> Registro de Actividades
+      </h2>
+      <p className="text-muted-foreground text-sm mb-6">
+        Este es el registro de auditoría de las acciones críticas (como eliminaciones) realizadas por los usuarios.
+      </p>
+
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : logs.length === 0 ? (
+        <div className="text-center p-8 text-muted-foreground bg-muted/20 rounded-2xl">
+          No hay registros de auditoría disponibles.
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-border/40">
+          <table className="w-full text-left border-collapse whitespace-nowrap">
+            <thead>
+              <tr className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
+                <th className="p-4 font-bold border-b border-border/40">Fecha</th>
+                <th className="p-4 font-bold border-b border-border/40">Usuario</th>
+                <th className="p-4 font-bold border-b border-border/40">Acción</th>
+                <th className="p-4 font-bold border-b border-border/40">Detalles</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm">
+              {logs.map((log: any) => (
+                <tr key={log.id} className="border-b border-border/40 hover:bg-muted/20 transition">
+                  <td className="p-4 font-medium text-foreground">
+                    {new Date(log.created_at).toLocaleString()}
+                  </td>
+                  <td className="p-4 text-muted-foreground">
+                    {log.perfiles?.full_name || log.perfiles?.email || log.user_id}
+                  </td>
+                  <td className="p-4">
+                    <span className="bg-destructive/10 text-destructive border border-red-100 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                      {log.action_type} {log.entity_type}
+                    </span>
+                  </td>
+                  <td className="p-4 text-muted-foreground text-xs">
+                    {log.details?.message || `ID: ${log.entity_id}`}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

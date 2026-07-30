@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { logAuditAction } from "@/lib/api/audit";
 
 export type AppointmentStatus = "programada" | "completada" | "cancelada" | "no_asistio";
 
@@ -209,14 +211,51 @@ export function useUpdateAppointment() {
 
         // 3. Handle Pagos
         if (facturaId && patch.payment_method) {
-           const { data: existP } = await supabase.from("pagos").select("id_pago").eq("id_factura", facturaId).maybeSingle();
+           const { data: existP } = await supabase.from("pagos").select("id_pago, monto, metodo_pago").eq("id_factura", facturaId).maybeSingle();
+           
+           // Fetch the payment method to get its account_id
+           const { data: pm } = await supabase.from("payment_methods").select("account_id").eq("name", patch.payment_method).maybeSingle();
+           const newAccountId = pm?.account_id;
+
            if (existP) {
+              // Revert old account balance if it was a different method or different amount
+              let oldAccountId = null;
+              if (existP.metodo_pago !== patch.payment_method) {
+                 const { data: oldPm } = await supabase.from("payment_methods").select("account_id").eq("name", existP.metodo_pago).maybeSingle();
+                 oldAccountId = oldPm?.account_id;
+              } else {
+                 oldAccountId = newAccountId;
+              }
+
+              if (oldAccountId) {
+                 const { data: oldAcc } = await supabase.from("financial_accounts").select("balance").eq("id", oldAccountId).maybeSingle();
+                 if (oldAcc) {
+                    await supabase.from("financial_accounts").update({ balance: oldAcc.balance - (existP.monto || 0) }).eq("id", oldAccountId);
+                 }
+              }
+
+              // Add to new account balance
+              if (newAccountId) {
+                 const { data: newAcc } = await supabase.from("financial_accounts").select("balance").eq("id", newAccountId).maybeSingle();
+                 if (newAcc) {
+                    await supabase.from("financial_accounts").update({ balance: newAcc.balance + targetPrice }).eq("id", newAccountId);
+                 }
+              }
+
               await supabase.from("pagos").update({ 
                 metodo_pago: patch.payment_method, 
                 referencia: patch.payment_reference || null,
                 monto: targetPrice
               }).eq("id_pago", existP.id_pago);
            } else {
+              // Add to new account balance
+              if (newAccountId) {
+                 const { data: newAcc } = await supabase.from("financial_accounts").select("balance").eq("id", newAccountId).maybeSingle();
+                 if (newAcc) {
+                    await supabase.from("financial_accounts").update({ balance: newAcc.balance + targetPrice }).eq("id", newAccountId);
+                 }
+              }
+
               await supabase.from("pagos").insert({
                 id_factura: facturaId,
                 metodo_pago: patch.payment_method,
@@ -229,7 +268,10 @@ export function useUpdateAppointment() {
       
       return { id };
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["appointments"] });
+      qc.invalidateQueries({ queryKey: ["financial_accounts"] });
+    },
   });
 }
 
@@ -242,6 +284,9 @@ export function useDeleteAppointment() {
 
       const { error } = await supabase.from("citas").delete().eq("id_cita", parseInt(id));
       if (error) throw error;
+
+      // Log audit action silently
+      await logAuditAction("DELETE", "APPOINTMENT", id, { message: "Cita eliminada" });
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["appointments"] }),
   });

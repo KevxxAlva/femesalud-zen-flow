@@ -328,6 +328,21 @@ export function useCreateConsultation() {
         if (consError) {
            console.warn("Error inserting consumables:", consError);
         }
+
+        // Deduct from inventory
+        for (const item of consumables) {
+          const { data: stockItem } = await supabase
+            .from("inventory_stocks")
+            .select("id, quantity")
+            .eq("name", item.item_name)
+            .maybeSingle();
+          if (stockItem) {
+            await supabase
+              .from("inventory_stocks")
+              .update({ quantity: Math.max(0, stockItem.quantity - item.quantity) })
+              .eq("id", stockItem.id);
+          }
+        }
       }
 
       // 4. Mark appointment as completed
@@ -371,6 +386,7 @@ export function useCreateConsultation() {
       qc.invalidateQueries({ queryKey: ["appointments"] });
       qc.invalidateQueries({ queryKey: ["patients"] });
       qc.invalidateQueries({ queryKey: ["clinical-notes"] });
+      qc.invalidateQueries({ queryKey: ["inventory_stocks"] });
     },
   });
 }
@@ -416,6 +432,28 @@ export function useUpdateConsultation() {
 
       // 3. Update consumables if provided
       if (consumables) {
+        // Fetch old consumables to restore inventory
+        const { data: oldConsumables } = await supabase
+          .from("insumos_consulta")
+          .select("*")
+          .eq("id_consulta", parseInt(id));
+          
+        if (oldConsumables) {
+          for (const old of oldConsumables) {
+            const { data: stockItem } = await supabase
+              .from("inventory_stocks")
+              .select("id, quantity")
+              .eq("name", old.nombre_insumo)
+              .maybeSingle();
+            if (stockItem) {
+              await supabase
+                .from("inventory_stocks")
+                .update({ quantity: stockItem.quantity + old.cantidad })
+                .eq("id", stockItem.id);
+            }
+          }
+        }
+
         // Try deleting by id_consulta first, then id_historia just in case
         await supabase.from("insumos_consulta").delete().eq("id_consulta", parseInt(id));
         if (oldHc.id_historia) {
@@ -432,6 +470,21 @@ export function useUpdateConsultation() {
           const { error: insError } = await supabase.from("insumos_consulta").insert(newConsumables);
           if (insError) {
              console.warn("Error inserting consumables on update:", insError);
+          }
+          
+          // Deduct new consumables from inventory
+          for (const item of consumables) {
+            const { data: stockItem } = await supabase
+              .from("inventory_stocks")
+              .select("id, quantity")
+              .eq("name", item.item_name)
+              .maybeSingle();
+            if (stockItem) {
+              await supabase
+                .from("inventory_stocks")
+                .update({ quantity: Math.max(0, stockItem.quantity - item.quantity) })
+                .eq("id", stockItem.id);
+            }
           }
         }
       }
