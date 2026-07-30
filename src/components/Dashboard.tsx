@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { 
-  Search, Bell, Settings, MoreHorizontal, MapPin, Edit2, ChevronDown, Users, CalendarClock
+  Search, Bell, Settings, MoreHorizontal, MapPin, Edit2, ChevronDown, ChevronLeft, ChevronRight, Users, CalendarClock
 } from "lucide-react";
 import { useAuthSession, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
@@ -103,29 +103,43 @@ export function Dashboard() {
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
   
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const todayStr = today.toISOString().slice(0, 10);
+  
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  
+  const selectedDateStr = useMemo(() => {
+    return selectedDate.toISOString().slice(0, 10);
+  }, [selectedDate]);
   
   const todaysAppointments = useMemo(() => {
     return appointments.filter(a => a.scheduled_at.slice(0, 10) === todayStr)
       .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
   }, [appointments, todayStr]);
 
+  const selectedDateAppointments = useMemo(() => {
+    return appointments.filter(a => a.scheduled_at.slice(0, 10) === selectedDateStr)
+      .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  }, [appointments, selectedDateStr]);
+
   const currentWeek = useMemo(() => {
     const days = [];
-    const date = new Date(today);
-    // Move to Sunday of current week
+    const date = new Date(selectedDate);
+    // Move to Sunday of selected date's week
     date.setDate(date.getDate() - date.getDay());
     for (let i = 0; i < 7; i++) {
+      const fullDate = new Date(date);
       days.push({
         day: date.toLocaleString('es-ES', { weekday: 'short' }).slice(0, 3).replace(/^\w/, c => c.toUpperCase()),
         date: date.getDate(),
-        active: date.toDateString() === today.toDateString()
+        fullDate,
+        dateStr: fullDate.toISOString().slice(0, 10),
+        active: fullDate.toDateString() === selectedDate.toDateString()
       });
       date.setDate(date.getDate() + 1);
     }
     return days;
-  }, [todayStr]);
+  }, [selectedDate]);
 
   const notifications = useMemo(() => {
     const list = [];
@@ -451,20 +465,50 @@ export function Dashboard() {
             {/* Calendar Header */}
             <div className="flex justify-between items-center bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-6 py-4 border-b border-primary/20">
               <span className="text-xs font-bold uppercase tracking-widest">Mi Calendario</span>
-              <button className="flex items-center gap-1 bg-black/10 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black/20 transition">
-                {today.toLocaleString("es-ES", { month: "long" })} <ChevronDown className="h-3 w-3" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button 
+                  onClick={() => {
+                    const prev = new Date(selectedDate);
+                    prev.setDate(prev.getDate() - 7);
+                    setSelectedDate(prev);
+                  }}
+                  className="p-1 hover:bg-black/20 rounded-lg transition cursor-pointer"
+                  title="Semana anterior"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button 
+                  onClick={() => setSelectedDate(new Date())}
+                  className="bg-black/10 px-2.5 py-1 rounded-lg text-xs font-bold hover:bg-black/20 transition capitalize cursor-pointer"
+                >
+                  {selectedDate.toLocaleString("es-ES", { month: "long" })} {selectedDate.getFullYear()}
+                </button>
+                <button 
+                  onClick={() => {
+                    const next = new Date(selectedDate);
+                    next.setDate(next.getDate() + 7);
+                    setSelectedDate(next);
+                  }}
+                  className="p-1 hover:bg-black/20 rounded-lg transition cursor-pointer"
+                  title="Semana siguiente"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             
-            {/* Simple CSS Calendar Grid (One Row style with pill) */}
-            <div className="bg-muted px-6 py-4 border-b border-border/40">
-              <div className="flex justify-between items-center">
+            {/* Calendar Grid (Interactive Row of Days) */}
+            <div className="bg-muted px-4 py-4 border-b border-border/40">
+              <div className="flex justify-between items-center gap-1">
                 {currentWeek.map((d) => (
-                  <div 
-                    key={d.day + d.date} 
+                  <button 
+                    key={d.dateStr}
+                    onClick={() => setSelectedDate(d.fullDate)}
                     className={cn(
-                      "flex flex-col items-center justify-center w-12 py-2 rounded-[1rem]",
-                      d.active ? "bg-primary text-primary-foreground shadow-md" : "text-muted-foreground bg-transparent"
+                      "flex flex-col items-center justify-center w-12 py-2 rounded-[1rem] transition-all cursor-pointer hover:scale-105",
+                      d.active 
+                        ? "bg-primary text-primary-foreground shadow-md font-bold" 
+                        : "text-muted-foreground bg-transparent hover:bg-background/60 hover:text-foreground"
                     )}
                   >
                     <span className="text-[10px] font-bold mb-1">{d.day}</span>
@@ -472,33 +516,46 @@ export function Dashboard() {
                       "text-sm font-bold",
                       d.active ? "text-primary-foreground" : "text-foreground"
                     )}>{d.date}</span>
-                  </div>
+                  </button>
                 ))}
               </div>
             </div>
 
-            {/* Timeline */}
+            {/* Timeline for Selected Date */}
             <div className="px-6 py-4 flex-1 flex flex-col">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                  {today.toLocaleString("es-ES", { month: "long" }).toUpperCase()}, {today.getDate()}
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <span>{selectedDate.toLocaleString("es-ES", { month: "long", day: "numeric", year: "numeric" }).toUpperCase()}</span>
+                  {selectedDate.toDateString() === today.toDateString() && (
+                    <span className="bg-primary/20 text-primary text-[10px] px-2 py-0.5 rounded-full font-extrabold">HOY</span>
+                  )}
                 </h3>
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground font-semibold">
+                  {selectedDateAppointments.length} cita(s)
+                </span>
               </div>
 
               <div className="flex flex-col flex-1">
-                {todaysAppointments.length > 0 ? (
-                  todaysAppointments.map((app, i) => {
+                {selectedDateAppointments.length > 0 ? (
+                  selectedDateAppointments.map((app, i) => {
                     const d = new Date(app.scheduled_at);
-                    const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }).toLowerCase();
+                    const time = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
                     const isEven = i % 2 === 0;
                     const dotColor = isEven ? "var(--color-primary)" : "var(--color-secondary)";
                     return (
-                      <div key={app.id} className="relative flex flex-col pt-1 pb-4 border-b border-dashed border-border/40 last:border-0 hover:bg-muted/30 transition-colors -mx-4 px-4 rounded-xl">
+                      <div key={app.id} className="relative flex flex-col pt-2 pb-4 border-b border-dashed border-border/40 last:border-0 hover:bg-muted/30 transition-colors -mx-4 px-4 rounded-xl">
                         <div className="flex items-center gap-3 text-xs font-bold">
-                          <span className="w-12 text-left text-muted-foreground font-medium">{time}</span>
-                          <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                          <span className="w-14 text-left text-muted-foreground font-medium">{time}</span>
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
                           <span className="text-foreground truncate flex-1">Consulta con {app.patient_name}</span>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[10px] uppercase font-bold",
+                            app.status === "completada" ? "bg-emerald-500/10 text-emerald-600" :
+                            app.status === "cancelada" ? "bg-destructive/10 text-destructive" :
+                            "bg-primary/10 text-primary"
+                          )}>
+                            {app.status}
+                          </span>
                         </div>
                       </div>
                     );
@@ -506,8 +563,8 @@ export function Dashboard() {
                 ) : (
                   <div className="flex flex-col items-center justify-center py-10 text-center opacity-60">
                     <CalendarClock className="h-10 w-10 text-muted-foreground mb-2" />
-                    <p className="text-sm font-bold text-foreground">Sin eventos para hoy</p>
-                    <p className="text-xs text-muted-foreground font-medium">No tienes citas programadas</p>
+                    <p className="text-sm font-bold text-foreground">Sin eventos para este día</p>
+                    <p className="text-xs text-muted-foreground font-medium">No hay citas programadas para esta fecha</p>
                   </div>
                 )}
               </div>

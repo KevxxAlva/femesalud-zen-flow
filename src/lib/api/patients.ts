@@ -70,45 +70,50 @@ export interface Patient {
 export type PatientInput = Omit<Patient, "id" | "created_at" | "updated_at">;
 
 // Helper to map DB record to Patient interface
-const mapPatient = (p: any): Patient => ({
-  id: p.id_paciente.toString(),
-  full_name: `${p.nombre} ${p.apellido}`,
-  email: p.email,
-  phone: p.telefono,
-  birth_date: p.fecha_nacimiento,
-  address: p.direccion,
-  status: "activo", // Defaulting since we didn't add it to DB yet
-  assigned_doctor_id: null,
-  notes: null,
-  created_at: p.creado_en || new Date().toISOString(),
-  updated_at: p.creado_en || new Date().toISOString(),
-  document_id: p.documento_identidad,
-  historia_number: p.historias_clinicas?.[0]?.id_historia?.toString() || null,
-  first_visit_date: null,
-  marital_status: null,
-  birthplace: null,
-  education_level: null,
-  occupation: null,
-  ethnicity: null,
-  family_history: {
-    mother: null,
-    father: null,
-    siblings: null,
-    children: p.historias_clinicas?.[0]?.antecedentes_familiares || null,
-  },
-  personal_history: {
-    alcohol: null,
-    drugs: null,
-    tobacco: null,
-    base_pathology: p.historias_clinicas?.[0]?.enfermedades_cronicas || null,
-    surgical: null,
-    allergies: p.historias_clinicas?.[0]?.alergias || null,
-  },
-  gynecological_data: null,
-  obstetric_data: null,
-  consultation_reason: null,
-  current_illness: null,
-});
+const mapPatient = (p: any): Patient => {
+  const hc = Array.isArray(p.historias_clinicas) ? p.historias_clinicas[0] : (p.historias_clinicas || {});
+  const extras = typeof hc.datos_extras === 'object' && hc.datos_extras !== null ? hc.datos_extras : {};
+
+  return {
+    id: p.id_paciente?.toString(),
+    full_name: `${p.nombre} ${p.apellido}`.trim(),
+    email: p.email,
+    phone: p.telefono,
+    birth_date: p.fecha_nacimiento,
+    address: p.direccion,
+    status: extras.status || "activo",
+    assigned_doctor_id: extras.assigned_doctor_id || null,
+    notes: extras.notes || null,
+    created_at: p.creado_en || new Date().toISOString(),
+    updated_at: p.creado_en || new Date().toISOString(),
+    document_id: p.documento_identidad,
+    historia_number: hc.id_historia?.toString() || extras.historia_number || null,
+    first_visit_date: extras.first_visit_date || null,
+    marital_status: extras.marital_status || null,
+    birthplace: extras.birthplace || null,
+    education_level: extras.education_level || null,
+    occupation: extras.occupation || null,
+    ethnicity: extras.ethnicity || null,
+    family_history: {
+      mother: extras.family_history?.mother || null,
+      father: extras.family_history?.father || null,
+      siblings: extras.family_history?.siblings || null,
+      children: hc.antecedentes_familiares || extras.family_history?.children || null,
+    },
+    personal_history: {
+      alcohol: extras.personal_history?.alcohol || null,
+      drugs: extras.personal_history?.drugs || null,
+      tobacco: extras.personal_history?.tobacco || null,
+      base_pathology: hc.enfermedades_cronicas || extras.personal_history?.base_pathology || null,
+      surgical: extras.personal_history?.surgical || null,
+      allergies: hc.alergias || extras.personal_history?.allergies || null,
+    },
+    gynecological_data: extras.gynecological_data || null,
+    obstetric_data: extras.obstetric_data || null,
+    consultation_reason: extras.consultation_reason || null,
+    current_illness: extras.current_illness || null,
+  };
+};
 
 export function usePatients() {
   return useQuery({
@@ -116,7 +121,7 @@ export function usePatients() {
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
         .from("pacientes")
-        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)")
+        .select("id_paciente, nombre, apellido, email, telefono, fecha_nacimiento, creado_en, documento_identidad, historias_clinicas(id_historia)")
         .order("creado_en", { ascending: false });
       if (error) throw error;
       return (data ?? []).map(mapPatient);
@@ -179,7 +184,7 @@ export function useRecentPatients(limit: number = 5) {
     queryFn: async (): Promise<Patient[]> => {
       const { data, error } = await supabase
         .from("pacientes")
-        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)")
+        .select("id_paciente, nombre, apellido, email, telefono, fecha_nacimiento, creado_en, documento_identidad, historias_clinicas(id_historia)")
         .order("creado_en", { ascending: false })
         .limit(limit);
       if (error) throw error;
@@ -202,7 +207,7 @@ export function usePaginatedPatients(
 
       let query = supabase
         .from("pacientes")
-        .select("id_paciente, nombre, apellido, email, telefono, creado_en, documento_identidad, historias_clinicas(id_historia)", { count: "exact" })
+        .select("id_paciente, nombre, apellido, email, telefono, fecha_nacimiento, creado_en, documento_identidad, historias_clinicas(id_historia)", { count: "exact" })
         .order("creado_en", { ascending: false })
         .range(from, to);
 
@@ -246,7 +251,7 @@ export function useCreatePatient() {
       const nombre = names[0];
       const apellido = names.slice(1).join(' ') || '';
 
-      const { error, data } = await supabase
+      const { error: patientError, data: patientData } = await supabase
         .from("pacientes")
         .insert({ 
           nombre, 
@@ -254,12 +259,41 @@ export function useCreatePatient() {
           email: input.email, 
           telefono: input.phone,
           documento_identidad: input.document_id || Math.random().toString().slice(2, 10),
-          fecha_nacimiento: input.birth_date
+          fecha_nacimiento: input.birth_date,
+          direccion: input.address
         })
         .select()
         .single();
-      if (error) throw error;
-      return mapPatient(data);
+      if (patientError) throw patientError;
+
+      const {
+        status, assigned_doctor_id, notes, historia_number, first_visit_date, 
+        marital_status, birthplace, education_level, occupation, ethnicity,
+        family_history, personal_history, gynecological_data, obstetric_data,
+        consultation_reason, current_illness
+      } = input;
+      
+      const datos_extras = {
+        status, assigned_doctor_id, notes, historia_number, first_visit_date, 
+        marital_status, birthplace, education_level, occupation, ethnicity,
+        family_history, personal_history, gynecological_data, obstetric_data,
+        consultation_reason, current_illness
+      };
+
+      const { error: hcError, data: hcData } = await supabase
+        .from("historias_clinicas")
+        .insert({
+          id_paciente: patientData.id_paciente,
+          alergias: input.personal_history?.allergies || null,
+          enfermedades_cronicas: input.personal_history?.base_pathology || null,
+          antecedentes_familiares: input.family_history?.children || null,
+          datos_extras
+        })
+        .select()
+        .single();
+      if (hcError) console.error("Error creating historia clinica", hcError);
+
+      return mapPatient({ ...patientData, historias_clinicas: hcData });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
@@ -284,13 +318,65 @@ export function useUpdatePatient() {
       if (patch.phone !== undefined) updateData.telefono = patch.phone;
       if (patch.document_id !== undefined) updateData.documento_identidad = patch.document_id;
       if (patch.birth_date !== undefined) updateData.fecha_nacimiento = patch.birth_date;
+      if (patch.address !== undefined) updateData.direccion = patch.address;
 
-      const { error, data } = await supabase.from("pacientes").update(updateData).eq("id_paciente", parseInt(id)).select().single();
-      if (error) throw error;
-      return mapPatient(data);
+      const { error: patientError, data: patientData } = await supabase
+        .from("pacientes")
+        .update(updateData)
+        .eq("id_paciente", parseInt(id))
+        .select()
+        .single();
+      if (patientError) throw patientError;
+
+      const {
+        status, assigned_doctor_id, notes, historia_number, first_visit_date, 
+        marital_status, birthplace, education_level, occupation, ethnicity,
+        family_history, personal_history, gynecological_data, obstetric_data,
+        consultation_reason, current_illness
+      } = patch;
+      
+      const extrasToMerge: any = {};
+      if (status !== undefined) extrasToMerge.status = status;
+      if (assigned_doctor_id !== undefined) extrasToMerge.assigned_doctor_id = assigned_doctor_id;
+      if (notes !== undefined) extrasToMerge.notes = notes;
+      if (historia_number !== undefined) extrasToMerge.historia_number = historia_number;
+      if (first_visit_date !== undefined) extrasToMerge.first_visit_date = first_visit_date;
+      if (marital_status !== undefined) extrasToMerge.marital_status = marital_status;
+      if (birthplace !== undefined) extrasToMerge.birthplace = birthplace;
+      if (education_level !== undefined) extrasToMerge.education_level = education_level;
+      if (occupation !== undefined) extrasToMerge.occupation = occupation;
+      if (ethnicity !== undefined) extrasToMerge.ethnicity = ethnicity;
+      if (family_history !== undefined) extrasToMerge.family_history = family_history;
+      if (personal_history !== undefined) extrasToMerge.personal_history = personal_history;
+      if (gynecological_data !== undefined) extrasToMerge.gynecological_data = gynecological_data;
+      if (obstetric_data !== undefined) extrasToMerge.obstetric_data = obstetric_data;
+      if (consultation_reason !== undefined) extrasToMerge.consultation_reason = consultation_reason;
+      if (current_illness !== undefined) extrasToMerge.current_illness = current_illness;
+
+      const { data: currentHc } = await supabase.from("historias_clinicas").select("*").eq("id_paciente", parseInt(id)).maybeSingle();
+      const currentExtras = typeof currentHc?.datos_extras === 'object' && currentHc?.datos_extras !== null ? currentHc.datos_extras : {};
+      const newExtras = { ...currentExtras, ...extrasToMerge };
+
+      const { error: hcError, data: hcData } = await supabase
+        .from("historias_clinicas")
+        .upsert({
+          ...(currentHc?.id_historia ? { id_historia: currentHc.id_historia } : {}),
+          id_paciente: parseInt(id),
+          alergias: patch.personal_history?.allergies !== undefined ? patch.personal_history?.allergies : currentHc?.alergias,
+          enfermedades_cronicas: patch.personal_history?.base_pathology !== undefined ? patch.personal_history?.base_pathology : currentHc?.enfermedades_cronicas,
+          antecedentes_familiares: patch.family_history?.children !== undefined ? patch.family_history?.children : currentHc?.antecedentes_familiares,
+          datos_extras: newExtras
+        }, { onConflict: "id_paciente" })
+        .select()
+        .single();
+      
+      if (hcError && hcError.code !== '23505') console.error("Error upserting historia clinica", hcError);
+
+      return mapPatient({ ...patientData, historias_clinicas: hcData || currentHc });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patients"] });
+      qc.invalidateQueries({ queryKey: ["patient"] });
       qc.invalidateQueries({ queryKey: ["patients_count"] });
       qc.invalidateQueries({ queryKey: ["patients_paginated"] });
       qc.invalidateQueries({ queryKey: ["patients_recent"] });

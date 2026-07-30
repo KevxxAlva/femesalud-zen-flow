@@ -1,10 +1,57 @@
 import { useState } from "react";
-import { usePatientConsultations } from "@/lib/api/consultations";
-import { Loader2, Stethoscope, ChevronDown, ChevronUp, FileText, Pill, Thermometer, Droplet, Activity, Scaling, TestTube, Crosshair, Package } from "lucide-react";
+import { usePatientConsultations, type Consultation } from "@/lib/api/consultations";
+import { usePatient } from "@/lib/api/patients";
+import { useDoctors } from "@/lib/api/profiles";
+import { useClinicInfo } from "@/lib/api/clinic";
+import { generateRecipePDF } from "@/lib/utils/recipePdf";
+import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
+import { Button } from "@/components/ui/button";
+import { Loader2, Stethoscope, ChevronDown, ChevronUp, FileText, Pill, Thermometer, Droplet, Activity, Scaling, TestTube, Crosshair, Package, Printer, MessageSquare } from "lucide-react";
 
 export function PatientConsultationsPanel({ patientId }: { patientId: string }) {
   const { data: consultations = [], isLoading } = usePatientConsultations(patientId);
+  const { data: patient } = usePatient(patientId);
+  const { data: doctors = [] } = useDoctors();
+  const { data: clinic } = useClinicInfo();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const handleExportRecipe = async (c: Consultation) => {
+    if (!patient) return;
+    const doctorObj = doctors.find((d) => d.id === c.doctor_id);
+    const doctorName = doctorObj?.full_name || doctorObj?.email || "Médico Tratante";
+
+    await generateRecipePDF(
+      {
+        full_name: patient.full_name,
+        document_id: patient.document_id,
+        birth_date: patient.birth_date,
+      },
+      {
+        created_at: c.created_at,
+        indications: c.indications,
+      },
+      doctorName,
+      doctorObj?.specialty,
+      doctorObj?.university,
+      doctorObj?.mpps,
+      doctorObj?.cmc
+    );
+  };
+
+  const handleSendWhatsApp = (c: Consultation) => {
+    if (!patient) return;
+    const doctorObj = doctors.find((d) => d.id === c.doctor_id);
+    const doctorName = doctorObj?.full_name || doctorObj?.email || "Médico Tratante";
+
+    sendRecipeViaWhatsApp({
+      patientName: patient.full_name,
+      patientPhone: patient.phone,
+      consultationDate: c.created_at,
+      indications: c.indications || c.plan || "",
+      doctorName,
+      clinicName: clinic?.name || "FemeSalud"
+    });
+  };
 
   if (isLoading) {
     return <div className="py-12 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -94,9 +141,31 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                       </h5>
                       <p className="text-foreground font-medium whitespace-pre-wrap mb-4">{c.diagnosis || "No especificado."}</p>
                       
-                      <h5 className="text-xs font-bold text-primary uppercase tracking-wider mb-2">
-                         Plan y Tratamiento
-                      </h5>
+                      <div className="flex items-center justify-between mb-2">
+                        <h5 className="text-xs font-bold text-primary uppercase tracking-wider">
+                           Plan y Tratamiento / Récipe
+                        </h5>
+                        {(c.indications || c.plan) && (
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExportRecipe(c)}
+                              className="h-7 px-2.5 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer bg-background hover:bg-muted"
+                            >
+                              <Printer className="h-3.5 w-3.5 text-primary" /> PDF
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSendWhatsApp(c)}
+                              className="h-7 px-2.5 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5 text-emerald-500" /> WhatsApp
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                       <p className="text-foreground whitespace-pre-wrap">{c.plan || c.indications || "No especificado."}</p>
                     </div>
 

@@ -42,7 +42,8 @@ export function PatientForm({
   // General States
   const [full_name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phonePrefix, setPhonePrefix] = useState("+58");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [birth_date, setBirth] = useState("");
   const [status, setStatus] = useState("nuevo");
   const [assigned_doctor_id, setDoctor] = useState("");
@@ -115,7 +116,18 @@ export function PatientForm({
     if (open && (!isEdit || patient)) {
       setName(patient?.full_name ?? "");
       setEmail(patient?.email ?? "");
-      setPhone(patient?.phone ?? "");
+      if (patient?.phone) {
+        const parts = patient.phone.split(" ");
+        if (parts.length > 1 && parts[0].startsWith("+")) {
+          setPhonePrefix(parts[0]);
+          setPhoneNumber(parts.slice(1).join(" "));
+        } else {
+          setPhoneNumber(patient.phone);
+        }
+      } else {
+        setPhonePrefix("+58");
+        setPhoneNumber("");
+      }
       setBirth(patient?.birth_date ?? "");
       setStatus(patient?.status ?? "nuevo");
       setDoctor(defaultDoctor);
@@ -196,7 +208,7 @@ export function PatientForm({
       const payload = {
         full_name: full_name.trim(),
         email: email || null,
-        phone: phone || null,
+        phone: phoneNumber.trim() ? `${phonePrefix} ${phoneNumber.trim()}` : null,
         birth_date: birth_date || null,
         status,
         assigned_doctor_id: doctorId,
@@ -344,7 +356,29 @@ export function PatientForm({
                   <div className="grid grid-cols-3 gap-4">
                     <div className="grid gap-2">
                       <Label htmlFor="phone">Teléfono</Label>
-                      <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0414..." className="rounded-xl" />
+                      <div className="flex h-10 w-full items-center rounded-xl border border-input bg-background shadow-sm focus-within:ring-1 focus-within:ring-ring focus-within:border-ring transition-colors">
+                        <Select value={phonePrefix} onValueChange={setPhonePrefix}>
+                          <SelectTrigger className="w-auto min-w-[70px] border-0 focus:ring-0 focus:ring-offset-0 bg-transparent h-full rounded-l-xl text-xs font-medium px-2 py-0">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="+58">VE +58</SelectItem>
+                            <SelectItem value="+1">US +1</SelectItem>
+                            <SelectItem value="+57">CO +57</SelectItem>
+                            <SelectItem value="+56">CL +56</SelectItem>
+                            <SelectItem value="+34">ES +34</SelectItem>
+                            <SelectItem value="+51">PE +51</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="w-px h-5 bg-border/60 mx-1"></div>
+                        <input
+                          id="phone"
+                          value={phoneNumber}
+                          onChange={(e) => setPhoneNumber(e.target.value.replace(/[^0-9]/g, ""))}
+                          placeholder="414 1234567"
+                          className="flex-1 bg-transparent border-0 focus:ring-0 text-sm h-full px-2 outline-none text-foreground placeholder:text-muted-foreground min-w-0"
+                        />
+                      </div>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="email">Correo Electrónico</Label>

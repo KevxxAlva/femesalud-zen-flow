@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -333,6 +333,7 @@ export type Database = {
           actualizado_en: string | null
           alergias: string | null
           antecedentes_familiares: string | null
+          datos_extras: Json | null
           enfermedades_cronicas: string | null
           id_historia: number
           id_paciente: number | null
@@ -342,6 +343,7 @@ export type Database = {
           actualizado_en?: string | null
           alergias?: string | null
           antecedentes_familiares?: string | null
+          datos_extras?: Json | null
           enfermedades_cronicas?: string | null
           id_historia?: number
           id_paciente?: number | null
@@ -351,6 +353,7 @@ export type Database = {
           actualizado_en?: string | null
           alergias?: string | null
           antecedentes_familiares?: string | null
+          datos_extras?: Json | null
           enfermedades_cronicas?: string | null
           id_historia?: number
           id_paciente?: number | null

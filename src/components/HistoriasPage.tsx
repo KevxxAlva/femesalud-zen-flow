@@ -3,7 +3,7 @@ import { usePaginatedPatients, usePatient, type Patient } from "@/lib/api/patien
 import { usePatientConsultations, type Consultation } from "@/lib/api/consultations";
 import { useDoctors } from "@/lib/api/profiles";
 import { useClinicInfo } from "@/lib/api/clinic";
-import { Search, FileText, HeartPulse, User, Calendar, Plus, Printer, Activity, Scissors, Stethoscope, ChevronDown, ChevronUp, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, FileText, HeartPulse, User, Calendar, Plus, Printer, Activity, Scissors, Stethoscope, ChevronDown, ChevronUp, Loader2, ChevronLeft, ChevronRight, MessageSquare } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { toast } from "sonner";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
+import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
 import { PatientFilesTab } from "@/components/PatientFilesTab";
 
 export function HistoriasPage() {
@@ -335,6 +336,20 @@ export function HistoriasPage() {
     );
   };
 
+  const handleSendRecipeWhatsApp = (patient: Patient, consultation: Consultation) => {
+    const doctorObj = doctors.find((d) => d.id === consultation.doctor_id);
+    const doctorName = doctorObj?.full_name || doctorMap.get(consultation.doctor_id ?? "") || "Médico Tratante";
+
+    sendRecipeViaWhatsApp({
+      patientName: patient.full_name,
+      patientPhone: patient.phone,
+      consultationDate: consultation.created_at,
+      indications: consultation.indications || "",
+      doctorName,
+      clinicName: clinic?.name || "FemeSalud"
+    });
+  };
+
   return (
     <div className="space-y-6 h-[calc(100vh-140px)] flex flex-col min-h-0">
       <header className="flex flex-wrap items-end justify-between gap-3">
@@ -620,14 +635,24 @@ export function HistoriasPage() {
                                             <FileText className="h-3 w-3" /> Indicaciones y Receta
                                           </h4>
                                           {c.indications && (
-                                            <Button
-                                              variant="ghost"
-                                              size="sm"
-                                              onClick={() => handleExportRecipe(selectedPatient, c)}
-                                              className="h-6 px-2 text-[10px] rounded-lg text-mauve hover:text-mauve-foreground hover:bg-mauve/10 flex items-center gap-1 cursor-pointer"
-                                            >
-                                              <Printer className="h-3 w-3" /> Imprimir Récipe
-                                            </Button>
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleExportRecipe(selectedPatient, c)}
+                                                className="h-6 px-2 text-[10px] rounded-lg text-mauve hover:text-mauve-foreground hover:bg-mauve/10 flex items-center gap-1 cursor-pointer"
+                                              >
+                                                <Printer className="h-3 w-3" /> Imprimir PDF
+                                              </Button>
+                                              <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handleSendRecipeWhatsApp(selectedPatient, c)}
+                                                className="h-6 px-2 text-[10px] rounded-lg text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10 flex items-center gap-1 cursor-pointer font-bold"
+                                              >
+                                                <MessageSquare className="h-3 w-3" /> WhatsApp
+                                              </Button>
+                                            </div>
                                           )}
                                         </div>
                                         <p className="font-medium text-foreground whitespace-pre-wrap leading-relaxed text-xs">{c.indications || "Sin indicaciones"}</p>

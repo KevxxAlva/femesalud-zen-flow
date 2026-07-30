@@ -21,6 +21,7 @@ import { useClinicalNotes } from "@/lib/api/clinical-notes";
 import { useAuthSession } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { differenceInYears } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -200,7 +201,12 @@ export function PatientsPage() {
                   </td>
                   <td className="p-4">
                     <span className="bg-primary/10 text-primary border border-blue-100 text-[9px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                      {p.birth_date ? `${new Date().getFullYear() - new Date(p.birth_date).getFullYear()} AÑOS` : "DESCONOCIDO"}
+                      {(() => {
+                        if (!p.birth_date) return "DESCONOCIDO";
+                        const d = new Date(p.birth_date);
+                        if (isNaN(d.getTime())) return "DESCONOCIDO";
+                        return `${differenceInYears(new Date(), d)} AÑOS`;
+                      })()}
                     </span>
                   </td>
                   <td className="p-4">

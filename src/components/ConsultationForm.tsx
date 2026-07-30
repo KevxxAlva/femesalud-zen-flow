@@ -16,9 +16,11 @@ import { useServices } from "@/lib/api/services";
 import { useStocks } from "@/lib/api/inventory";
 import { supabase } from "@/integrations/supabase/client";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
+import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
+import { useClinicInfo } from "@/lib/api/clinic";
 import { toast } from "sonner";
 import { useRouter } from "@tanstack/react-router";
-import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2 } from "lucide-react";
+import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2, MessageSquare } from "lucide-react";
 import { CLINICAL_TEMPLATES, PRESCRIPTION_TEMPLATES } from "@/lib/constants/clinicalTemplates";
 
 const CONTACT_CHANNELS = ["WhatsApp", "Instagram", "Facebook", "Radio", "Recomendado", "Prensa", "Volante", "Otro"];
@@ -283,8 +285,9 @@ export function ConsultationForm({
     e.preventDefault();
     handleSave(false);
   };
+  const { data: clinic } = useClinicInfo();
 
-  const handleSave = async (shouldPrint: boolean) => {
+  const handleSave = async (actionType: "save" | "print" | "whatsapp" = "save") => {
     if (!appointment) return;
 
     try {
@@ -367,80 +370,52 @@ export function ConsultationForm({
         consumables,
       };
 
-      if (isEdit && existingConsultation) {
-        await update.mutateAsync({ id: existingConsultation.id, ...payload });
-        
-        if (appointment?.id) {
-          let service = services.find(s => appointment.reason && appointment.reason.toLowerCase().includes(s.nombre_servicio.toLowerCase()));
-          if (!service) service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
-          const servicePrice = service ? Number(service.costo_base) : 40;
-          await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
-          localStorage.setItem("pending_payment_appointment_id", appointment.id);
-          toast.success("Consulta actualizada y factura generada");
-          onOpenChange(false);
-          router.navigate({ to: "/facturacion" });
-        } else {
-          toast.success("Consulta clínica actualizada");
-          onOpenChange(false);
-        }
+      if (isEdit && existingConsultation?.id) {
+        await updateConsultation.mutateAsync({
+          id: existingConsultation.id,
+          ...payload,
+        });
+        toast.success("Consulta actualizada con éxito");
       } else {
-        await create.mutateAsync(payload);
-        
-        if (appointment?.id) {
-          let service = services.find(s => appointment.reason && appointment.reason.toLowerCase().includes(s.nombre_servicio.toLowerCase()));
-          if (!service) service = services.find(s => s.nombre_servicio.toLowerCase() === 'consulta general');
-          const servicePrice = service ? Number(service.costo_base) : 40;
-          await updateApp.mutateAsync({ id: appointment.id, status: 'completada', price: servicePrice });
-          localStorage.setItem("pending_payment_appointment_id", appointment.id);
-        }
-
-        toast.success("Consulta clínica registrada y cita completada");
-        onOpenChange(false);
-        router.navigate({ to: "/facturacion" });
+        await createConsultation.mutateAsync(payload);
+        await updateAppointment.mutateAsync({ id: appointment.id, status: "completada" });
+        toast.success("Consulta registrada con éxito");
       }
 
-
-      if (shouldPrint && payload.indications) {
+      if (actionType === "print" && payload.indications) {
         const patientData = patient;
         const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
         const doctorName = doctorObj?.full_name || "Médico Tratante";
         const doctorSpecialty = doctorObj?.specialty || undefined;
         
-        if (patientData) {
-          await generateRecipePDF(
-            {
-              full_name: patientData.full_name,
-              document_id: patientData.document_id,
-              birth_date: patientData.birth_date,
-            },
-            {
-              created_at: new Date().toISOString(),
-              indications: payload.indications,
-            },
-            doctorName,
-            doctorSpecialty,
-            doctorObj?.university || undefined,
-            doctorObj?.mpps || undefined,
-            doctorObj?.cmc || undefined
-          );
-        } else {
-          await generateRecipePDF(
-            {
-              full_name: appointment.patient_name || "Paciente",
-              document_id: null,
-              birth_date: null,
-            },
-            {
-              created_at: new Date().toISOString(),
-              indications: payload.indications,
-            },
-            doctorName,
-            doctorSpecialty,
-            doctorObj?.university || undefined,
-            doctorObj?.mpps || undefined,
-            doctorObj?.cmc || undefined
-          );
-        }
+        await generateRecipePDF(
+          {
+            full_name: patientData?.full_name || appointment.patient_name || "Paciente",
+            document_id: patientData?.document_id || null,
+            birth_date: patientData?.birth_date || null,
+          },
+          {
+            created_at: new Date().toISOString(),
+            indications: payload.indications,
+          },
+          doctorName,
+          doctorSpecialty,
+          doctorObj?.university,
+          doctorObj?.mpps,
+          doctorObj?.cmc
+        );
+      } else if (actionType === "whatsapp" && payload.indications) {
+        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
+        const doctorName = doctorObj?.full_name || "Médico Tratante";
+
+        sendRecipeViaWhatsApp({
+          patientName: patient?.full_name || appointment.patient_name || "Paciente",
+          patientPhone: patient?.phone || appointment.patient_phone,
+          consultationDate: new Date().toISOString(),
+          indications: payload.indications,
+          doctorName,
+          clinicName: clinic?.name || "FemeSalud"
+        });
       }
 
       onOpenChange(false);
@@ -1035,20 +1010,36 @@ export function ConsultationForm({
                 </Button>
                 <div className="flex items-center gap-2">
                   {indications.trim() && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => handleSave(true)}
-                      disabled={busy}
-                      className="rounded-2xl border-mauve text-primary hover:bg-primary/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
-                    >
-                      {busy ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Printer className="h-3.5 w-3.5" />
-                      )}
-                      {isEdit ? "Guardar e Imprimir Récipe" : "Registrar e Imprimir Récipe"}
-                    </Button>
+                    <>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSave("print")}
+                        disabled={busy}
+                        className="rounded-2xl border-mauve text-primary hover:bg-primary/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs"
+                      >
+                        {busy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Printer className="h-3.5 w-3.5" />
+                        )}
+                        Imprimir PDF
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => handleSave("whatsapp")}
+                        disabled={busy}
+                        className="rounded-2xl border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 flex items-center gap-1.5 cursor-pointer h-9 text-xs font-bold"
+                      >
+                        {busy ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
+                        )}
+                        Enviar por WhatsApp
+                      </Button>
+                    </>
                   )}
                   <Button
                     type="submit"
