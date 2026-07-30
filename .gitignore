@@ -42,3 +42,7 @@ dist-ssr
 .codex
 .cursor
 .impeccable
+
+# Temporary files & utility scripts with secrets
+temp_*.txt
+setAdmin.js
