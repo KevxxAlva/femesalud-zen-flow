@@ -150,7 +150,7 @@ export const generateFichaPDF = async (patient: any, doctorMap: Map<string, stri
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       try {
-        if (logoBase64) {
+        if (config.logoBase64) {
           doc.saveGraphicsState();
           const gState = new (doc as any).GState({ opacity: 0.04 });
           doc.setGState(gState);
@@ -158,7 +158,7 @@ export const generateFichaPDF = async (patient: any, doctorMap: Map<string, stri
           const imgHeight = 550;
           const imgX = (pageWidth - imgWidth) / 2;
           const imgY = (pageHeight - imgHeight) / 2 - 20;
-          doc.addImage(logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
+          doc.addImage(config.logoBase64, "PNG", imgX, imgY, imgWidth, imgHeight);
           doc.restoreGraphicsState();
         }
       } catch (watermarkErr) {

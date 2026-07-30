@@ -153,7 +153,7 @@ export function usePatientsGrowth() {
         .select("creado_en")
         .gte("creado_en", fourteenDaysAgo.toISOString());
       if (error) throw error;
-      return (data ?? []).map(d => ({ created_at: d.creado_en }));
+      return (data ?? []).map(d => ({ created_at: d.creado_en || "" }));
     },
   });
 }

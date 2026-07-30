@@ -1,15 +1,18 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { 
-  Search, Bell, Settings, MoreHorizontal, MapPin, Edit2, ChevronDown, ChevronLeft, ChevronRight, Users, CalendarClock
+  Search, Bell, Settings, MoreHorizontal, MapPin, Edit2, ChevronDown, ChevronLeft, ChevronRight, Users, CalendarClock, Plus, Check
 } from "lucide-react";
 import { useAuthSession, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
 import { useAppointments } from "@/lib/api/appointments";
 import { useRecentPatients, usePatientsCountByDateRange } from "@/lib/api/patients";
-import { useDashboardStats, useMonthlyPayments } from "@/lib/api/dashboard";
+import { useDashboardStats, useMonthlyPayments, useDailyGoals, useAddDailyGoal, useIncrementDailyGoal } from "@/lib/api/dashboard";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, PieChart, Pie, Cell } from "recharts";
 
@@ -99,12 +102,33 @@ export function Dashboard() {
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     return startOfLastMonth.toISOString().slice(0, 10);
   }, []);
+  const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const { data: dailyGoals = [] } = useDailyGoals(todayStr);
+  const addDailyGoal = useAddDailyGoal();
+  const incrementDailyGoal = useIncrementDailyGoal();
+  
+  const [isGoalModalOpen, setIsGoalModalOpen] = useState(false);
+  const [newGoalTitle, setNewGoalTitle] = useState("");
+  const [newGoalTarget, setNewGoalTarget] = useState(1);
+
+  const handleAddGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGoalTitle.trim() || newGoalTarget < 1) return;
+    await addDailyGoal.mutateAsync({
+      title: newGoalTitle.trim(),
+      target_value: newGoalTarget,
+      date: todayStr
+    });
+    setNewGoalTitle("");
+    setNewGoalTarget(1);
+    setIsGoalModalOpen(false);
+  };
+
   const { data: appointments = [] } = useAppointments({ from: startOfLastMonthStr });
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
   
   const today = useMemo(() => new Date(), []);
-  const todayStr = today.toISOString().slice(0, 10);
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   
@@ -408,11 +432,74 @@ export function Dashboard() {
                     <div className="h-full bg-foreground/50 rounded-full transition-all duration-500" style={{ width: `${stats?.plansDone.invoices || 0}%` }}></div>
                   </div>
                 </div>
+
+                {/* Custom Daily Goals */}
+                {dailyGoals.map(goal => {
+                  const percentage = Math.min(Math.round((goal.current_value / goal.target_value) * 100), 100);
+                  const isComplete = goal.current_value >= goal.target_value;
+                  return (
+                    <div key={goal.id}>
+                      <div className="flex justify-between text-xs font-bold mb-2">
+                        <span className="text-foreground flex items-center gap-2">
+                          {goal.title}
+                          {isComplete && <Check className="h-3 w-3 text-emerald-500" />}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-foreground">{percentage}%</span>
+                          {!isComplete && (
+                            <button 
+                              onClick={() => incrementDailyGoal.mutate({ id: goal.id, currentValue: goal.current_value, date: goal.date })}
+                              className="bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 rounded hover:bg-emerald-500/30 w-5 h-5 flex items-center justify-center transition disabled:opacity-50"
+                              disabled={incrementDailyGoal.isPending}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                        <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${percentage}%` }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
-              <button className="mt-6 w-full py-2.5 border-2 border-dashed border-border text-muted-foreground font-bold text-xs rounded-xl hover:bg-muted transition">
-                Añadir meta +
-              </button>
+              <Dialog open={isGoalModalOpen} onOpenChange={setIsGoalModalOpen}>
+                <DialogTrigger asChild>
+                  <button className="mt-6 w-full py-2.5 border-2 border-dashed border-border text-muted-foreground font-bold text-xs rounded-xl hover:bg-muted transition flex items-center justify-center gap-2">
+                    <Plus className="h-4 w-4" /> Añadir meta
+                  </button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Nueva meta de hoy</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleAddGoal} className="space-y-4 pt-4">
+                    <div className="space-y-2">
+                      <Label>¿Qué quieres lograr hoy?</Label>
+                      <Input 
+                        placeholder="Ej: Entregar presupuestos" 
+                        value={newGoalTitle}
+                        onChange={(e) => setNewGoalTitle(e.target.value)}
+                        autoFocus
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cantidad objetivo</Label>
+                      <Input 
+                        type="number" 
+                        min={1} 
+                        value={newGoalTarget}
+                        onChange={(e) => setNewGoalTarget(parseInt(e.target.value) || 1)}
+                      />
+                    </div>
+                    <button type="submit" disabled={addDailyGoal.isPending || !newGoalTitle.trim()} className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-xl mt-2 disabled:opacity-50">
+                      Guardar Meta
+                    </button>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
           </div>
         </div>

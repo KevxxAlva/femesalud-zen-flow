@@ -53,8 +53,9 @@ export const generateRecipePDF = async (
   doctorSpecialty?: string,
   doctorUniversity?: string,
   doctorMpps?: string,
-  doctorCmc?: string
-) => {
+  doctorCmc?: string,
+  returnBlob: boolean = false
+): Promise<Blob | void> => {
   try {
     const indicationsText = consultation.indications?.trim();
     if (!indicationsText) {
@@ -86,11 +87,11 @@ export const generateRecipePDF = async (
     try {
       const { data } = await supabase.from("clinic_info").select("*").eq("id", 1).maybeSingle();
       if (data) {
-        clinicAddress1 = data.address_line1;
-        clinicAddress2 = data.address_line2;
-        clinicPhone = data.phone;
-        clinicName = data.name;
-        clinicRif = data.rif;
+        clinicAddress1 = data.address_line1 || "";
+        clinicAddress2 = data.address_line2 || "";
+        clinicPhone = data.phone || "";
+        clinicName = data.name || "Centro Médico FemeSalud Zen Flow";
+        clinicRif = data.rif || "J-00000000-0";
         
         customHeaderText = data.recipe_header_text || "";
         customFooterText = data.recipe_footer_text || "";
@@ -115,33 +116,10 @@ export const generateRecipePDF = async (
     let docCmc = doctorCmc || "";
     let finalSpecialty = doctorSpecialty || "";
 
-    // If any of the credentials are not provided, try to fetch them from database profiles
-    if (!docUni || !docMpps || !docCmc || !finalSpecialty) {
-      try {
-        const { data: profileData } = await supabase
-          .from("profiles")
-          .select("university, mpps, cmc, specialty")
-          .ilike("full_name", `%${doctorName}%`)
-          .maybeSingle();
-
-        if (profileData) {
-          if (!docUni) docUni = profileData.university || "";
-          if (!docMpps) docMpps = profileData.mpps || "";
-          if (!docCmc) docCmc = profileData.cmc || "";
-          if (!finalSpecialty) finalSpecialty = profileData.specialty || "";
-        }
-      } catch (e) {
-        console.error("Error fetching doctor profile for PDF:", e);
-      }
-    }
 
     // Default fallbacks if they are still missing
     if (!docUni) {
-      if (doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé")) {
-        docUni = "UC-CHET";
-      } else {
-        docUni = finalSpecialty ? "Ginecólogo Obstetra" : "UC-CHET";
-      }
+      docUni = "Universidad Central de Venezuela";
     }
     if (!docMpps) {
       if (doctorName.toLowerCase().includes("carli") || doctorName.toLowerCase().includes("sole") || doctorName.toLowerCase().includes("solé")) {
@@ -381,8 +359,12 @@ export const generateRecipePDF = async (
     }
 
     const cleanName = patient.full_name.replace(/\s+/g, "_");
-    doc.save(`Recipe_${cleanName}_${topYear}${topMonth}${topDay}.pdf`);
-    toast.success("Récipe médico exportado correctamente");
+    if (returnBlob) {
+      return doc.output("blob");
+    } else {
+      doc.save(`Recipe_${cleanName}_${topYear}${topMonth}${topDay}.pdf`);
+      toast.success("Récipe médico exportado correctamente");
+    }
   } catch (err) {
     console.error(err);
     toast.error(err instanceof Error ? err.message : "Error al exportar el récipe");

@@ -7,6 +7,8 @@ import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Loader2, Stethoscope, ChevronDown, ChevronUp, FileText, Pill, Thermometer, Droplet, Activity, Scaling, TestTube, Crosshair, Package, Printer, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 export function PatientConsultationsPanel({ patientId }: { patientId: string }) {
   const { data: consultations = [], isLoading } = usePatientConsultations(patientId);
@@ -38,19 +40,76 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
     );
   };
 
-  const handleSendWhatsApp = (c: Consultation) => {
-    if (!patient) return;
-    const doctorObj = doctors.find((d) => d.id === c.doctor_id);
-    const doctorName = doctorObj?.full_name || doctorObj?.email || "Médico Tratante";
+  const [isUploading, setIsUploading] = useState<string | null>(null);
 
-    sendRecipeViaWhatsApp({
-      patientName: patient.full_name,
-      patientPhone: patient.phone,
-      consultationDate: c.created_at,
-      indications: c.indications || c.plan || "",
-      doctorName,
-      clinicName: clinic?.name || "FemeSalud"
-    });
+  const handleSendWhatsApp = async (c: Consultation) => {
+    if (!patient) return;
+    
+    setIsUploading(c.id);
+    const toastId = toast.loading("Generando y subiendo récipe a la nube...");
+    
+    try {
+      const doctorObj = doctors.find((d) => d.id === c.doctor_id);
+      const doctorName = doctorObj?.full_name || doctorObj?.email || "Médico Tratante";
+
+      // 1. Generar el PDF como Blob
+      const pdfBlob = await generateRecipePDF(
+        {
+          full_name: patient.full_name,
+          document_id: patient.document_id,
+          birth_date: patient.birth_date,
+        },
+        {
+          created_at: c.created_at,
+          indications: c.indications,
+        },
+        doctorName,
+        doctorObj?.specialty,
+        doctorObj?.university,
+        doctorObj?.mpps,
+        doctorObj?.cmc,
+        true // returnBlob = true
+      ) as Blob;
+
+      if (!pdfBlob) throw new Error("No se pudo generar el PDF.");
+
+      // 2. Subir a Supabase Storage
+      const cleanName = patient.full_name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `Recipe_${cleanName}_${c.id}.pdf`;
+      
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from("recipes")
+        .upload(filename, pdfBlob, {
+          contentType: "application/pdf",
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // 3. Obtener URL pública
+      const { data: publicUrlData } = supabase.storage
+        .from("recipes")
+        .getPublicUrl(filename);
+
+      // 4. Enviar WhatsApp
+      sendRecipeViaWhatsApp({
+        patientName: patient.full_name,
+        patientPhone: patient.phone,
+        consultationDate: c.created_at,
+        indications: c.indications || c.plan || "",
+        doctorName,
+        clinicName: clinic?.name || "FemeSalud",
+        recipeUrl: publicUrlData.publicUrl
+      });
+      
+      toast.success("Enlace de récipe generado correctamente", { id: toastId });
+    } catch (error) {
+      console.error("Error subiendo el PDF:", error);
+      const msg = error instanceof Error ? error.message : (error as any)?.message || JSON.stringify(error);
+      toast.error(`Error al subir PDF: ${msg}`, { id: toastId });
+    } finally {
+      setIsUploading(null);
+    }
   };
 
   if (isLoading) {
@@ -159,9 +218,15 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                               variant="outline"
                               size="sm"
                               onClick={() => handleSendWhatsApp(c)}
+                              disabled={isUploading === c.id}
                               className="h-7 px-2.5 text-xs rounded-xl flex items-center gap-1.5 cursor-pointer border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 font-bold"
                             >
-                              <MessageSquare className="h-3.5 w-3.5 text-emerald-500" /> WhatsApp
+                              {isUploading === c.id ? (
+                                <Loader2 className="h-3.5 w-3.5 text-emerald-500 animate-spin" />
+                              ) : (
+                                <MessageSquare className="h-3.5 w-3.5 text-emerald-500" />
+                              )}
+                              WhatsApp
                             </Button>
                           </div>
                         )}

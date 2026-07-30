@@ -455,9 +455,9 @@ export function useUpdateConsultation() {
         }
 
         // Try deleting by id_consulta first, then id_historia just in case
-        await supabase.from("insumos_consulta").delete().eq("id_consulta", parseInt(id));
+        await (supabase as any).from("insumos_consulta").delete().eq("id_consulta", parseInt(id));
         if (oldHc.id_historia) {
-           await supabase.from("insumos_consulta").delete().eq("id_historia", oldHc.id_historia);
+           await (supabase as any).from("insumos_consulta").delete().eq("id_historia", oldHc.id_historia);
         }
 
         if (consumables.length > 0) {
@@ -467,7 +467,7 @@ export function useUpdateConsultation() {
             nombre_insumo: item.item_name,
             cantidad: item.quantity
           }));
-          const { error: insError } = await supabase.from("insumos_consulta").insert(newConsumables);
+          const { error: insError } = await (supabase as any).from("insumos_consulta").insert(newConsumables);
           if (insError) {
              console.warn("Error inserting consumables on update:", insError);
           }
@@ -482,7 +482,7 @@ export function useUpdateConsultation() {
             if (stockItem) {
               await supabase
                 .from("inventory_stocks")
-                .update({ quantity: Math.max(0, stockItem.quantity - item.quantity) })
+                .update({ quantity: Math.max(0, (stockItem.quantity || 0) - item.quantity) })
                 .eq("id", stockItem.id);
             }
           }
@@ -495,7 +495,7 @@ export function useUpdateConsultation() {
         const { data: origApp } = await supabase
           .from("citas")
           .select("fecha_hora, id_medico")
-          .eq("id_cita", oldHc.id_cita)
+          .eq("id_cita", Number(oldHc.id_cita))
           .maybeSingle();
 
         let scheduledAt = `${patch.next_appointment_date}T09:00:00Z`;

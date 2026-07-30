@@ -111,7 +111,7 @@ function ConfiguracionPage() {
               {/* Profile Avatar Card */}
               <div className="flex flex-col sm:flex-row items-center gap-4 pb-6 border-b border-border/40">
                 <div className="h-20 w-20 rounded-[1.25rem] bg-muted/50 text-primary flex items-center justify-center font-black text-2xl shadow-sm border border-border/40">
-                  {initials(profileName || user?.email)}
+                  {initials(profileName || user?.email || "")}
                 </div>
                 <div className="text-center sm:text-left">
                   <h3 className="font-bold text-lg text-foreground">{profileName || "Usuario FemeSalud"}</h3>

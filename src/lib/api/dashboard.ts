@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 // Helper to get dates for the last 7 days (including today)
@@ -162,6 +162,63 @@ export function useMonthlyPayments() {
       }));
 
       return { total, paymentsByDay };
+    }
+  });
+}
+
+export interface DailyGoal {
+  id: string;
+  created_at: string;
+  date: string;
+  title: string;
+  target_value: number;
+  current_value: number;
+}
+
+export function useDailyGoals(dateStr: string) {
+  return useQuery({
+    queryKey: ["daily_goals", dateStr],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("daily_goals")
+        .select("*")
+        .eq("date", dateStr)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data as DailyGoal[];
+    }
+  });
+}
+
+export function useAddDailyGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (goal: { title: string; target_value: number; date: string }) => {
+      const { data, error } = await supabase.from("daily_goals").insert([goal]).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["daily_goals", variables.date] });
+    }
+  });
+}
+
+export function useIncrementDailyGoal() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, currentValue }: { id: string; currentValue: number; date: string }) => {
+      const { data, error } = await supabase
+        .from("daily_goals")
+        .update({ current_value: currentValue + 1 })
+        .eq("id", id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["daily_goals", variables.date] });
     }
   });
 }

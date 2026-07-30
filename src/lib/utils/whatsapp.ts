@@ -7,6 +7,7 @@ export interface WhatsAppRecipeData {
   indications: string;
   doctorName?: string;
   clinicName?: string;
+  recipeUrl?: string;
 }
 
 export function generateWhatsAppRecipeMessage({
@@ -14,29 +15,15 @@ export function generateWhatsAppRecipeMessage({
   consultationDate,
   indications,
   doctorName,
-  clinicName = "FemeSalud"
+  clinicName = "FemeSalud",
+  recipeUrl
 }: WhatsAppRecipeData): string {
-  const formattedDate = new Date(consultationDate).toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric"
-  });
-
-  let msg = `🏥 *${clinicName.toUpperCase()} — RÉCIPE MÉDICO*\n`;
-  msg += `─────────────────────────\n`;
-  msg += `👤 *Paciente:* ${patientName}\n`;
-  msg += `📅 *Fecha:* ${formattedDate}\n`;
-  if (doctorName) {
-    msg += `🩺 *Médico:* ${doctorName}\n`;
+  if (recipeUrl) {
+    return `🏥 *${clinicName.toUpperCase()}*\n\nHola ${patientName}, hemos generado tu récipe médico digital. Puedes descargarlo en formato PDF ingresando al siguiente enlace:\n\n📄 ${recipeUrl}\n\n_Si tienes problemas para abrirlo, por favor avísanos._`;
   }
-  msg += `─────────────────────────\n\n`;
-  msg += `💊 *TRATAMIENTO E INDICACIONES:*\n\n`;
-  msg += `${indications.trim()}\n\n`;
-  msg += `─────────────────────────\n`;
-  msg += `_Conserve este récipe para el seguimiento de su tratamiento. Si presenta alguna duda o síntoma adverso, comuníquese de inmediato con el consultorio._`;
 
-  return msg;
+  // Fallback si no hay URL (aunque ahora siempre debería haber)
+  return `🏥 *${clinicName.toUpperCase()}*\n\nHola ${patientName}, aquí están las indicaciones de tu consulta:\n\n${indications.trim()}`;
 }
 
 export function sendRecipeViaWhatsApp(data: WhatsAppRecipeData) {

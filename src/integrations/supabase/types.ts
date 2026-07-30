@@ -14,6 +14,74 @@ export type Database = {
   }
   public: {
     Tables: {
+      archivos_pacientes: {
+        Row: {
+          fecha_subida: string | null
+          id: string
+          id_paciente: number | null
+          nombre_archivo: string
+          ruta_archivo: string
+          tamano_bytes: number | null
+          tipo_archivo: string | null
+        }
+        Insert: {
+          fecha_subida?: string | null
+          id?: string
+          id_paciente?: number | null
+          nombre_archivo: string
+          ruta_archivo: string
+          tamano_bytes?: number | null
+          tipo_archivo?: string | null
+        }
+        Update: {
+          fecha_subida?: string | null
+          id?: string
+          id_paciente?: number | null
+          nombre_archivo?: string
+          ruta_archivo?: string
+          tamano_bytes?: number | null
+          tipo_archivo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "archivos_pacientes_id_paciente_fkey"
+            columns: ["id_paciente"]
+            isOneToOne: false
+            referencedRelation: "pacientes"
+            referencedColumns: ["id_paciente"]
+          },
+        ]
+      }
+      audit_logs: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          details: Json | null
+          entity_id: string
+          entity_type: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id: string
+          entity_type: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          details?: Json | null
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       catalogo_medicamentos: {
         Row: {
           concentracion: string | null
@@ -79,6 +147,54 @@ export type Database = {
             referencedColumns: ["id_paciente"]
           },
         ]
+      }
+      clinic_info: {
+        Row: {
+          address_line1: string | null
+          address_line2: string | null
+          id: number
+          name: string
+          phone: string | null
+          recipe_clinic_type: string | null
+          recipe_font_family: string | null
+          recipe_footer_text: string | null
+          recipe_header_text: string | null
+          recipe_logo_url: string | null
+          recipe_primary_color: string | null
+          rif: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address_line1?: string | null
+          address_line2?: string | null
+          id?: number
+          name: string
+          phone?: string | null
+          recipe_clinic_type?: string | null
+          recipe_font_family?: string | null
+          recipe_footer_text?: string | null
+          recipe_header_text?: string | null
+          recipe_logo_url?: string | null
+          recipe_primary_color?: string | null
+          rif?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address_line1?: string | null
+          address_line2?: string | null
+          id?: number
+          name?: string
+          phone?: string | null
+          recipe_clinic_type?: string | null
+          recipe_font_family?: string | null
+          recipe_footer_text?: string | null
+          recipe_header_text?: string | null
+          recipe_logo_url?: string | null
+          recipe_primary_color?: string | null
+          rif?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       consultas: {
         Row: {
@@ -146,6 +262,33 @@ export type Database = {
             referencedColumns: ["id_medico"]
           },
         ]
+      }
+      daily_goals: {
+        Row: {
+          created_at: string
+          current_value: number
+          date: string
+          id: string
+          target_value: number
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number
+          date: string
+          id?: string
+          target_value: number
+          title: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number
+          date?: string
+          id?: string
+          target_value?: number
+          title?: string
+        }
+        Relationships: []
       }
       detalles_factura: {
         Row: {
@@ -328,6 +471,60 @@ export type Database = {
           },
         ]
       }
+      financial_accounts: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          id: string
+          name: string
+          status: string | null
+          type: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string | null
+          type: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+          type?: string
+        }
+        Relationships: []
+      }
+      financial_purchases: {
+        Row: {
+          amount: number | null
+          created_at: string | null
+          id: string
+          purchase_date: string
+          status: string | null
+          vendor: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          purchase_date: string
+          status?: string | null
+          vendor: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string | null
+          id?: string
+          purchase_date?: string
+          status?: string | null
+          vendor?: string
+        }
+        Relationships: []
+      }
       historias_clinicas: {
         Row: {
           actualizado_en: string | null
@@ -401,9 +598,61 @@ export type Database = {
           },
         ]
       }
+      inventory_peripherals: {
+        Row: {
+          assigned_to: string
+          condition: string | null
+          created_at: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          assigned_to: string
+          condition?: string | null
+          created_at?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          assigned_to?: string
+          condition?: string | null
+          created_at?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      inventory_stocks: {
+        Row: {
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+          quantity: number | null
+          status: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+          quantity?: number | null
+          status?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          quantity?: number | null
+          status?: string | null
+        }
+        Relationships: []
+      }
       medicos: {
         Row: {
           apellido: string
+          cmc: string | null
           email: string | null
           estado: boolean | null
           id_especialidad: number | null
@@ -412,9 +661,11 @@ export type Database = {
           nombre: string
           numero_licencia: string | null
           telefono: string | null
+          universidad: string | null
         }
         Insert: {
           apellido: string
+          cmc?: string | null
           email?: string | null
           estado?: boolean | null
           id_especialidad?: number | null
@@ -423,9 +674,11 @@ export type Database = {
           nombre: string
           numero_licencia?: string | null
           telefono?: string | null
+          universidad?: string | null
         }
         Update: {
           apellido?: string
+          cmc?: string | null
           email?: string | null
           estado?: boolean | null
           id_especialidad?: number | null
@@ -434,6 +687,7 @@ export type Database = {
           nombre?: string
           numero_licencia?: string | null
           telefono?: string | null
+          universidad?: string | null
         }
         Relationships: [
           {
@@ -501,6 +755,7 @@ export type Database = {
           id_pago: number
           metodo_pago: string | null
           monto_pagado: number
+          referencia: string | null
         }
         Insert: {
           fecha_pago?: string | null
@@ -508,6 +763,7 @@ export type Database = {
           id_pago?: number
           metodo_pago?: string | null
           monto_pagado: number
+          referencia?: string | null
         }
         Update: {
           fecha_pago?: string | null
@@ -515,6 +771,7 @@ export type Database = {
           id_pago?: number
           metodo_pago?: string | null
           monto_pagado?: number
+          referencia?: string | null
         }
         Relationships: [
           {
@@ -523,6 +780,41 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "facturas"
             referencedColumns: ["id_factura"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          account_id: string | null
+          category: string
+          created_at: string | null
+          id: string
+          name: string
+          status: string | null
+        }
+        Insert: {
+          account_id?: string | null
+          category: string
+          created_at?: string | null
+          id?: string
+          name: string
+          status?: string | null
+        }
+        Update: {
+          account_id?: string | null
+          category?: string
+          created_at?: string | null
+          id?: string
+          name?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -654,6 +946,36 @@ export type Database = {
           descripcion?: string | null
           id_servicio?: number
           nombre_servicio?: string
+        }
+        Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          patient_name: string
+          priority: string | null
+          status: string | null
+          subject: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          patient_name: string
+          priority?: string | null
+          status?: string | null
+          subject: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          patient_name?: string
+          priority?: string | null
+          status?: string | null
+          subject?: string
         }
         Relationships: []
       }
@@ -833,4 +1155,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

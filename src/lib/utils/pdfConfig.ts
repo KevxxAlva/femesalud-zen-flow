@@ -16,11 +16,11 @@ export const getClinicPdfConfig = async () => {
   try {
     const { data } = await supabase.from("clinic_info").select("*").eq("id", 1).maybeSingle();
     if (data) {
-      clinicAddress1 = data.address_line1;
-      clinicAddress2 = data.address_line2;
-      clinicPhone = data.phone;
-      clinicName = data.name;
-      clinicRif = data.rif;
+      clinicAddress1 = data.address_line1 || "";
+      clinicAddress2 = data.address_line2 || "";
+      clinicPhone = data.phone || "";
+      clinicName = data.name || "Centro Médico FemeSalud Zen Flow";
+      clinicRif = data.rif || "J-00000000-0";
       
       clinicType = data.recipe_clinic_type || "Consultorio Ginecológico Obstétrico";
       
