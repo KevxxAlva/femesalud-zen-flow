@@ -42,6 +42,7 @@ dist-ssr
 .codex
 .cursor
 .impeccable
+.git-rewrite
 
 # Temporary files & utility scripts with secrets
 temp_*.txt
