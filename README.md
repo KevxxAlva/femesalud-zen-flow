@@ -1,6 +1,6 @@
 # FemeSalud — Premium Clinical Suite 🏥✨
 
-Plataforma premium de gestión médica diseñada para optimizar los flujos de trabajo de profesionales de la salud y clínicas privadas. Ofrece una experiencia fluida, rápida y segura en la administración de pacientes, citas e historias clínicas.
+Plataforma premium de gestión médica diseñada para optimizar los flujos de trabajo de profesionales de la salud y clínicas privadas. Ofrece una experiencia fluida, rápida y segura en la administración de pacientes, citas, facturación e historias clínicas.
 
 <img width="1350" height="640" alt="image" src="https://github.com/user-attachments/assets/142f4f5b-9c57-4c17-b5b1-6c776020b2f7" />
 
@@ -8,22 +8,27 @@ Plataforma premium de gestión médica diseñada para optimizar los flujos de tr
 
 ## 🚀 Características Principales
 
-*   **📅 Agenda Médica Inteligente**: Sincronización de citas en tiempo real para médicos y asistentes. Visualización interactiva y gestión de horarios.
+*   **📅 Agenda Médica Inteligente**: Sincronización de citas con visualización interactiva. Incluye resolución visual en cascada para horarios superpuestos y filtros avanzados por estado (Completadas, Pendientes, Canceladas).
 *   **📑 Historias Clínicas en un Clic**: Expediente médico digital unificado para cada paciente. Historial de consultas, diagnósticos, recetas y notas protegidas.
-*   **🔒 Seguridad de Grado Clínico**: Control de acceso granular mediante roles de usuario (`admin` y `doctor`) protegidos por Políticas de Seguridad de Fila (RLS) en base de datos.
-*   **💼 Facturación y Finanzas Zen**: Control simplificado de cobros de consultas, seguimiento de ingresos y reportes de facturación integrados.
-*   **⚡ Arquitectura Moderna SSR**: Renderizado en el servidor mediante **TanStack Start** y **Nitro** para garantizar tiempos de carga instantáneos y optimización SEO premium.
+*   **🎨 Diseñador de Récipes y Documentos**: Herramienta visual integrada para personalizar la identidad visual de todos los PDFs generados (logotipos corporativos, fuentes, membretes y color principal).
+*   **📤 Envío de Recetarios (PDF + WhatsApp)**: Generación automática de recetas médicas en formato PDF y envío directo al paciente vía WhatsApp con un solo clic o descarga directa.
+*   **💼 Facturación y Finanzas Zen**: Control simplificado de cobros de consultas y descarga de recibos individuales de pago en formato PDF profesional.
+*   **📊 Reportes Automatizados**: Generación y exportación de reportes mensuales en PDF desde el Dashboard (Nuevos pacientes, Citas médicas, e Ingresos).
+*   **🎯 Metas Diarias y Progreso (Daily Goals)**: Seguimiento de metas financieras y de consultas directamente en el panel de control.
+*   **🔒 Seguridad de Grado Clínico**: Control de acceso granular mediante roles de usuario (`admin` y `doctor`) protegidos por Políticas de Seguridad de Fila (RLS) en Supabase.
+*   **🌙 Interfaz Adaptable (Modo Claro/Oscuro)**: Diseño responsivo y moderno con soporte completo para modo oscuro y temas personalizados (Tailwind CSS v4).
 
 ---
 
 ## 🛠️ Stack Tecnológico
 
 *   **Framework**: [React 19](https://react.dev/) + [Vite](https://vite.dev/)
-*   **Enrutador y SSR**: [TanStack Start](https://tanstack.com/router/v1/docs/start/overview) (con presets de Nitro)
-*   **Estilos**: [TailwindCSS v4](https://tailwindcss.com/) + Lightning CSS
+*   **Enrutador**: [React Router](https://reactrouter.com/) (Anteriormente TanStack Router)
+*   **Estilos**: [TailwindCSS v4](https://tailwindcss.com/) + Shadcn UI
+*   **Generación de PDFs**: [jsPDF](https://github.com/parallax/jsPDF) + jsPDF-AutoTable
 *   **Base de Datos y Backend**: [Supabase](https://supabase.com/) (PostgreSQL, Row Level Security)
 *   **Gestor de Paquetes**: [Bun](https://bun.sh/) (recomendado) o npm / pnpm
-*   **Despliegue**: [Vercel](https://vercel.com/) (Serverless Edge Functions)
+*   **Despliegue**: [Vercel](https://vercel.com/) / Netlify
 
 ---
 
@@ -63,24 +68,16 @@ Para validar y empaquetar la aplicación antes de realizar un despliegue:
 ```bash
 bun run build
 ```
-Esto generará los archivos estáticos y las funciones Serverless listas para Vercel en el directorio `.vercel/output/`.
 
 ---
 
-## 🌐 Despliegue en Vercel
+## 🌐 Despliegue
 
-La aplicación está completamente optimizada para desplegarse en **Vercel** usando Serverless Functions. La compilación se realiza a través de Nitro utilizando el archivo `vercel.json` en la raíz:
+La aplicación es un Single Page Application (SPA) renderizado del lado del cliente, por lo que está optimizada para desplegarse fácilmente en plataformas como **Vercel**, **Netlify** o cualquier servidor estático estándar.
 
-```json
-{
-  "framework": "tanstack-start"
-}
-```
-
-Para implementar cambios en producción, simplemente realiza un push a la rama principal `main`:
+Para implementar cambios en producción en un entorno conectado a Git:
 ```bash
 git add .
-git commit -m "feat: nuevos cambios"
+git commit -m "feat: nuevas mejoras en PDF y UI"
 git push origin main
 ```
-Vercel detectará el commit automáticamente, ejecutará `bun run build` y desplegará la nueva versión en segundos.

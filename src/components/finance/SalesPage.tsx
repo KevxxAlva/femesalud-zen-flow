@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Search, Plus, X, Pencil, Trash2, ChevronLeft, ChevronRight, Filter, ReceiptText, Loader2, CreditCard } from "lucide-react";
+import { Search, Plus, X, Pencil, Trash2, ChevronLeft, ChevronRight, Filter, ReceiptText, Loader2, CreditCard, Download } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { cn } from "@/lib/utils";
+import { generateSalesReport } from "@/lib/utils/generateSalesReport";
+import { generateIndividualInvoice } from "@/lib/utils/generateIndividualInvoice";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { logAuditAction } from "@/lib/api/audit";
 import { usePaymentMethods } from "@/lib/api/paymentMethods";
 
@@ -25,6 +30,8 @@ type Invoice = {
 
 export function SalesPage() {
   const [q, setQ] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -142,10 +149,32 @@ export function SalesPage() {
     updatePaymentStatus.mutate({ id: selectedInvoice.id_factura, status: "pagado", invoice: selectedInvoice });
   };
 
+  const generatePDFReport = async () => {
+    try {
+      await generateSalesReport(filtered, filterMonth);
+      toast.success("Reporte generado exitosamente");
+    } catch (err: any) {
+      toast.error(`Error al generar reporte: ${err.message}`);
+    }
+  };
+
   const filtered = facturas.filter((f) => {
-    if (!q) return true;
-    const term = q.toLowerCase();
-    return f.id_factura.toString().includes(term) || (f.paciente_nombre?.toLowerCase().includes(term));
+    if (q) {
+      const term = q.toLowerCase();
+      if (!(f.id_factura.toString().includes(term) || (f.paciente_nombre?.toLowerCase().includes(term)))) return false;
+    }
+    if (filterMonth && f.fecha_emision) {
+      const date = new Date(f.fecha_emision);
+      const yearMonth = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      if (yearMonth !== filterMonth) return false;
+    }
+    if (filterStatus !== "all") {
+      const estado = f.estado_pago.toLowerCase();
+      if (filterStatus === "pagado" && !(estado === "pagado" || estado === "paid")) return false;
+      if (filterStatus === "pendiente" && !(estado === "pendiente" || estado === "pending")) return false;
+      if (filterStatus === "cancelado" && !(estado === "cancelado" || estado === "cancelled")) return false;
+    }
+    return true;
   });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -180,9 +209,58 @@ export function SalesPage() {
           <ReceiptText className="h-4 w-4" /> {filtered.length} facturas
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted">
-            <Filter className="h-3.5 w-3.5" /> Filtros
+          <button 
+            onClick={generatePDFReport}
+            className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted"
+            title="Descargar reporte de pagos filtrados"
+          >
+            <Download className="h-3.5 w-3.5" /> Descargar PDF
           </button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button className={cn("flex items-center gap-2 px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted transition-colors", (filterMonth || filterStatus !== "all") && "bg-muted border-mauve text-mauve")}>
+                <Filter className="h-3.5 w-3.5" /> {(filterMonth || filterStatus !== "all") ? "Filtrado" : "Filtros"}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-60 rounded-2xl glass-card border-0 shadow-2xl p-4" align="end">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Filtrar por Mes</h4>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="month"
+                      value={filterMonth}
+                      onChange={(e) => setFilterMonth(e.target.value)}
+                      className="flex h-9 w-full rounded-xl border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                    {filterMonth && (
+                      <button 
+                        onClick={() => setFilterMonth("")}
+                        className="p-2 hover:bg-muted rounded-lg text-muted-foreground transition-colors"
+                        title="Limpiar filtro"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <h4 className="font-medium text-sm">Estado de Pago</h4>
+                  <Select value={filterStatus} onValueChange={setFilterStatus}>
+                    <SelectTrigger className="w-full rounded-xl h-9 bg-transparent border-input">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="pagado">Pagados</SelectItem>
+                      <SelectItem value="pendiente">Pendientes</SelectItem>
+                      <SelectItem value="cancelado">Cancelados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
@@ -228,6 +306,20 @@ export function SalesPage() {
                   </td>
                   <td className="p-4">
                     <div className="flex items-center gap-3 text-muted-foreground">
+                      {(f.estado_pago === "pagado" || f.estado_pago === "Paid") && (
+                        <button 
+                          onClick={() => {
+                            toast.loading("Generando recibo...", { id: "receipt" });
+                            generateIndividualInvoice(f)
+                              .then(() => toast.success("Recibo generado", { id: "receipt" }))
+                              .catch(() => toast.error("Error al generar", { id: "receipt" }));
+                          }}
+                          className="hover:text-primary cursor-pointer transition-colors"
+                          title="Descargar Recibo"
+                        >
+                          <Download className="h-4 w-4" />
+                        </button>
+                      )}
                       {(f.estado_pago === "pendiente" || f.estado_pago === "Pending" || f.estado_pago === "Pendiente") && (
                         <button 
                           onClick={() => handleConfirmClick(f)}

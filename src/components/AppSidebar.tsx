@@ -70,20 +70,6 @@ function SidebarBody({ onNavigate, isCollapsed }: { onNavigate?: () => void, isC
             {!isCollapsed && <span className="font-display font-bold text-xl tracking-tight text-foreground truncate bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">FemeSalud</span>}
           </div>
 
-          {/* Clinic Info Box */}
-          {!isCollapsed && (
-            <div className="bg-muted border border-border/40 rounded-xl p-3 flex gap-3 items-center mb-6">
-              <div className="bg-background p-2 rounded-lg shadow-sm">
-                <Building2 className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-bold text-foreground leading-tight truncate">{clinic?.name || "Clínica FemeSalud"}</p>
-                <p className="text-[9px] text-muted-foreground font-medium leading-tight mt-0.5 truncate">
-                  {clinic?.address_line1 || "Valle de la Pascua, Guárico"}
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Navigation List */}

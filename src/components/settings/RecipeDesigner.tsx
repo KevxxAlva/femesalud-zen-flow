@@ -17,7 +17,6 @@ export function RecipeDesigner() {
   const [primaryColor, setPrimaryColor] = useState("#008080"); // default teal
   const [fontFamily, setFontFamily] = useState("font-serif"); // default to serif as requested
   const [headerText, setHeaderText] = useState("");
-  const [footerText, setFooterText] = useState("");
   
   // Clinic general details that appear in header
   const [clinicName, setClinicName] = useState("");
@@ -36,7 +35,6 @@ export function RecipeDesigner() {
       setPrimaryColor(clinic.recipe_primary_color || "#008080");
       setFontFamily(clinic.recipe_font_family || "font-serif");
       setHeaderText(clinic.recipe_header_text || "");
-      setFooterText(clinic.recipe_footer_text || "");
       
       setClinicName(clinic.name || "");
       setClinicType(clinic.recipe_clinic_type || "Consultorio Ginecológico Obstétrico");
@@ -79,7 +77,6 @@ export function RecipeDesigner() {
         recipe_primary_color: primaryColor,
         recipe_font_family: fontFamily,
         recipe_header_text: headerText,
-        recipe_footer_text: footerText,
       });
       toast.success("Configuración del recetario guardada con éxito");
     } catch (err: any) {
@@ -193,47 +190,47 @@ export function RecipeDesigner() {
             </div>
 
             {/* General Header Fields */}
-            <div className="space-y-4 bg-white/50 p-4 rounded-xl border border-gray-100">
+            <div className="space-y-4 bg-muted/30 p-4 rounded-xl border border-border/40">
               <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Datos Principales (Arriba)</Label>
               
               <Input 
                 placeholder="Línea 1: Dirección (Ej: Calle las Flores...)"
-                className="rounded-xl bg-white border-gray-200 text-sm"
+                className="rounded-xl bg-background border-border/40 text-sm"
                 value={addressLine1}
                 onChange={(e) => setAddressLine1(e.target.value)}
               />
               
               <Input 
                 placeholder="Línea 2: Ciudad (Ej: Valle de la Pascua...)"
-                className="rounded-xl bg-white border-gray-200 text-sm"
+                className="rounded-xl bg-background border-border/40 text-sm"
                 value={addressLine2}
                 onChange={(e) => setAddressLine2(e.target.value)}
               />
 
               <Input 
                 placeholder="Teléfonos"
-                className="rounded-xl bg-white border-gray-200 text-sm"
+                className="rounded-xl bg-background border-border/40 text-sm"
                 value={clinicPhone}
                 onChange={(e) => setClinicPhone(e.target.value)}
               />
 
               <Input 
                 placeholder="RIF (Opcional)"
-                className="rounded-xl bg-white border-gray-200 text-sm"
+                className="rounded-xl bg-background border-border/40 text-sm"
                 value={clinicRif}
                 onChange={(e) => setClinicRif(e.target.value)}
               />
 
               <Input 
                 placeholder="Tipo de Consultorio (Ej: Consultorio Ginecológico)"
-                className="rounded-xl bg-white border-gray-200 text-sm font-bold"
+                className="rounded-xl bg-background border-border/40 text-sm font-bold"
                 value={clinicType}
                 onChange={(e) => setClinicType(e.target.value)}
               />
 
               <Input 
                 placeholder="Nombre de la Clínica"
-                className="rounded-xl bg-white border-gray-200 text-sm font-bold text-primary"
+                className="rounded-xl bg-background border-border/40 text-sm font-bold text-primary"
                 value={clinicName}
                 onChange={(e) => setClinicName(e.target.value)}
               />
@@ -250,17 +247,6 @@ export function RecipeDesigner() {
               />
               <p className="text-[10px] text-muted-foreground">Presiona Enter para saltos de línea. Se mostrará centrado en la parte superior.</p>
             </div>
-
-            {/* Footer Text */}
-            <div className="space-y-3">
-              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Pie de Página</Label>
-              <Textarea 
-                placeholder="Ej: Av. Principal, Clínica Centro \n Tlf: +58 412 1234567"
-                className="min-h-[80px] rounded-xl bg-muted border-gray-200 resize-none text-sm text-foreground"
-                value={footerText}
-                onChange={(e) => setFooterText(e.target.value)}
-              />
-            </div>
             
           </div>
           
@@ -274,13 +260,13 @@ export function RecipeDesigner() {
       </div>
 
       {/* RIGHT PANEL: LIVE PREVIEW */}
-      <div className="flex-1 bg-muted/40 rounded-[3rem] p-4 sm:p-8 flex items-center justify-center overflow-hidden border border-border/40 relative min-h-[600px]">
+      <div className="flex-1 bg-muted/40 rounded-[2rem] sm:rounded-[3rem] p-2 sm:p-8 flex items-start sm:items-center justify-center overflow-x-auto overflow-y-auto border border-border/40 relative min-h-[500px] sm:min-h-[600px]">
         <div className="absolute top-6 left-8 flex items-center gap-2 text-muted-foreground font-bold text-xs uppercase tracking-wider">
           <Eye className="h-4 w-4" /> Vista Previa del Documento
         </div>
 
         {/* Paper Simulation */}
-        <div className={cn("bg-white w-full max-w-[500px] aspect-[1/1.414] rounded-sm shadow-2xl overflow-hidden flex flex-col relative transition-all duration-300 transform origin-top hover:scale-[1.02]", fontFamily)}>
+        <div className={cn("bg-white w-[320px] sm:w-[400px] md:w-[500px] shrink-0 aspect-[1/1.414] rounded-sm shadow-2xl overflow-hidden flex flex-col relative transition-all duration-300 transform origin-top mt-12 sm:mt-0 hover:scale-[1.02]", fontFamily)}>
           
           {/* Paper Header */}
           <div className={cn("px-6 pt-8 pb-4 transition-colors duration-300 text-gray-800", fontFamily)}>
@@ -327,8 +313,8 @@ export function RecipeDesigner() {
           <div className="mx-8 border-b-2 transition-colors duration-300" style={{ borderColor: primaryColor }}></div>
 
           {/* Paper Body (Simulated content) */}
-          <div className="flex-1 p-8 flex flex-col">
-            <div className="flex justify-between items-end mb-8 text-xs text-gray-500 border-b border-gray-100 pb-4">
+          <div className="flex-1 p-6 sm:p-8 flex flex-col">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-6 sm:mb-8 text-[10px] sm:text-xs text-gray-500 border-b border-gray-100 pb-4 gap-2 sm:gap-0">
               <div><span className="font-bold text-gray-700">Paciente:</span> Katherine Álvarez</div>
               <div><span className="font-bold text-gray-700">Fecha:</span> 28/07/2026</div>
             </div>
@@ -363,11 +349,6 @@ export function RecipeDesigner() {
                 Firma y Sello del Médico
               </div>
             </div>
-          </div>
-
-          {/* Paper Footer */}
-          <div className="p-4 text-center text-[10px] text-white whitespace-pre-wrap leading-relaxed transition-colors duration-300 font-medium" style={{ backgroundColor: primaryColor }}>
-            {footerText || <span className="opacity-70 italic">Aquí irá el pie de página...</span>}
           </div>
           
         </div>

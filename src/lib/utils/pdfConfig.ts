@@ -100,15 +100,5 @@ export const drawPdfWatermark = (doc: any, config: any, pageWidth: number, pageH
 };
 
 export const drawPdfFooter = (doc: any, config: any, pageWidth: number, pageHeight: number) => {
-  if (config.customFooterText) {
-    doc.setFont(config.customFontFamily, "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(100, 100, 100);
-    const footerLines = config.customFooterText.split("\n");
-    let fY = pageHeight - 30;
-    footerLines.forEach((line: string) => {
-      doc.text(line, pageWidth / 2, fY, { align: "center" });
-      fY += 10;
-    });
-  }
+  // Footer removed by user request
 };

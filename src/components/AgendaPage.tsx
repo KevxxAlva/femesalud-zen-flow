@@ -106,7 +106,7 @@ export function AgendaPage() {
     const weekStart = formatToYMD(weekDays[0]);
     const weekEnd = formatToYMD(weekDays[6]);
     
-    return appointments.filter((a) => {
+    const processed = appointments.filter((a) => {
       // Handle both "YYYY-MM-DD HH:MM:SS" and ISO strings safely
       const safeIso = a.scheduled_at.replace(" ", "T");
       const d = dateOnly(safeIso);
@@ -128,9 +128,9 @@ export function AgendaPage() {
       
       let theme;
       if (app.status?.toLowerCase() === 'completada') {
-        theme = { bg: "bg-green-50", border: "border-green-400", text: "text-green-700" };
+        theme = { bg: "bg-green-50/90 backdrop-blur-sm", border: "border-green-400", text: "text-green-700" };
       } else {
-        theme = { bg: "bg-primary/10", border: "border-blue-300", text: "text-primary" };
+        theme = { bg: "bg-primary/10 backdrop-blur-sm", border: "border-blue-300", text: "text-primary" };
       }
       
       return {
@@ -140,8 +140,22 @@ export function AgendaPage() {
         durationHours,
         theme
       };
+    }).sort((a, b) => {
+      if (a.dayIndex !== b.dayIndex) return a.dayIndex - b.dayIndex;
+      return a.topHours - b.topHours;
     });
-  }, [appointments, weekDays]);
+
+    const result = [];
+    let currentGroup: any[] = [];
+    for (const ev of processed) {
+      currentGroup = currentGroup.filter(g => g.topHours + g.durationHours > ev.topHours);
+      ev.overlapIndex = currentGroup.length;
+      currentGroup.push(ev);
+      result.push(ev);
+    }
+
+    return result;
+  }, [appointments, weekDays, searchQuery, statusFilter]);
 
   const monthDaysGrid = useMemo(() => {
     const year = currentDate.getFullYear();
@@ -183,9 +197,9 @@ export function AgendaPage() {
                   {statusFilter !== "todas" && <span className="bg-primary w-2 h-2 rounded-full absolute top-1 right-1"></span>}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-48 rounded-xl">
-                <DropdownMenuItem onClick={() => setStatusFilter("todas")} className="text-xs font-bold cursor-pointer">Todas (Activas)</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("programada")} className="text-xs font-bold cursor-pointer">Solo Programadas</DropdownMenuItem>
+              <DropdownMenuContent align="start" className="w-56 rounded-xl">
+                <DropdownMenuItem onClick={() => setStatusFilter("todas")} className="text-xs font-bold cursor-pointer">Completadas y en Espera (Todas)</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("pendiente")} className="text-xs font-bold cursor-pointer">Solo en Espera (Pendientes)</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("completada")} className="text-xs font-bold cursor-pointer">Solo Completadas</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("cancelada")} className="text-xs font-bold cursor-pointer text-destructive hover:text-destructive focus:text-destructive">Ver Canceladas</DropdownMenuItem>
               </DropdownMenuContent>
@@ -484,10 +498,16 @@ export function AgendaPage() {
                                 <div 
                                   onClick={(e) => e.stopPropagation()} // Prevent column click when clicking event
                                   className={cn(
-                                    "absolute left-1 right-1 rounded-[1rem] p-3 text-xs font-bold cursor-pointer transition-all hover:scale-[1.02] hover:z-30 overflow-hidden shadow-sm border border-l-4",
+                                    "absolute rounded-[1rem] p-3 text-xs font-bold cursor-pointer transition-all hover:scale-[1.02] hover:!z-50 overflow-hidden shadow-sm border border-l-4",
                                     ev.theme.bg, ev.theme.border, ev.theme.text
                                   )}
-                                  style={{ top: `${topPx}px`, height: `${heightPx}px` }}
+                                  style={{ 
+                                    top: `${topPx}px`, 
+                                    height: `${heightPx}px`,
+                                    left: `${(ev.overlapIndex || 0) * 16 + 4}px`,
+                                    right: `4px`,
+                                    zIndex: 10 + (ev.overlapIndex || 0)
+                                  }}
                                 >
                                   <p className="truncate font-extrabold">{ev.patient_name}</p>
                                   <p className="text-[10px] opacity-80 font-medium tracking-wide mt-0.5 flex gap-1">

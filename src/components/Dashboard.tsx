@@ -11,6 +11,12 @@ import { useDashboardStats, useMonthlyPayments, useDailyGoals, useAddDailyGoal, 
 import { useClinicInfo } from "@/lib/api/clinic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { generateSalesReport } from "@/lib/utils/generateSalesReport";
+import { generatePatientsReport } from "@/lib/utils/generatePatientsReport";
+import { generateAppointmentsReport } from "@/lib/utils/generateAppointmentsReport";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
@@ -125,6 +131,77 @@ export function Dashboard() {
   };
 
   const { data: appointments = [] } = useAppointments({ from: startOfLastMonthStr });
+
+  const handleDownloadReport = async () => {
+    try {
+      toast.loading("Generando reporte...", { id: "report" });
+      const { data, error } = await supabase
+        .from("facturas")
+        .select(`id_factura, id_paciente, fecha_emision, subtotal, monto_paciente, total_general, estado_pago, pacientes (nombre, apellido)`);
+      if (error) throw error;
+      const formatted = data.map(d => ({
+        ...d,
+        paciente_nombre: d.pacientes ? `${d.pacientes.nombre} ${d.pacientes.apellido}` : ''
+      }));
+      await generateSalesReport(formatted, "");
+      toast.success("Reporte generado", { id: "report" });
+    } catch (e) {
+      toast.error("Error al generar reporte", { id: "report" });
+    }
+  };
+
+  const handleDownloadPatientsReport = async () => {
+    try {
+      toast.loading("Generando reporte...", { id: "report_patients" });
+      
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const { data, error } = await supabase
+        .from("pacientes")
+        .select(`id_paciente, nombre, apellido, documento_identidad, telefono, creado_en`)
+        .gte("creado_en", startOfMonth)
+        .lte("creado_en", endOfMonth)
+        .order("creado_en", { ascending: false });
+
+      if (error) throw error;
+      
+      await generatePatientsReport(data || []);
+      toast.success("Reporte generado", { id: "report_patients" });
+    } catch (e) {
+      toast.error("Error al generar reporte", { id: "report_patients" });
+    }
+  };
+
+  const handleDownloadAppointmentsReport = async () => {
+    try {
+      toast.loading("Generando reporte...", { id: "report_apps" });
+      
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59).toISOString();
+
+      const { data, error } = await supabase
+        .from("citas")
+        .select(`id_cita, fecha_hora, estado, motivo, pacientes (nombre, apellido)`)
+        .gte("fecha_hora", startOfMonth)
+        .lte("fecha_hora", endOfMonth)
+        .order("fecha_hora", { ascending: false });
+
+      if (error) throw error;
+      
+      const formatted = data.map(d => ({
+        ...d,
+        paciente_nombre: d.pacientes ? `${d.pacientes.nombre} ${d.pacientes.apellido}` : ''
+      }));
+      
+      await generateAppointmentsReport(formatted);
+      toast.success("Reporte generado", { id: "report_apps" });
+    } catch (e) {
+      toast.error("Error al generar reporte", { id: "report_apps" });
+    }
+  };
 
   const doctorMap = useMemo(() => new Map(doctors.map((d) => [d.id, d.full_name || d.email])), [doctors]);
   
@@ -294,7 +371,22 @@ export function Dashboard() {
             <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Pacientes Registrados</h3>
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground focus:outline-none transition-colors"><MoreHorizontal className="h-4 w-4" /></button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                    <DropdownMenuItem asChild className="text-xs font-bold cursor-pointer">
+                      <Link to="/pacientes">Ver Todos</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="text-xs font-bold cursor-pointer">
+                      <Link to="/agenda">Ver Citas</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadPatientsReport} className="text-xs font-bold cursor-pointer text-primary focus:text-primary">
+                      Descargar Reporte del Mes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex items-end gap-3 mb-1">
                 <span className="font-display text-4xl font-bold text-foreground tracking-tight">{totalPatients}</span>
@@ -309,7 +401,19 @@ export function Dashboard() {
             <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Citas Online</h3>
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground focus:outline-none transition-colors"><MoreHorizontal className="h-4 w-4" /></button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                    <DropdownMenuItem asChild className="text-xs font-bold cursor-pointer">
+                      <Link to="/agenda">Ir a la Agenda</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadAppointmentsReport} className="text-xs font-bold cursor-pointer text-primary focus:text-primary">
+                      Descargar Reporte del Mes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex items-end gap-3 mb-1">
                 <span className="font-display text-4xl font-bold text-foreground tracking-tight">{stats?.onlineWork.total || 0}</span>
@@ -329,7 +433,19 @@ export function Dashboard() {
             <div className="glass-card rounded-[2rem] p-5 shadow-lg shadow-black/5 flex flex-col hover:-translate-y-1 transition-transform duration-300">
               <div className="flex justify-between items-start mb-2">
                 <h3 className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ingresos Mensuales</h3>
-                <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button className="text-muted-foreground hover:text-foreground focus:outline-none transition-colors"><MoreHorizontal className="h-4 w-4" /></button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-52 rounded-xl">
+                    <DropdownMenuItem asChild className="text-xs font-bold cursor-pointer">
+                      <Link to="/facturacion">Ver Facturación</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleDownloadReport} className="text-xs font-bold cursor-pointer text-primary focus:text-primary">
+                      Descargar Reporte General
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex items-end gap-3 mb-1">
                 <span className="font-display text-4xl font-bold text-foreground tracking-tight">${monthlyData.total.toFixed(2)}</span>
