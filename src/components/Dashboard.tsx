@@ -208,10 +208,18 @@ export function Dashboard() {
   const today = useMemo(() => new Date(), []);
   
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [appointmentPage, setAppointmentPage] = useState(1);
+  const itemsPerPage = 8;
+  
+  // Reset page when selected date changes
+  useEffect(() => {
+    setAppointmentPage(1);
+  }, [selectedDate]);
   
   const selectedDateStr = useMemo(() => {
     return selectedDate.toISOString().slice(0, 10);
   }, [selectedDate]);
+
   
   const todaysAppointments = useMemo(() => {
     return appointments.filter(a => a.scheduled_at.slice(0, 10) === todayStr)
@@ -740,29 +748,55 @@ export function Dashboard() {
 
               <div className="flex flex-col flex-1">
                 {selectedDateAppointments.length > 0 ? (
-                  selectedDateAppointments.map((app, i) => {
-                    const d = new Date(app.scheduled_at);
-                    const time = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
-                    const isEven = i % 2 === 0;
-                    const dotColor = isEven ? "var(--color-primary)" : "var(--color-secondary)";
-                    return (
-                      <div key={app.id} className="relative flex flex-col pt-2 pb-4 border-b border-dashed border-border/40 last:border-0 hover:bg-muted/30 transition-colors -mx-4 px-4 rounded-xl">
-                        <div className="flex items-center gap-3 text-xs font-bold">
-                          <span className="w-14 text-left text-muted-foreground font-medium">{time}</span>
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
-                          <span className="text-foreground truncate flex-1">Consulta con {app.patient_name}</span>
-                          <span className={cn(
-                            "px-2 py-0.5 rounded text-[10px] uppercase font-bold",
-                            app.status === "completada" ? "bg-emerald-500/10 text-emerald-600" :
-                            app.status === "cancelada" ? "bg-destructive/10 text-destructive" :
-                            "bg-primary/10 text-primary"
-                          )}>
-                            {app.status}
-                          </span>
+                  <>
+                    {selectedDateAppointments
+                      .slice((appointmentPage - 1) * itemsPerPage, appointmentPage * itemsPerPage)
+                      .map((app, i) => {
+                      const d = new Date(app.scheduled_at);
+                      const time = d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+                      const isEven = i % 2 === 0;
+                      const dotColor = isEven ? "var(--color-primary)" : "var(--color-secondary)";
+                      return (
+                        <div key={app.id} className="relative flex flex-col pt-2 pb-4 border-b border-dashed border-border/40 last:border-0 hover:bg-muted/30 transition-colors -mx-4 px-4 rounded-xl">
+                          <div className="flex items-center gap-3 text-xs font-bold">
+                            <span className="w-14 text-left text-muted-foreground font-medium">{time}</span>
+                            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dotColor }} />
+                            <span className="text-foreground truncate flex-1">Consulta con {app.patient_name}</span>
+                            <span className={cn(
+                              "px-2 py-0.5 rounded text-[10px] uppercase font-bold",
+                              app.status === "completada" ? "bg-emerald-500/10 text-emerald-600" :
+                              app.status === "cancelada" ? "bg-destructive/10 text-destructive" :
+                              "bg-primary/10 text-primary"
+                            )}>
+                              {app.status}
+                            </span>
+                          </div>
                         </div>
+                      );
+                    })}
+                    
+                    {selectedDateAppointments.length > itemsPerPage && (
+                      <div className="flex justify-between items-center mt-4 pt-4 border-t border-border/40">
+                        <button
+                          onClick={() => setAppointmentPage(p => Math.max(1, p - 1))}
+                          disabled={appointmentPage === 1}
+                          className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-50 transition cursor-pointer text-foreground"
+                        >
+                          Anterior
+                        </button>
+                        <span className="text-xs text-muted-foreground font-bold">
+                          Página {appointmentPage} de {Math.ceil(selectedDateAppointments.length / itemsPerPage)}
+                        </span>
+                        <button
+                          onClick={() => setAppointmentPage(p => Math.min(Math.ceil(selectedDateAppointments.length / itemsPerPage), p + 1))}
+                          disabled={appointmentPage === Math.ceil(selectedDateAppointments.length / itemsPerPage)}
+                          className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider bg-muted hover:bg-muted/80 rounded-lg disabled:opacity-50 transition cursor-pointer text-foreground"
+                        >
+                          Siguiente
+                        </button>
                       </div>
-                    );
-                  })
+                    )}
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-10 text-center opacity-60">
                     <CalendarClock className="h-10 w-10 text-muted-foreground mb-2" />
