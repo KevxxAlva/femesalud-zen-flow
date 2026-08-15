@@ -79,7 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "description", content: "Plataforma premium de gestión médica para profesionales de la salud." },
     ],
     links: [
-      { rel: "icon", href: "/logo.png", type: "image/png" },
+      { rel: "icon", href: "/favicon.svg", type: "image/svg+xml" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
