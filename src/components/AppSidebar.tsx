@@ -28,7 +28,7 @@ const navigation: ModuleDef[] = [
   { category: "CLÍNICA" },
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Pacientes", url: "/pacientes", icon: UserRound },
-  { title: "Tratamientos", url: "/servicios", icon: Stethoscope },
+  { title: "Servicios Médicos", url: "/servicios", icon: Stethoscope },
   { title: "Personal", url: "/doctores", icon: Users, adminOnly: true },
   { category: "FINANZAS" },
   { title: "Cuentas", url: "/cuentas", icon: Wallet, adminOnly: true },
@@ -148,7 +148,7 @@ function SidebarBody({ onNavigate, isCollapsed }: { onNavigate?: () => void, isC
                   )}
                 >
                   <LogOut className="h-4 w-4 text-muted-foreground group-hover:text-destructive flex-shrink-0" strokeWidth={2.5} />
-                  {!isCollapsed && <span>Log out</span>}
+                  {!isCollapsed && <span>Cerrar sesión</span>}
                 </button>
               </TooltipTrigger>
               {isCollapsed && <TooltipContent side="right" className="font-bold">Cerrar Sesión</TooltipContent>}
@@ -186,39 +186,6 @@ export function AppSidebar({ isCollapsed, onToggle }: { isCollapsed?: boolean; o
           )}
         </button>
         <SidebarBody isCollapsed={isCollapsed} />
-      </aside>
-
-      {/* Mobile Toggle */}
-      <button
-        onClick={() => setMobileOpen(true)}
-        aria-label="Abrir menú"
-        className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-2xl bg-card shadow-sm border border-border/40 md:hidden text-foreground"
-      >
-        <Menu className="h-5 w-5" />
-      </button>
-
-      {/* Mobile Drawer Overlay */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm transition-opacity md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-      
-      {/* Mobile Sidebar */}
-      <aside
-        className={cn(
-          "fixed left-0 top-0 bottom-0 z-50 flex w-[260px] flex-col bg-card shadow-2xl transition-transform duration-300 ease-out md:hidden border-r border-border/40",
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <button
-          onClick={() => setMobileOpen(false)}
-          className="absolute right-4 top-6 flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 z-50"
-        >
-          <X className="h-4 w-4" />
-        </button>
-        <SidebarBody onNavigate={() => setMobileOpen(false)} />
       </aside>
     </>
   );

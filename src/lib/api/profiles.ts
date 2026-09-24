@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Profile {
   id: string;
+  auth_id?: string | null;
   full_name: string;
   email: string;
   specialty: string | null;
@@ -68,6 +69,7 @@ export function useDoctors() {
       
       return (data ?? []).map((m: any) => ({
         id: m.id_medico?.toString(),
+        auth_id: m.usuarios?.auth_id || null,
         full_name: `${m.nombre} ${m.apellido}`,
         email: m.email || "",
         specialty: m.especialidades?.nombre || null,

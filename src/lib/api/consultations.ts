@@ -66,6 +66,10 @@ export interface Consultation {
   
   // Marketing
   contact_channel: string | null;
+
+  // Specialty dynamic data
+  specialty_name?: string | null;
+  specialty_data?: Record<string, any> | null;
   
   created_at: string;
   updated_at: string;
@@ -104,7 +108,9 @@ const packObservaciones = (data: Partial<ConsultationInput>) => {
     fetal_movements: data.fetal_movements, edema: data.edema, alarm_signs: data.alarm_signs,
     complementary_exams: data.complementary_exams, plan: data.plan,
     next_appointment_date: data.next_appointment_date, contact_channel: data.contact_channel,
-    indications: data.indications, diagnosis: data.diagnosis
+    indications: data.indications, diagnosis: data.diagnosis,
+    specialty_name: data.specialty_name,
+    specialty_data: data.specialty_data
   };
   return JSON.stringify(json);
 };
@@ -166,6 +172,9 @@ const unpackConsultation = (h: any): Consultation => {
     plan: extra.plan || null,
     next_appointment_date: extra.next_appointment_date || null,
     contact_channel: extra.contact_channel || null,
+
+    specialty_name: extra.specialty_name || null,
+    specialty_data: extra.specialty_data || null,
     
     created_at: h.fecha_hora || h.fecha_consulta || new Date().toISOString(),
     updated_at: h.fecha_hora || h.fecha_consulta || new Date().toISOString(),

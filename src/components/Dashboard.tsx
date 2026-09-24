@@ -7,7 +7,7 @@ import { useAuthSession, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useDoctors } from "@/lib/api/profiles";
 import { useAppointments } from "@/lib/api/appointments";
 import { useRecentPatients, usePatientsCountByDateRange } from "@/lib/api/patients";
-import { useDashboardStats, useMonthlyPayments, useDailyGoals, useAddDailyGoal, useIncrementDailyGoal } from "@/lib/api/dashboard";
+import { useDashboardStats, useMonthlyPayments, useDailyGoals, useAddDailyGoal, useIncrementDailyGoal, useDashboardTrends, useTopTreatments } from "@/lib/api/dashboard";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -20,7 +20,9 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, PieChart, Pie, Cell } from "recharts";
+import { AreaChart, Area, ResponsiveContainer, Tooltip, XAxis, PieChart, Pie, Cell, BarChart, Bar, CartesianGrid, YAxis } from "recharts";
+import { driver } from "driver.js";
+import "driver.js/dist/driver.css";
 
 function MiniAreaChart({ data, colorVar, gradientId }: { data: number[]; colorVar: string; gradientId: string }) {
   const chartData = useMemo(() => data.map((val, i) => ({ index: i, value: val })), [data]);
@@ -101,6 +103,8 @@ export function Dashboard() {
   const { data: stats } = useDashboardStats();
   const { data: monthlyData = { total: 0, paymentsByDay: [] } } = useMonthlyPayments();
   const { data: clinic } = useClinicInfo();
+  const { data: trends = [] } = useDashboardTrends();
+  const { data: topTreatments = [] } = useTopTreatments();
   
   // Real data
   const startOfLastMonthStr = useMemo(() => {
@@ -215,6 +219,38 @@ export function Dashboard() {
   useEffect(() => {
     setAppointmentPage(1);
   }, [selectedDate]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const isTourDone = localStorage.getItem('femesalud_tour_done');
+      if (!isTourDone) {
+        const driverObj = driver({
+          showProgress: true,
+          steps: [
+            {
+              element: 'aside',
+              popover: { title: 'Menú Principal', description: 'Accede a todas las herramientas de la clínica desde aquí.' }
+            },
+            {
+              element: '#search-bar',
+              popover: { title: 'Buscador', description: 'Encuentra rápidamente pacientes, citas y más.' }
+            },
+            {
+              element: '#calendar-widget',
+              popover: { title: 'Tu Agenda', description: 'Controla tus citas diarias y mantente al día con tu calendario.' }
+            }
+          ],
+          onDestroyStarted: () => {
+            if (!driverObj.hasNextStep() || confirm("¿Estás seguro de saltar el tour?")) {
+              localStorage.setItem('femesalud_tour_done', 'true');
+              driverObj.destroy();
+            }
+          },
+        });
+        setTimeout(() => driverObj.drive(), 1000);
+      }
+    }
+  }, []);
   
   const selectedDateStr = useMemo(() => {
     return selectedDate.toISOString().slice(0, 10);
@@ -282,7 +318,7 @@ export function Dashboard() {
     <div className="min-h-full bg-muted/50 rounded-[2rem] p-4 md:p-8 font-sans text-foreground">
       {/* Header Bar */}
       <header className="flex flex-wrap items-center justify-between gap-4 mb-8">
-        <div className="relative w-full max-w-sm flex items-center bg-card rounded-full px-4 py-2.5 shadow-sm">
+        <div id="search-bar" className="relative w-full max-w-sm flex items-center bg-card rounded-full px-4 py-2.5 shadow-sm">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input 
             type="text" 
@@ -626,6 +662,57 @@ export function Dashboard() {
               </Dialog>
             </div>
           </div>
+
+          {/* CHARTS ROW */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Trends Chart */}
+            <div className="glass-card rounded-[2rem] p-6 shadow-lg shadow-black/5 flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Tendencias de Ingresos (6 Meses)</h3>
+              </div>
+              <div className="flex-1 min-h-[250px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={trends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--color-border)" />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }} dy={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--color-muted-foreground)' }} tickFormatter={(val) => `$${val}`} />
+                    <Tooltip
+                      contentStyle={{ borderRadius: '1rem', border: '1px solid var(--color-border)', backgroundColor: 'var(--color-card)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Ingresos']}
+                      cursor={{ fill: 'var(--color-muted)', opacity: 0.2 }}
+                    />
+                    <Bar dataKey="amount" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={30} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            {/* Top Treatments */}
+            <div className="glass-card rounded-[2rem] p-6 shadow-lg shadow-black/5 flex flex-col">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Servicios Populares</h3>
+              </div>
+              <div className="flex-1 space-y-4 pt-2">
+                {topTreatments.length > 0 ? (
+                  topTreatments.map((t, idx) => (
+                    <div key={idx} className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center text-secondary font-bold text-xs">
+                          #{idx + 1}
+                        </div>
+                        <span className="font-bold text-sm text-foreground">{t.name}</span>
+                      </div>
+                      <span className="font-bold text-xs bg-muted px-2 py-1 rounded-md">{t.count} consultas</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex h-full min-h-[150px] items-center justify-center text-muted-foreground text-xs">
+                    Sin datos suficientes
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* RIGHT COLUMN (Sidebar Profile & Calendar) */}
@@ -671,7 +758,7 @@ export function Dashboard() {
           </div>
 
           {/* CALENDAR & SCHEDULE WIDGET */}
-          <div className="glass-card rounded-[2rem] overflow-hidden shadow-lg shadow-black/5 flex-1 flex flex-col">
+          <div id="calendar-widget" className="glass-card rounded-[2rem] overflow-hidden shadow-lg shadow-black/5 flex-1 flex flex-col">
             
             {/* Calendar Header */}
             <div className="flex justify-between items-center bg-gradient-to-r from-primary to-primary/90 text-primary-foreground px-6 py-4 border-b border-primary/20">

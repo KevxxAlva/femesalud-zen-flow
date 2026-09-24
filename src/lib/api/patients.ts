@@ -247,24 +247,33 @@ export function useCreatePatient() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: Partial<PatientInput> & { full_name: string; assigned_doctor_id: string }) => {
-      const names = input.full_name.split(' ');
-      const nombre = names[0];
-      const apellido = names.slice(1).join(' ') || '';
+      const names = (input.full_name || "").trim().split(/\s+/);
+      const nombre = names[0] || "Paciente";
+      const apellido = names.slice(1).join(" ") || ".";
+
+      const cleanDocId = input.document_id?.trim() || `S/C-${Date.now().toString().slice(-6)}`;
+      const cleanEmail = input.email?.trim() || null;
+      const cleanPhone = input.phone?.trim() || null;
+      const cleanBirth = input.birth_date?.trim() || null;
+      const cleanAddress = input.address?.trim() || null;
 
       const { error: patientError, data: patientData } = await supabase
         .from("pacientes")
         .insert({ 
           nombre, 
           apellido, 
-          email: input.email, 
-          telefono: input.phone,
-          documento_identidad: input.document_id || Math.random().toString().slice(2, 10),
-          fecha_nacimiento: input.birth_date,
-          direccion: input.address
+          email: cleanEmail, 
+          telefono: cleanPhone,
+          documento_identidad: cleanDocId,
+          fecha_nacimiento: cleanBirth,
+          direccion: cleanAddress
         })
         .select()
         .single();
-      if (patientError) throw patientError;
+      if (patientError) {
+        console.error("Error creating patient in pacientes:", patientError);
+        throw patientError;
+      }
 
       const {
         status, assigned_doctor_id, notes, historia_number, first_visit_date, 
@@ -291,7 +300,10 @@ export function useCreatePatient() {
         })
         .select()
         .single();
-      if (hcError) console.error("Error creating historia clinica", hcError);
+      if (hcError) {
+        console.error("Error creating historia clinica", hcError);
+        throw hcError;
+      }
 
       return mapPatient({ ...patientData, historias_clinicas: hcData });
     },
@@ -310,15 +322,15 @@ export function useUpdatePatient() {
     mutationFn: async ({ id, ...patch }: Partial<PatientInput> & { id: string }) => {
       const updateData: any = {};
       if (patch.full_name) {
-        const names = patch.full_name.split(' ');
-        updateData.nombre = names[0];
-        updateData.apellido = names.slice(1).join(' ') || '';
+        const names = patch.full_name.trim().split(/\s+/);
+        updateData.nombre = names[0] || "Paciente";
+        updateData.apellido = names.slice(1).join(" ") || ".";
       }
-      if (patch.email !== undefined) updateData.email = patch.email;
-      if (patch.phone !== undefined) updateData.telefono = patch.phone;
-      if (patch.document_id !== undefined) updateData.documento_identidad = patch.document_id;
-      if (patch.birth_date !== undefined) updateData.fecha_nacimiento = patch.birth_date;
-      if (patch.address !== undefined) updateData.direccion = patch.address;
+      if (patch.email !== undefined) updateData.email = patch.email?.trim() || null;
+      if (patch.phone !== undefined) updateData.telefono = patch.phone?.trim() || null;
+      if (patch.document_id !== undefined) updateData.documento_identidad = patch.document_id?.trim() || null;
+      if (patch.birth_date !== undefined) updateData.fecha_nacimiento = patch.birth_date?.trim() || null;
+      if (patch.address !== undefined) updateData.direccion = patch.address?.trim() || null;
 
       const { error: patientError, data: patientData } = await supabase
         .from("pacientes")
@@ -326,7 +338,10 @@ export function useUpdatePatient() {
         .eq("id_paciente", parseInt(id))
         .select()
         .single();
-      if (patientError) throw patientError;
+      if (patientError) {
+        console.error("Error updating patient in pacientes:", patientError);
+        throw patientError;
+      }
 
       const {
         status, assigned_doctor_id, notes, historia_number, first_visit_date, 

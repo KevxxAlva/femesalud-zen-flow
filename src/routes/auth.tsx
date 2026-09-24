@@ -294,7 +294,7 @@ function AuthPage() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm">
             <Heart className="h-5 w-5" fill="currentColor" />
           </div>
-          <span className="font-display font-bold text-xl tracking-tight text-zinc-950 dark:text-primary-foreground">
+          <span className="font-display font-bold text-xl tracking-tight text-foreground">
             feme<span className="text-primary">salud</span>
           </span>
         </div>
@@ -303,14 +303,14 @@ function AuthPage() {
         <div className="my-auto py-8 max-w-[360px] w-full mx-auto">
           {mode === "login" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-zinc-900 dark:text-primary-foreground">Sign in</h2>
+              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Iniciar sesión</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Introduce tus credenciales para acceder a la suite clínica.
               </p>
 
               <form onSubmit={handleLogin} className="mt-8 space-y-5">
                 <div className="space-y-1.5 text-left">
-                  <Label htmlFor="email" className="text-zinc-500 font-medium text-xs">E-mail</Label>
+                  <Label htmlFor="email" className="text-zinc-500 font-medium text-xs">Correo electrónico</Label>
                   <Input
                     id="email"
                     type="email"
@@ -324,7 +324,7 @@ function AuthPage() {
                 </div>
 
                 <div className="space-y-1.5 text-left">
-                  <Label htmlFor="password" className="text-zinc-500 font-medium text-xs">Password</Label>
+                  <Label htmlFor="password" className="text-zinc-500 font-medium text-xs">Contraseña</Label>
                   <div className="relative">
                     <Input
                       id="password"
@@ -352,14 +352,14 @@ function AuthPage() {
                       type="checkbox"
                       className="rounded border-zinc-300 dark:border-zinc-800 text-primary focus:ring-[#4361ee] w-4 h-4 cursor-pointer"
                     />
-                    <span>Remember me</span>
+                    <span>Recordarme</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => setMode("recovery")}
                     className="font-bold text-zinc-400 hover:text-primary transition-colors bg-transparent border-0 cursor-pointer p-0"
                   >
-                    Forgot Password?
+                    ¿Olvidaste tu contraseña?
                   </button>
                 </div>
 
@@ -368,7 +368,7 @@ function AuthPage() {
                   disabled={loading}
                   className="w-full h-11 rounded-2xl bg-primary hover:bg-[#3451d6] text-primary-foreground font-semibold shadow-md shadow-blue-500/10 hover:shadow-primary/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
                 >
-                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" /> : "Sign in"}
+                  {loading ? <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" /> : "Iniciar sesión"}
                 </Button>
               </form>
             </>
@@ -376,14 +376,14 @@ function AuthPage() {
 
           {mode === "recovery" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-zinc-900 dark:text-primary-foreground">Recuperar contraseña</h2>
+              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Recuperar contraseña</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Ingresa tu correo y te enviaremos las instrucciones para restablecer tu acceso.
               </p>
 
               <form onSubmit={handleRecovery} className="mt-8 space-y-5">
                 <div className="space-y-1.5 text-left">
-                  <Label htmlFor="recovery-email" className="text-zinc-500 font-medium text-xs">E-mail</Label>
+                  <Label htmlFor="recovery-email" className="text-zinc-500 font-medium text-xs">Correo electrónico</Label>
                   <Input
                     id="recovery-email"
                     type="email"
@@ -417,7 +417,7 @@ function AuthPage() {
 
           {mode === "reset-password" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-zinc-900 dark:text-primary-foreground">Nueva contraseña</h2>
+              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Nueva contraseña</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Ingresa tu nueva contraseña para reestablecer tu acceso a la plataforma.
               </p>
@@ -458,7 +458,7 @@ function AuthPage() {
 
           {mode === "bootstrap" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-zinc-900 dark:text-primary-foreground">Primer Admin</h2>
+              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Primer Admin</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Crea la primera cuenta del sistema. Quedará automáticamente como administrador.
               </p>

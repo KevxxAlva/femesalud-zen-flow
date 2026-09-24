@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { RecipeDesigner } from "@/components/settings/RecipeDesigner";
-import { FileText } from "lucide-react";
+import { FileText, Lock } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
   head: () => ({ meta: [{ title: "Configuración — FemeSalud" }] }),
@@ -85,6 +86,12 @@ function ConfiguracionPage() {
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-muted/50 p-1 rounded-2xl mb-6 max-w-2xl h-auto flex-wrap">
           <TabsTrigger value="profile" className="rounded-xl font-bold text-xs flex items-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground">
             <UserIcon className="h-4 w-4" /> Mi Perfil
+          </TabsTrigger>
+          <TabsTrigger
+            value="security"
+            className="rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground"
+          >
+            <Lock className="h-4 w-4" /> Seguridad
           </TabsTrigger>
           <TabsTrigger
             value="audit"
@@ -224,6 +231,11 @@ function ConfiguracionPage() {
         </TabsContent>
 
 
+        {/* TAB 2: SEGURIDAD */}
+        <TabsContent value="security" className="outline-none space-y-4">
+          <SecuritySection />
+        </TabsContent>
+
         {/* TAB 3: AUDITORIA */}
         {isAdmin && (
           <TabsContent value="audit" className="outline-none space-y-4">
@@ -263,10 +275,11 @@ function AuditLogSection() {
           <table className="w-full text-left border-collapse whitespace-nowrap">
             <thead>
               <tr className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
-                <th className="p-4 font-bold border-b border-border/40">Fecha</th>
+                <th className="p-4 font-bold border-b border-border/40">Created At (Fecha)</th>
+                <th className="p-4 font-bold border-b border-border/40">Action (Acción)</th>
+                <th className="p-4 font-bold border-b border-border/40">Table Name (Tabla)</th>
+                <th className="p-4 font-bold border-b border-border/40">Record ID</th>
                 <th className="p-4 font-bold border-b border-border/40">Usuario</th>
-                <th className="p-4 font-bold border-b border-border/40">Acción</th>
-                <th className="p-4 font-bold border-b border-border/40">Detalles</th>
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -275,16 +288,19 @@ function AuditLogSection() {
                   <td className="p-4 font-medium text-foreground">
                     {new Date(log.created_at).toLocaleString()}
                   </td>
-                  <td className="p-4 text-muted-foreground">
-                    {log.perfiles?.full_name || log.perfiles?.email || log.user_id}
-                  </td>
                   <td className="p-4">
                     <span className="bg-destructive/10 text-destructive border border-red-100 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
-                      {log.action_type} {log.entity_type}
+                      {log.action_type}
                     </span>
                   </td>
-                  <td className="p-4 text-muted-foreground text-xs">
-                    {log.details?.message || `ID: ${log.entity_id}`}
+                  <td className="p-4 text-muted-foreground">
+                    {log.entity_type}
+                  </td>
+                  <td className="p-4 text-muted-foreground font-mono text-xs">
+                    {log.entity_id}
+                  </td>
+                  <td className="p-4 text-muted-foreground">
+                    {log.perfiles?.full_name || log.perfiles?.email || log.user_id}
                   </td>
                 </tr>
               ))}
@@ -292,6 +308,97 @@ function AuditLogSection() {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+function SecuritySection() {
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [verifyCode, setVerifyCode] = useState("");
+  const [factorId, setFactorId] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+
+  const handleEnable2FA = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+      });
+      if (error) throw error;
+      
+      setFactorId(data.id);
+      setQrCode(data.totp.qr_code);
+    } catch (error: any) {
+      toast.error(error.message || "Error al habilitar 2FA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerify2FA = async () => {
+    setLoading(true);
+    try {
+      const challenge = await supabase.auth.mfa.challenge({ factorId });
+      if (challenge.error) throw challenge.error;
+      
+      const verify = await supabase.auth.mfa.verify({
+        factorId,
+        challengeId: challenge.data.id,
+        code: verifyCode
+      });
+      if (verify.error) throw verify.error;
+      
+      toast.success("2FA habilitado correctamente");
+      setQrCode(null);
+      setEnabled(true);
+    } catch (error: any) {
+      toast.error(error.message || "Error al verificar código");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
+      <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
+        <Lock className="h-5 w-5" /> Seguridad
+      </h2>
+      <div className="space-y-4">
+        <h3 className="font-bold">Autenticación de Dos Factores (2FA)</h3>
+        {enabled ? (
+          <p className="text-sm text-green-600 font-semibold">2FA ya está habilitado en tu cuenta.</p>
+        ) : !qrCode ? (
+          <div>
+            <p className="text-sm text-muted-foreground mb-4">
+              Añade una capa extra de seguridad a tu cuenta habilitando la autenticación de dos factores.
+            </p>
+            <Button onClick={handleEnable2FA} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Habilitar 2FA
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-4 border border-border/40 p-4 rounded-xl">
+            <p className="text-sm font-medium">1. Escanea este código QR con tu aplicación de autenticación (ej. Google Authenticator, Authy).</p>
+            <div className="bg-white p-2 inline-block rounded-lg" dangerouslySetInnerHTML={{ __html: qrCode }} />
+            <div className="max-w-xs space-y-2 mt-4">
+              <Label className="font-medium">2. Ingresa el código de verificación</Label>
+              <Input 
+                value={verifyCode} 
+                onChange={e => setVerifyCode(e.target.value)} 
+                placeholder="000000"
+                maxLength={6}
+                className="text-center tracking-widest text-lg font-bold"
+              />
+              <Button onClick={handleVerify2FA} disabled={loading || verifyCode.length < 6} className="w-full mt-2">
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Verificar y Activar
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { useDoctors } from "@/lib/api/profiles";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import confetti from "canvas-confetti";
 
 const STATUSES = ["nuevo", "activo", "en_tratamiento", "alta"];
 const statusLabel = (s: string) => ({ nuevo: "Nuevo", activo: "Activo", en_tratamiento: "En tratamiento", alta: "Alta" } as Record<string, string>)[s] ?? s;
@@ -196,10 +197,13 @@ export function PatientForm({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!full_name.trim()) return;
-    const doctorId = assigned_doctor_id || defaultDoctor;
+    if (!full_name.trim()) {
+      toast.error("Por favor ingrese el nombre completo del paciente");
+      return;
+    }
+    const doctorId = assigned_doctor_id || defaultDoctor || (doctors[0]?.id ? String(doctors[0].id) : (user?.id ?? ""));
     if (!doctorId) {
-      toast.error("Falta médico asignado");
+      toast.error("Por favor seleccione un médico asignado");
       return;
     }
     try {
@@ -207,25 +211,25 @@ export function PatientForm({
       
       const payload = {
         full_name: full_name.trim(),
-        email: email || null,
+        email: email.trim() || null,
         phone: phoneNumber.trim() ? `${phonePrefix} ${phoneNumber.trim()}` : null,
         birth_date: birth_date || null,
         status,
         assigned_doctor_id: doctorId,
-        address: address || null,
-        notes: notes || null,
+        address: address.trim() || null,
+        notes: notes.trim() || null,
         document_id: combinedDocId,
         
         // Extended clinical columns
-        historia_number: historia_number || null,
+        historia_number: historia_number.trim() || null,
         first_visit_date: first_visit_date || null,
-        marital_status: marital_status || null,
-        birthplace: birthplace || null,
-        education_level: education_level || null,
-        occupation: occupation || null,
-        ethnicity: ethnicity || null,
-        consultation_reason: consultation_reason || null,
-        current_illness: current_illness || null,
+        marital_status: marital_status.trim() || null,
+        birthplace: birthplace.trim() || null,
+        education_level: education_level.trim() || null,
+        occupation: occupation.trim() || null,
+        ethnicity: ethnicity.trim() || null,
+        consultation_reason: consultation_reason.trim() || null,
+        current_illness: current_illness.trim() || null,
 
         family_history: {
           mother: famMother || null,
@@ -270,14 +274,30 @@ export function PatientForm({
 
       if (isEdit && patient) {
         await update.mutateAsync({ id: patient.id, ...payload });
-        toast.success("Paciente actualizado");
+        toast.success("Paciente actualizado con éxito");
       } else {
         await create.mutateAsync(payload);
-        toast.success("Paciente creado");
+        toast.success("Paciente creado con éxito");
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
       }
       onOpenChange(false);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error guardando");
+    } catch (err: any) {
+      console.error("Error guardando paciente:", err);
+      let errorMsg = "Error al guardar el paciente";
+      const rawMsg = err?.message || err?.error_description || err?.details || (typeof err === "string" ? err : "");
+
+      if (rawMsg.includes("pacientes_documento_identidad_key") || rawMsg.includes("documento_identidad")) {
+        errorMsg = "Ya existe un paciente registrado con este documento de identidad (cédula/pasaporte).";
+      } else if (rawMsg.includes("pacientes_email_key") || rawMsg.includes("email")) {
+        errorMsg = "El correo electrónico ya se encuentra registrado para otro paciente.";
+      } else if (rawMsg) {
+        errorMsg = rawMsg;
+      }
+      toast.error(errorMsg);
     }
   };
 
@@ -341,7 +361,7 @@ export function PatientForm({
                       <Label htmlFor="doc-number">Cédula / Pasaporte</Label>
                       <Input
                         id="doc-number"
-                        placeholder="Ej. 12345678"
+                        placeholder="Ej. 12345678 (o auto-genera S/C)"
                         value={idNumber}
                         onChange={(e) => setIdNumber(e.target.value)}
                         className="rounded-xl"

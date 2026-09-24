@@ -3,7 +3,10 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppSidebar } from "@/components/AppSidebar";
 import { CommandMenu } from "@/components/CommandMenu";
+import { BottomNavBar } from "@/components/BottomNavBar";
 import { useRealtimeSync } from "@/hooks/useRealtimeSync";
+import { AnimatePresence, motion } from "framer-motion";
+import { useLocation } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -18,6 +21,7 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
   const router = useRouter();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const location = useLocation();
 
   useRealtimeSync();
 
@@ -31,12 +35,22 @@ function AuthenticatedLayout() {
   }, [router]);
 
   return (
-    <div className="min-h-screen bg-muted">
+    <div className="min-h-screen bg-muted pb-16 md:pb-0">
       <AppSidebar isCollapsed={isCollapsed} onToggle={() => setIsCollapsed(!isCollapsed)} />
-      <main className={`px-4 pt-20 pb-6 md:pr-6 md:py-6 md:pt-6 h-full min-h-screen transition-all duration-300 ${isCollapsed ? "md:ml-[80px]" : "md:ml-[260px]"}`}>
-        <Outlet />
+      <main className={`px-4 pt-4 md:pt-6 pb-6 md:pr-6 md:py-6 h-full min-h-screen transition-all duration-300 ${isCollapsed ? "md:ml-[80px]" : "md:ml-[260px]"}`}>
+        <AnimatePresence>
+          <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
       </main>
       <CommandMenu />
+      <BottomNavBar />
     </div>
   );
 }

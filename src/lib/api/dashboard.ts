@@ -222,3 +222,86 @@ export function useIncrementDailyGoal() {
     }
   });
 }
+
+export function useDashboardTrends() {
+  return useQuery({
+    queryKey: ["dashboard_trends"],
+    queryFn: async () => {
+      const sixMonthsAgo = new Date();
+      sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+      sixMonthsAgo.setDate(1);
+
+      const { data: invoices, error } = await supabase
+        .from("facturas")
+        .select("fecha_emision, total_general, estado_pago")
+        .gte("fecha_emision", sixMonthsAgo.toISOString());
+      
+      if (error) throw error;
+
+      const monthlyData: Record<string, number> = {};
+      
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date();
+        d.setMonth(d.getMonth() - i);
+        const monthYear = d.toLocaleString('es-ES', { month: 'short', year: '2-digit' });
+        monthlyData[monthYear] = 0;
+      }
+
+      const paidInvoices = invoices?.filter(i => i.estado_pago === "pagado" || i.estado_pago === "Paid") || [];
+
+      paidInvoices.forEach(inv => {
+        if (!inv.fecha_emision) return;
+        const d = new Date(inv.fecha_emision);
+        const monthYear = d.toLocaleString('es-ES', { month: 'short', year: '2-digit' });
+        if (monthlyData[monthYear] !== undefined) {
+          monthlyData[monthYear] += (Number(inv.total_general) || 0);
+        }
+      });
+
+      return Object.entries(monthlyData).map(([month, amount]) => ({
+        month,
+        amount
+      }));
+    }
+  });
+}
+
+export function useTopTreatments() {
+  return useQuery({
+    queryKey: ["dashboard_top_treatments"],
+    queryFn: async () => {
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+      const { data: facturas } = await supabase
+        .from("facturas")
+        .select("id_factura")
+        .gte("fecha_emision", thirtyDaysAgo.toISOString());
+
+      if (!facturas || facturas.length === 0) return [];
+
+      const facturaIds = facturas.map(f => f.id_factura);
+
+      const { data: detalles } = await supabase
+        .from("detalles_factura")
+        .select("id_servicio, cantidad, servicios(nombre_servicio)")
+        .in("id_factura", facturaIds);
+
+      if (!detalles) return [];
+
+      const counts: Record<string, { name: string, count: number }> = {};
+      detalles.forEach(d => {
+        const sId = d.id_servicio;
+        if (!sId) return;
+        if (!counts[sId]) {
+          counts[sId] = { name: (d.servicios as any)?.nombre_servicio || "Tratamiento", count: 0 };
+        }
+        counts[sId].count += (d.cantidad || 1);
+      });
+
+      return Object.values(counts)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+    }
+  });
+}

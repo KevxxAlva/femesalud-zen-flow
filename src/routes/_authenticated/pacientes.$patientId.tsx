@@ -3,7 +3,7 @@ import { useState } from "react"
 import { 
   ArrowLeft, FileDown, FileText, Printer, Loader2, User, Calendar, Phone, Mail, 
   MapPin, Briefcase, GraduationCap, HeartPulse, Baby, Stethoscope, Clock, 
-  StickyNote, Activity, AlertCircle, Sparkles, FileSpreadsheet, ShieldCheck, Heart
+  StickyNote, Activity, AlertCircle, Sparkles, FileSpreadsheet, ShieldCheck, Heart, Pill
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -36,8 +36,11 @@ const calculateAge = (dob: string | Date | undefined | null) => {
   return age;
 };
 import { generateFichaPDF } from "@/lib/utils/pdf"
+import { generateFullHistoryPdf } from "@/lib/pdf/generateFullHistoryPdf"
 import { generateReposoPDF, generateAtencionPDF, generateJustificativoPDF } from "@/lib/utils/reportsPdf"
 import { AppSidebar } from "@/components/AppSidebar"
+import { usePatientConsultations } from "@/lib/api/consultations"
+import { generateRecipePdf } from "@/lib/pdf/generateRecipePdf"
 
 export const Route = createFileRoute('/_authenticated/pacientes/$patientId')({
   component: PatientDetailRoute,
@@ -60,6 +63,45 @@ const statusLabel = (s?: string) => {
   };
   return m[s] || s;
 };
+
+function PatientRecipesTab({ patientId, patient, doctors }: any) {
+  const { data: consultations, isLoading } = usePatientConsultations(patientId);
+  
+  if (isLoading) return <Loader2 className="h-6 w-6 animate-spin text-muted-foreground mx-auto mt-4" />;
+  
+  const recipes = consultations?.filter((c: any) => c.indications && c.indications.trim().length > 0) || [];
+  
+  if (recipes.length === 0) return <p className="text-muted-foreground text-sm p-4 text-center">No hay recetas registradas.</p>;
+  
+  return (
+    <div className="space-y-4">
+      {recipes.map((c: any) => {
+        const doc = doctors?.find((d: any) => d.id === c.doctor_id);
+        return (
+          <div key={c.id} className="p-4 border border-border/50 rounded-2xl bg-muted/10 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div>
+              <p className="font-bold text-sm text-foreground">
+                Receta de Consulta - {new Date(c.created_at).toLocaleDateString("es-ES")}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1 line-clamp-2 max-w-md">
+                {c.indications}
+              </p>
+            </div>
+            <Button 
+              size="sm" 
+              variant="outline" 
+              className="rounded-xl flex-shrink-0"
+              onClick={() => generateRecipePdf(patient, c, doc)}
+            >
+              <FileDown className="h-4 w-4 mr-2" />
+              Descargar PDF
+            </Button>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function PatientDetailRoute() {
   const { patientId } = Route.useParams()
@@ -87,7 +129,7 @@ function PatientDetailRoute() {
   const [doctorMpps, setDoctorMpps] = useState("");
   const [doctorCmc, setDoctorCmc] = useState("");
 
-  const handleExportFicha = (p: any) => generateFichaPDF(p, doctorMap);
+  const handleExportFicha = (p: any) => generateFullHistoryPdf(p.id);
 
   const handleOpenReposoDialog = (p: any) => {
     setReposoStart(new Date().toISOString().slice(0, 10));
@@ -214,7 +256,7 @@ function PatientDetailRoute() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="rounded-2xl bg-popover/95 backdrop-blur-md border border-border/50 p-2 shadow-2xl min-w-[200px]" align="end">
                   <DropdownMenuItem onClick={() => handleExportFicha(viewing)} className="rounded-xl cursor-pointer text-xs font-semibold flex items-center gap-2 px-3 py-2.5 hover:bg-muted/80 transition-colors">
-                    <FileText className="h-4 w-4 text-primary" /> Ficha Médica Completa
+                    <FileText className="h-4 w-4 text-primary" /> Expediente Clínico Completo
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleOpenReposoDialog(viewing)} className="rounded-xl cursor-pointer text-xs font-semibold flex items-center gap-2 px-3 py-2.5 hover:bg-muted/80 transition-colors">
                     <Printer className="h-4 w-4 text-emerald-500" /> Constancia de Reposo
@@ -314,6 +356,9 @@ function PatientDetailRoute() {
               </TabsTrigger>
               <TabsTrigger value="notas" className="rounded-xl font-bold text-xs py-2.5 px-3.5 flex items-center gap-2 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
                 <StickyNote className="h-3.5 w-3.5" /> Notas Clínicas
+              </TabsTrigger>
+              <TabsTrigger value="recetas" className="rounded-xl font-bold text-xs py-2.5 px-3.5 flex items-center gap-2 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+                <Pill className="h-3.5 w-3.5" /> Recetas
               </TabsTrigger>
             </TabsList>
 
@@ -609,6 +654,16 @@ function PatientDetailRoute() {
               <TabsContent value="timeline" className="space-y-4 outline-none">
                 <div className="max-w-2xl">
                   <PatientTimeline patientId={viewing.id} />
+                </div>
+              </TabsContent>
+
+              {/* TAB 8: RECETAS */}
+              <TabsContent value="recetas" className="space-y-4 outline-none">
+                <div className="bg-card border border-border/40 p-6 rounded-3xl shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-primary mb-4 flex items-center gap-2">
+                    <Pill className="h-4 w-4" /> Historial de Recetas e Indicaciones
+                  </h3>
+                  <PatientRecipesTab patientId={viewing.id} patient={viewing} doctors={doctors} />
                 </div>
               </TabsContent>
             </div>

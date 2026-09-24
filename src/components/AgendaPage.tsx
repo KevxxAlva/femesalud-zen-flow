@@ -204,18 +204,6 @@ export function AgendaPage() {
                 <DropdownMenuItem onClick={() => setStatusFilter("cancelada")} className="text-xs font-bold cursor-pointer text-destructive hover:text-destructive focus:text-destructive">Ver Canceladas</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted focus:outline-none">
-                  <Clock className="h-4 w-4 text-muted-foreground" /> {calendarView} <span className="ml-1 text-[10px] text-muted-foreground">▼</span>
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="w-40 rounded-xl">
-                <DropdownMenuItem onClick={() => setCalendarView("Mensual")} className="text-xs font-bold cursor-pointer">Mensual</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCalendarView("Semanal")} className="text-xs font-bold cursor-pointer">Semanal</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setCalendarView("Diaria")} className="text-xs font-bold cursor-pointer">Diaria</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
             <button className="flex items-center gap-2 text-xs font-bold text-foreground border border-border/40 rounded-xl px-4 py-2 hover:bg-muted">
               <Download className="h-4 w-4 text-muted-foreground" /> Descargar Datos
             </button>
@@ -361,8 +349,44 @@ export function AgendaPage() {
                 </h2>
                 <button onClick={() => setCurrentDate(new Date())} className="text-xs font-bold text-primary bg-muted/50 px-3 py-1 rounded-lg">Hoy</button>
                 <div className="flex items-center gap-1 text-muted-foreground">
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() - 7 * 86400000))} className="hover:bg-muted p-1 rounded-md"><ChevronLeft className="h-4 w-4" /></button>
-                  <button onClick={() => setCurrentDate(new Date(currentDate.getTime() + 7 * 86400000))} className="hover:bg-muted p-1 rounded-md"><ChevronRight className="h-4 w-4" /></button>
+                  <button 
+                    onClick={() => {
+                      if (calendarView === "Mensual") {
+                        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
+                      } else if (calendarView === "Diaria") {
+                        setCurrentDate(new Date(currentDate.getTime() - 86400000));
+                      } else {
+                        setCurrentDate(new Date(currentDate.getTime() - 7 * 86400000));
+                      }
+                    }} 
+                    className="hover:bg-muted p-1 rounded-md"
+                  ><ChevronLeft className="h-4 w-4" /></button>
+                  <button 
+                    onClick={() => {
+                      if (calendarView === "Mensual") {
+                        setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
+                      } else if (calendarView === "Diaria") {
+                        setCurrentDate(new Date(currentDate.getTime() + 86400000));
+                      } else {
+                        setCurrentDate(new Date(currentDate.getTime() + 7 * 86400000));
+                      }
+                    }} 
+                    className="hover:bg-muted p-1 rounded-md"
+                  ><ChevronRight className="h-4 w-4" /></button>
+                </div>
+                <div className="flex bg-muted/50 p-1 rounded-lg ml-4">
+                  {["Mensual", "Semanal", "Diaria"].map((v) => (
+                    <button
+                      key={v}
+                      onClick={() => setCalendarView(v)}
+                      className={cn(
+                        "px-3 py-1 text-xs font-bold rounded-md transition-colors",
+                        calendarView === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {v}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div className="flex items-center gap-4 text-xs font-bold text-muted-foreground">
@@ -389,8 +413,8 @@ export function AgendaPage() {
                     ))}
                   </div>
                   {/* Monthly Grid */}
-                  <div className="flex-1 grid grid-cols-7 grid-rows-6">
-                    {monthDaysGrid.map((d, i) => {
+                  <div className="flex-1 grid grid-cols-7 grid-rows-5">
+                    {monthDays.map((d, i) => {
                       const isToday = formatToYMD(d) === formatToYMD(new Date());
                       const isCurrentMonth = d.getMonth() === currentDate.getMonth();
                       
@@ -404,7 +428,7 @@ export function AgendaPage() {
                       return (
                         <div 
                           key={i} 
-                          onClick={() => { setDefaultFormDate(formatToYMD(d)); setEditingApp(null); setFormOpen(true); }}
+                          onClick={() => { setCurrentDate(d); setCalendarView("Semanal"); }}
                           className={cn(
                             "border-r border-b border-border/40 p-2 min-h-[120px] transition hover:bg-muted/50 cursor-pointer overflow-hidden flex flex-col", 
                             !isCurrentMonth && "bg-muted/30 opacity-50", 
@@ -418,19 +442,15 @@ export function AgendaPage() {
                           </div>
                           <div className="space-y-1 flex-1 overflow-y-auto no-scrollbar">
                             {dayEvents.map(ev => {
-                              let theme;
-                              if (ev.status?.toLowerCase() === 'completada') {
-                                theme = { bg: "bg-green-100 text-green-700 hover:bg-green-200" };
-                              } else {
-                                theme = { bg: "bg-blue-100 text-primary hover:bg-blue-200" };
-                              }
+                              let dotColor = ev.status?.toLowerCase() === 'completada' ? "bg-green-500" : "bg-blue-500";
                               return (
                                 <div 
-                                  key={ev.id} 
-                                  onClick={(e) => { e.stopPropagation(); setEditingApp(ev); setFormOpen(true); }} 
-                                  className={cn("text-[10px] font-bold px-1.5 py-1 rounded truncate transition", theme.bg)}
+                                  key={ev.id}
+                                  onClick={(e) => { e.stopPropagation(); setEditingApp(ev); setFormOpen(true); }}
+                                  className="flex items-center gap-1.5 text-[10px] font-bold px-1.5 py-1 rounded hover:bg-muted transition"
                                 >
-                                  {timeOnly(ev.scheduled_at.replace(" ", "T"))} {ev.patient_name}
+                                  <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", dotColor)}></div>
+                                  <span className="truncate">{timeOnly(ev.scheduled_at.replace(" ", "T"))} {ev.patient_name}</span>
                                 </div>
                               );
                             })}

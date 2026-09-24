@@ -19,9 +19,10 @@ import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
 import { useClinicInfo } from "@/lib/api/clinic";
 import { toast } from "sonner";
-import { useRouter } from "@tanstack/react-router";
-import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2, MessageSquare } from "lucide-react";
-import { CLINICAL_TEMPLATES, PRESCRIPTION_TEMPLATES } from "@/lib/constants/clinicalTemplates";
+import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2, MessageSquare, Sparkles } from "lucide-react";
+import { CLINICAL_TEMPLATES, PRESCRIPTION_TEMPLATES, getTemplatesForSpecialty, getPrescriptionsForSpecialty } from "@/lib/constants/clinicalTemplates";
+import { getSpecialtyConfig, AVAILABLE_SPECIALTIES, getSpecialtyBadgeStyle } from "@/lib/constants/specialtyForms";
+import { DynamicSpecialtyFields } from "@/components/consultation/DynamicSpecialtyFields";
 
 const CONTACT_CHANNELS = ["WhatsApp", "Instagram", "Facebook", "Radio", "Recomendado", "Prensa", "Volante", "Otro"];
 
@@ -49,7 +50,8 @@ export function ConsultationForm({
   const { data: services = [] } = useServices();
   const { data: stocks = [] } = useStocks();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const router = useRouter();
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [selectedDoctorId, setSelectedDoctorId] = useState<string>("");
 
   const dynamicConsumables = useMemo(() => {
     return stocks
@@ -62,6 +64,7 @@ export function ConsultationForm({
     supabase.auth.getUser().then(({ data }) => {
       if (data?.user) {
         setCurrentUserId(data.user.id);
+        setCurrentUserEmail(data.user.email || null);
       }
     });
   }, []);
@@ -119,6 +122,70 @@ export function ConsultationForm({
   const [commonQuantities, setCommonQuantities] = useState<Record<string, string>>({});
   const [customConsumables, setCustomConsumables] = useState<{ item_name: string; quantity: string; unit: string }[]>([]);
 
+  // Specialty Dynamic States & Config
+  const [specialtyAnswers, setSpecialtyAnswers] = useState<Record<string, any>>({});
+  const [selectedSpecialty, setSelectedSpecialty] = useState<string>("Ginecología y Obstetricia");
+
+  const currentDoctor = useMemo(() => {
+    if (selectedDoctorId) {
+      const match = doctors.find((d) => d.id === selectedDoctorId);
+      if (match) return match;
+    }
+    const targetId = existingConsultation?.doctor_id || appointment?.doctor_id;
+    if (targetId) {
+      const match = doctors.find((d) => d.id === targetId || d.auth_id === targetId);
+      if (match) return match;
+    }
+    if (currentUserId) {
+      const match = doctors.find((d) => d.auth_id === currentUserId || (currentUserEmail && d.email?.toLowerCase() === currentUserEmail.toLowerCase()));
+      if (match) return match;
+    }
+    return doctors[0] || null;
+  }, [doctors, selectedDoctorId, existingConsultation?.doctor_id, appointment?.doctor_id, currentUserId, currentUserEmail]);
+
+  const specialtyConfig = useMemo(() => {
+    const spec = selectedSpecialty || existingConsultation?.specialty_name || currentDoctor?.specialty || "Ginecología y Obstetricia";
+    return getSpecialtyConfig(spec);
+  }, [selectedSpecialty, existingConsultation?.specialty_name, currentDoctor?.specialty]);
+
+  const currentSpecialtyTemplates = useMemo(() => {
+    return getTemplatesForSpecialty(specialtyConfig.key);
+  }, [specialtyConfig.key]);
+
+  const currentSpecialtyPrescriptions = useMemo(() => {
+    return getPrescriptionsForSpecialty(specialtyConfig.key);
+  }, [specialtyConfig.key]);
+
+  const handleDoctorChange = (doctorId: string) => {
+    setSelectedDoctorId(doctorId);
+    const doc = doctors.find((d) => d.id === doctorId);
+    if (doc?.specialty) {
+      setSelectedSpecialty(doc.specialty);
+      toast.info(`Especialidad adaptada a: ${doc.specialty}`);
+    }
+  };
+
+  const handleSpecialtyAnswerChange = (fieldId: string, value: any) => {
+    setSpecialtyAnswers((prev) => ({ ...prev, [fieldId]: value }));
+
+    // Keep legacy gynecology/obstetrics states in sync if applicable
+    if (fieldId === "acetic_acid_test") setAceticAcidTest(value);
+    if (fieldId === "acetic_clock_position") setAceticClockPosition(value);
+    if (fieldId === "acetic_relative_position") setAceticRelativePosition(value);
+    if (fieldId === "lugol_test") setLugolTest(value);
+    if (fieldId === "lugol_clock_position") setLugolClockPosition(value);
+    if (fieldId === "lugol_relative_position") setLugolRelativePosition(value);
+    if (fieldId === "gestational_age") setGestationalAge(value);
+    if (fieldId === "fetal_weight") setFetalWeight(String(value));
+    if (fieldId === "obstetric_bp") setObstetricBp(value);
+    if (fieldId === "uterine_height") setUterineHeight(String(value));
+    if (fieldId === "presentation") setPresentation(value);
+    if (fieldId === "fetal_heart_rate") setFetalHeartRate(String(value));
+    if (fieldId === "fetal_movements") setFetalMovements(value);
+    if (fieldId === "edema") setEdema(value);
+    if (fieldId === "alarm_signs") setAlarmSigns(value);
+  };
+
   // IMC Calculation
   const bmi = useMemo(() => {
     const w = parseFloat(weightKg);
@@ -133,12 +200,12 @@ export function ConsultationForm({
     if (!templateId) return;
     const t = CLINICAL_TEMPLATES.find(x => x.id === templateId);
     if (t) {
-      setSubjectiveExam(t.subjective);
-      setBreasts(t.breasts);
-      setAbdomen(t.abdomen);
-      setGynecological(t.gynecological);
-      setDiagnosis(t.diagnosis);
-      setPlan(t.plan);
+      if (t.subjective) setSubjectiveExam(t.subjective);
+      if (t.breasts) setBreasts(t.breasts);
+      if (t.abdomen) setAbdomen(t.abdomen);
+      if (t.gynecological) setGynecological(t.gynecological);
+      if (t.diagnosis) setDiagnosis(t.diagnosis);
+      if (t.plan) setPlan(t.plan);
       toast.success(`Plantilla "${t.name}" aplicada con éxito`);
     }
   };
@@ -193,11 +260,34 @@ export function ConsultationForm({
         setEdema(existingConsultation.edema ?? "");
         setAlarmSigns(existingConsultation.alarm_signs ?? "");
 
+        const initialAnswers: Record<string, any> = {
+          ...(existingConsultation.specialty_data || {}),
+        };
+        if (existingConsultation.acetic_acid_test) initialAnswers.acetic_acid_test = existingConsultation.acetic_acid_test;
+        if (existingConsultation.acetic_clock_position) initialAnswers.acetic_clock_position = existingConsultation.acetic_clock_position;
+        if (existingConsultation.acetic_relative_position) initialAnswers.acetic_relative_position = existingConsultation.acetic_relative_position;
+        if (existingConsultation.lugol_test) initialAnswers.lugol_test = existingConsultation.lugol_test;
+        if (existingConsultation.lugol_clock_position) initialAnswers.lugol_clock_position = existingConsultation.lugol_clock_position;
+        if (existingConsultation.lugol_relative_position) initialAnswers.lugol_relative_position = existingConsultation.lugol_relative_position;
+        if (existingConsultation.gestational_age) initialAnswers.gestational_age = existingConsultation.gestational_age;
+        if (existingConsultation.fetal_weight) initialAnswers.fetal_weight = existingConsultation.fetal_weight;
+        if (existingConsultation.obstetric_bp) initialAnswers.obstetric_bp = existingConsultation.obstetric_bp;
+        if (existingConsultation.uterine_height) initialAnswers.uterine_height = existingConsultation.uterine_height;
+        if (existingConsultation.presentation) initialAnswers.presentation = existingConsultation.presentation;
+        if (existingConsultation.fetal_heart_rate) initialAnswers.fetal_heart_rate = existingConsultation.fetal_heart_rate;
+        if (existingConsultation.fetal_movements) initialAnswers.fetal_movements = existingConsultation.fetal_movements;
+        if (existingConsultation.edema) initialAnswers.edema = existingConsultation.edema;
+        if (existingConsultation.alarm_signs) initialAnswers.alarm_signs = existingConsultation.alarm_signs;
+        setSpecialtyAnswers(initialAnswers);
+        setSelectedSpecialty(existingConsultation.specialty_name || currentDoctor?.specialty || "Ginecología y Obstetricia");
+
         setDiagnosis(existingConsultation.diagnosis ?? "");
         setIndications(existingConsultation.indications ?? "");
         setComplementaryExams(existingConsultation.complementary_exams ?? "");
         setPlan(existingConsultation.plan ?? "");
         setNextAppointmentDate(existingConsultation.next_appointment_date ?? "");
+        setSelectedDoctorId(existingConsultation.doctor_id || "");
+        setSelectedSpecialty(existingConsultation.specialty_name || currentDoctor?.specialty || "Ginecología y Obstetricia");
 
         // Map consumables
         const commonMap: Record<string, string> = {};
@@ -257,11 +347,23 @@ export function ConsultationForm({
         setComplementaryExams("");
         setPlan("");
         setNextAppointmentDate("");
+        setSpecialtyAnswers({});
+
+        // Auto-assign doctor & their specialty
+        const targetDocId = appointment?.doctor_id;
+        const initialDoc = doctors.find((d) => (targetDocId && (d.id === targetDocId || d.auth_id === targetDocId)) || (currentUserId && (d.auth_id === currentUserId || (currentUserEmail && d.email?.toLowerCase() === currentUserEmail.toLowerCase())))) || doctors[0] || null;
+        if (initialDoc) {
+          setSelectedDoctorId(initialDoc.id);
+          setSelectedSpecialty(initialDoc.specialty || "Medicina General");
+        } else {
+          setSelectedSpecialty("Medicina General");
+        }
+
         setCommonQuantities({});
         setCustomConsumables([]);
       }
     }
-  }, [open, existingConsultation]); // Removed dynamicConsumables to prevent infinite render loops
+  }, [open, existingConsultation, appointment, doctors, currentUserId, currentUserEmail]);
 
   const addCustomConsumable = () => {
     setCustomConsumables([...customConsumables, { item_name: "", quantity: "1", unit: "U" }]);
@@ -322,7 +424,7 @@ export function ConsultationForm({
       const payload = {
         appointment_id: appointment.id,
         patient_id: appointment.patient_id,
-        doctor_id: appointment.doctor_id || null,
+        doctor_id: selectedDoctorId || currentDoctor?.id || appointment.doctor_id || null,
         visit_type: visitType,
         is_first_visit: isFirstVisit,
         subjective_exam: subjectiveExam || null,
@@ -367,6 +469,9 @@ export function ConsultationForm({
         plan: plan || null,
         next_appointment_date: nextAppointmentDate || null,
 
+        specialty_name: selectedSpecialty || currentDoctor?.specialty || specialtyConfig.name,
+        specialty_data: specialtyAnswers,
+
         consumables,
       };
 
@@ -382,11 +487,12 @@ export function ConsultationForm({
         toast.success("Consulta registrada con éxito");
       }
 
+      const activeDoctor = currentDoctor || doctors.find((d) => d.id === (selectedDoctorId || existingConsultation?.doctor_id || currentUserId));
+
       if (actionType === "print" && payload.indications) {
         const patientData = patient;
-        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
-        const doctorName = doctorObj?.full_name || "Médico Tratante";
-        const doctorSpecialty = doctorObj?.specialty || undefined;
+        const doctorName = activeDoctor?.full_name || "Médico Tratante";
+        const doctorSpecialty = activeDoctor?.specialty || selectedSpecialty || undefined;
         
         await generateRecipePDF(
           {
@@ -400,13 +506,12 @@ export function ConsultationForm({
           },
           doctorName,
           doctorSpecialty,
-          doctorObj?.university,
-          doctorObj?.mpps,
-          doctorObj?.cmc
+          activeDoctor?.university,
+          activeDoctor?.mpps,
+          activeDoctor?.cmc
         );
       } else if (actionType === "whatsapp" && payload.indications) {
-        const doctorObj = doctors.find((d) => d.id === (existingConsultation?.doctor_id || currentUserId));
-        const doctorName = doctorObj?.full_name || "Médico Tratante";
+        const doctorName = activeDoctor?.full_name || "Médico Tratante";
 
         sendRecipeViaWhatsApp({
           patientName: patient?.full_name || appointment.patient_name || "Paciente",
@@ -444,23 +549,63 @@ export function ConsultationForm({
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="flex-1 overflow-hidden p-6 flex flex-col min-h-0 bg-background/50 relative">
+            {/* Top Bar: Doctor & Specialty Selector */}
+            <div className="flex flex-wrap items-center justify-between gap-3 p-3 mb-3 rounded-2xl bg-muted/40 border border-border/50">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted-foreground">Médico:</span>
+                <Select value={selectedDoctorId || currentDoctor?.id || ""} onValueChange={handleDoctorChange}>
+                  <SelectTrigger className="h-8 text-xs rounded-xl bg-background border-border/50 font-bold min-w-[200px]">
+                    <SelectValue placeholder="Seleccione médico..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-[300px]">
+                    {doctors.map((d) => (
+                      <SelectItem key={d.id} value={d.id} className="text-xs font-semibold">
+                        {d.full_name} {d.specialty ? `— ${d.specialty}` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-muted-foreground">Especialidad:</span>
+                <Select value={selectedSpecialty} onValueChange={(val) => setSelectedSpecialty(val)}>
+                  <SelectTrigger className="h-8 text-xs rounded-xl bg-background border-primary/40 font-bold text-primary min-w-[220px]">
+                    <SelectValue placeholder="Seleccione especialidad..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-[300px]">
+                    {AVAILABLE_SPECIALTIES.map((spec) => (
+                      <SelectItem key={spec.id} value={spec.name} className="text-xs font-semibold">
+                        {spec.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <span className={cn("text-[10px] font-extrabold px-2.5 py-1 rounded-lg border uppercase tracking-wider hidden sm:inline-block", getSpecialtyBadgeStyle(selectedSpecialty).className)}>
+                  {selectedSpecialty}
+                </span>
+              </div>
+            </div>
+
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
               <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
                 <TabsList className="grid w-full max-w-2xl grid-cols-5 bg-muted/50 p-1 rounded-2xl">
                   <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
                   <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
-                  <TabsTrigger value="special" className="rounded-2xl font-medium text-xs">Colpo & Obstetricia</TabsTrigger>
+                  <TabsTrigger value="special" className="rounded-2xl font-medium text-xs truncate px-2" title={specialtyConfig.tabTitle}>
+                    {specialtyConfig.tabTitle}
+                  </TabsTrigger>
                   <TabsTrigger value="plan" className="rounded-2xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
                   <TabsTrigger value="consumables" className="rounded-2xl font-medium text-xs">Consumibles</TabsTrigger>
                 </TabsList>
                 <div className="flex items-center gap-2">
                   <Wand2 className="h-4 w-4 text-primary" />
                   <Select onValueChange={applyClinicalTemplate}>
-                    <SelectTrigger className="w-[200px] h-8 text-xs rounded-xl bg-white/50">
-                      <SelectValue placeholder="Autocompletar..." />
+                    <SelectTrigger className="w-[220px] h-8 text-xs rounded-xl bg-white/70 dark:bg-muted font-medium">
+                      <SelectValue placeholder="Plantillas rápidas..." />
                     </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {CLINICAL_TEMPLATES.map(t => (
+                    <SelectContent className="rounded-xl max-h-[300px]">
+                      {currentSpecialtyTemplates.map(t => (
                         <SelectItem key={t.id} value={t.id} className="text-xs">{t.name}</SelectItem>
                       ))}
                     </SelectContent>
@@ -472,7 +617,7 @@ export function ConsultationForm({
                 <div className="py-1">
                   {/* TAB 1: ANAMNESIS */}
                   <TabsContent value="anamnesis" className="grid gap-4 mt-0">
-                    <div className="grid grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="grid gap-2">
                         <Label htmlFor="c-visit-type">Tipo de asistencia</Label>
                         <Select value={visitType} onValueChange={(v: VisitType) => setVisitType(v)}>
@@ -532,7 +677,7 @@ export function ConsultationForm({
                   <TabsContent value="vitals" className="space-y-6 mt-0">
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
                       <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Signos Vitales</h3>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-height">Estatura (cm)</Label>
                           <Input
@@ -613,210 +758,58 @@ export function ConsultationForm({
                     </div>
 
                     <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Revisión por Sistemas / Examen Físico</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">
+                          Revisión por Sistemas / Examen Físico
+                        </h3>
+                        <span className="text-[11px] text-muted-foreground font-semibold">
+                          {specialtyConfig.key === "gynecology" ? "Enfoque Gineco-Obstétrico" : `Adaptado a ${specialtyConfig.name}`}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-skin">Piel y faneras</Label>
-                          <Input id="c-skin" value={skin} onChange={(e) => setSkin(e.target.value)} placeholder="Normal, hidratada..." className="rounded-2xl text-xs h-9" />
+                          <Input id="c-skin" value={skin} onChange={(e) => setSkin(e.target.value)} placeholder="Normal, hidratada, turgor conservado..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-headneck">Cabeza y cuello</Label>
-                          <Input id="c-headneck" value={headNeck} onChange={(e) => setHeadNeck(e.target.value)} placeholder="Móvil, sin adenopatías..." className="rounded-2xl text-xs h-9" />
+                          <Input id="c-headneck" value={headNeck} onChange={(e) => setHeadNeck(e.target.value)} placeholder="Normocéfalo, sin adenopatías..." className="rounded-2xl text-xs h-9" />
                         </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-breasts">Mamas</Label>
-                          <Input id="c-breasts" value={breasts} onChange={(e) => setBreasts(e.target.value)} placeholder="Simétricas, sin nódulos palpables..." className="rounded-2xl text-xs h-9" />
-                        </div>
+                        {specialtyConfig.key === "gynecology" && (
+                          <div className="grid gap-1.5">
+                            <Label htmlFor="c-breasts">Mamas</Label>
+                            <Input id="c-breasts" value={breasts} onChange={(e) => setBreasts(e.target.value)} placeholder="Simétricas, sin nódulos palpables..." className="rounded-2xl text-xs h-9" />
+                          </div>
+                        )}
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-abdomen">Abdomen</Label>
                           <Input id="c-abdomen" value={abdomen} onChange={(e) => setAbdomen(e.target.value)} placeholder="Blando, depresible, no doloroso..." className="rounded-2xl text-xs h-9" />
                         </div>
-                        <div className="grid gap-1.5 col-span-2">
-                          <Label htmlFor="c-gyneco">Ginecológico</Label>
-                          <Input id="c-gyneco" value={gynecological} onChange={(e) => setGynecological(e.target.value)} placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-2xl text-xs h-9" />
-                        </div>
+                        {specialtyConfig.key === "gynecology" && (
+                          <div className="grid gap-1.5 col-span-2">
+                            <Label htmlFor="c-gyneco">Ginecológico</Label>
+                            <Input id="c-gyneco" value={gynecological} onChange={(e) => setGynecological(e.target.value)} placeholder="Genitales externos normales, vagina elástica, cuello sano..." className="rounded-2xl text-xs h-9" />
+                          </div>
+                        )}
                         <div className="grid gap-1.5">
-                          <Label htmlFor="c-extremities">Extremidades</Label>
-                          <Input id="c-extremities" value={extremities} onChange={(e) => setExtremities(e.target.value)} placeholder="Simétricas, sin edemas..." className="rounded-2xl text-xs h-9" />
+                          <Label htmlFor="c-extremities">Extremidades y Aparato Locomotor</Label>
+                          <Input id="c-extremities" value={extremities} onChange={(e) => setExtremities(e.target.value)} placeholder="Simétricas, arcos conservados, sin edemas..." className="rounded-2xl text-xs h-9" />
                         </div>
                         <div className="grid gap-1.5">
                           <Label htmlFor="c-neuro">Neurológico</Label>
-                          <Input id="c-neuro" value={neurological} onChange={(e) => setNeurological(e.target.value)} placeholder="Lúcida, orientada..." className="rounded-2xl text-xs h-9" />
+                          <Input id="c-neuro" value={neurological} onChange={(e) => setNeurological(e.target.value)} placeholder="Lúcida, orientada en 3 esferas..." className="rounded-2xl text-xs h-9" />
                         </div>
                       </div>
                     </div>
                   </TabsContent>
 
-                  {/* TAB 3: COLPOSCOPY & OBSTETRICS */}
+                  {/* TAB 3: DYNAMIC SPECIALTY QUESTIONS */}
                   <TabsContent value="special" className="space-y-6 mt-0">
-                    <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Hallazgos Colposcópicos</h3>
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="grid gap-1.5 col-span-3">
-                          <Label htmlFor="c-acetic">Test de Ácido Acético</Label>
-                          <Input
-                            id="c-acetic"
-                            placeholder="Ej. Acetoblanco positivo..."
-                            value={aceticAcidTest}
-                            onChange={(e) => setAceticAcidTest(e.target.value)}
-                            className="rounded-2xl"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-acetic-clock">Posición Horaria Ácido</Label>
-                          <Input
-                            id="c-acetic-clock"
-                            placeholder="Ej. 12:00, 3:00"
-                            value={aceticClockPosition}
-                            onChange={(e) => setAceticClockPosition(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5 col-span-2">
-                          <Label htmlFor="c-acetic-relative">Posición Relativa Ácido</Label>
-                          <Input
-                            id="c-acetic-relative"
-                            placeholder="Ej. Zona de transformación..."
-                            value={aceticRelativePosition}
-                            onChange={(e) => setAceticRelativePosition(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-
-                        <div className="grid gap-1.5 col-span-3 border-t border-border/40 pt-3 mt-1">
-                          <Label htmlFor="c-lugol">Test de Lugol (Schiller)</Label>
-                          <Input
-                            id="c-lugol"
-                            placeholder="Ej. Yodonegativo (Schiller positivo)..."
-                            value={lugolTest}
-                            onChange={(e) => setLugolTest(e.target.value)}
-                            className="rounded-2xl"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-lugol-clock">Posición Horaria Lugol</Label>
-                          <Input
-                            id="c-lugol-clock"
-                            placeholder="Ej. 6:00, 9:00"
-                            value={lugolClockPosition}
-                            onChange={(e) => setLugolClockPosition(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5 col-span-2">
-                          <Label htmlFor="c-lugol-relative">Posición Relativa Lugol</Label>
-                          <Input
-                            id="c-lugol-relative"
-                            placeholder="Ej. Labio anterior..."
-                            value={lugolRelativePosition}
-                            onChange={(e) => setLugolRelativePosition(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-muted/30 p-4 rounded-2xl space-y-4">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-primary">Control de Embarazo (Obstetricia)</h3>
-                        <span className="text-[10px] text-muted-foreground bg-blush/20 text-blush-foreground px-2 py-0.5 rounded-full font-bold">Rellenar solo si aplica</span>
-                      </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-eg">Edad Gestacional (EG)</Label>
-                          <Input
-                            id="c-eg"
-                            placeholder="Ej. 24.3 semanas"
-                            value={gestationalAge}
-                            onChange={(e) => setGestationalAge(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-fweight">Peso Fetal Estimado (g)</Label>
-                          <Input
-                            id="c-fweight"
-                            type="number"
-                            placeholder="Gramos"
-                            value={fetalWeight}
-                            onChange={(e) => setFetalWeight(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-obp">PA Obstétrica</Label>
-                          <Input
-                            id="c-obp"
-                            placeholder="Ej. 110/70"
-                            value={obstetricBp}
-                            onChange={(e) => setObstetricBp(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-au">Altura Uterina (AU - cm)</Label>
-                          <Input
-                            id="c-au"
-                            type="number"
-                            placeholder="cm"
-                            value={uterineHeight}
-                            onChange={(e) => setUterineHeight(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-presentation">Presentación Fetal</Label>
-                          <Input
-                            id="c-presentation"
-                            placeholder="Cefálica, Podálica, Transversa..."
-                            value={presentation}
-                            onChange={(e) => setPresentation(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-fhr">FC Fetal (FCF)</Label>
-                          <Input
-                            id="c-fhr"
-                            type="number"
-                            placeholder="LPM"
-                            value={fetalHeartRate}
-                            onChange={(e) => setFetalHeartRate(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-fmov">Movimientos Fetales</Label>
-                          <Input
-                            id="c-fmov"
-                            placeholder="Activos, presentes, atenuados..."
-                            value={fetalMovements}
-                            onChange={(e) => setFetalMovements(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-edema">Edema</Label>
-                          <Input
-                            id="c-edema"
-                            placeholder="Ausente, grado I, grado II..."
-                            value={edema}
-                            onChange={(e) => setEdema(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                        <div className="grid gap-1.5">
-                          <Label htmlFor="c-alarm">Signos de Alarma</Label>
-                          <Input
-                            id="c-alarm"
-                            placeholder="Niega cefalea, zumbidos, sangrado..."
-                            value={alarmSigns}
-                            onChange={(e) => setAlarmSigns(e.target.value)}
-                            className="rounded-2xl text-xs"
-                          />
-                        </div>
-                      </div>
-                    </div>
+                    <DynamicSpecialtyFields
+                      config={specialtyConfig}
+                      values={specialtyAnswers}
+                      onChange={handleSpecialtyAnswerChange}
+                    />
                   </TabsContent>
 
                   {/* TAB 4: DIAGNOSIS & PLAN */}
@@ -837,11 +830,11 @@ export function ConsultationForm({
                       <div className="flex items-center justify-between">
                         <Label htmlFor="c-indications">Indicaciones / Receta</Label>
                         <Select onValueChange={applyPrescriptionTemplate}>
-                          <SelectTrigger className="w-[180px] h-7 text-xs rounded-xl bg-muted/50 border-0">
-                            <SelectValue placeholder="Cargar receta rápida..." />
+                          <SelectTrigger className="w-[200px] h-7 text-xs rounded-xl bg-muted/50 border-0 font-medium">
+                            <SelectValue placeholder="Recetas rápidas..." />
                           </SelectTrigger>
-                          <SelectContent className="rounded-xl">
-                            {PRESCRIPTION_TEMPLATES.map(t => (
+                          <SelectContent className="rounded-xl max-h-[300px]">
+                            {currentSpecialtyPrescriptions.map(t => (
                               <SelectItem key={t.id} value={t.id} className="text-xs">{t.name}</SelectItem>
                             ))}
                           </SelectContent>

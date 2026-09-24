@@ -268,7 +268,24 @@ function DoctoresAdmin() {
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label htmlFor="sp">Especialidad</Label>
-                <Input id="sp" value={form.specialty} onChange={(e) => setForm({ ...form, specialty: e.target.value })} placeholder="Ginecología" />
+                <Select value={form.specialty} onValueChange={(v) => setForm({ ...form, specialty: v })}>
+                  <SelectTrigger id="sp" className="text-xs">
+                    <SelectValue placeholder="Seleccione especialidad" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Ginecología y Obstetricia" className="text-xs">Ginecología y Obstetricia</SelectItem>
+                    <SelectItem value="Pediatría" className="text-xs">Pediatría</SelectItem>
+                    <SelectItem value="Cardiología" className="text-xs">Cardiología</SelectItem>
+                    <SelectItem value="Dermatología" className="text-xs">Dermatología</SelectItem>
+                    <SelectItem value="Traumatología y Ortopedia" className="text-xs">Traumatología y Ortopedia</SelectItem>
+                    <SelectItem value="Oftalmología" className="text-xs">Oftalmología</SelectItem>
+                    <SelectItem value="Medicina General" className="text-xs">Medicina General</SelectItem>
+                    <SelectItem value="Neurología" className="text-xs">Neurología</SelectItem>
+                    <SelectItem value="Gastroenterología" className="text-xs">Gastroenterología</SelectItem>
+                    <SelectItem value="Urología" className="text-xs">Urología</SelectItem>
+                    <SelectItem value="Otorrinolaringología" className="text-xs">Otorrinolaringología</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>Rol</Label>

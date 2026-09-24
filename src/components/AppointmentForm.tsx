@@ -229,7 +229,7 @@ export function AppointmentForm({
             </div>
           </div>
           <div className="grid gap-2">
-            <Label>Tratamiento / Servicio</Label>
+            <Label>Servicio Médico</Label>
             <Select 
               value={selectedServiceId} 
               onValueChange={(val) => {
@@ -243,7 +243,7 @@ export function AppointmentForm({
                 }
               }}
             >
-              <SelectTrigger><SelectValue placeholder="Selecciona tratamiento..." /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder="Selecciona servicio médico..." /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Ninguno (Consulta General)</SelectItem>
                 {services.map((s) => (

@@ -9,6 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Stethoscope, ChevronDown, ChevronUp, FileText, Pill, Thermometer, Droplet, Activity, Scaling, TestTube, Crosshair, Package, Printer, MessageSquare } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { SpecialtyDataViewer } from "@/components/consultation/SpecialtyDataViewer";
+import { getSpecialtyBadgeStyle } from "@/lib/constants/specialtyForms";
+import { cn } from "@/lib/utils";
 
 export function PatientConsultationsPanel({ patientId }: { patientId: string }) {
   const { data: consultations = [], isLoading } = usePatientConsultations(patientId);
@@ -141,11 +144,18 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                   <Stethoscope className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-foreground capitalize">
-                    {c.visit_type === "PRIMERA_VEZ" ? "Consulta Primera Vez" : 
-                     c.visit_type === "CONTROL" ? "Consulta de Control" : 
-                     c.visit_type === "EMERGENCIA" ? "Consulta de Emergencia" : c.visit_type || "Consulta Clínica"}
-                  </h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm text-foreground capitalize">
+                      {c.visit_type === "PRIMERA_VEZ" ? "Consulta Primera Vez" : 
+                       c.visit_type === "CONTROL" ? "Consulta de Control" : 
+                       c.visit_type === "EMERGENCIA" ? "Consulta de Emergencia" : c.visit_type || "Consulta Clínica"}
+                    </h4>
+                    {c.specialty_name && (
+                      <span className={cn("text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border", getSpecialtyBadgeStyle(c.specialty_name).className)}>
+                        {c.specialty_name}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground font-medium flex items-center gap-1.5 mt-0.5">
                     {new Date(c.created_at).toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
                     <span>•</span>
@@ -184,11 +194,18 @@ export function PatientConsultationsPanel({ patientId }: { patientId: string }) 
                       
                       {c.gynecological && (
                         <div className="mt-4 pt-4 border-t border-border/50">
-                          <h6 className="font-semibold text-xs text-muted-foreground mb-1">Examen Físico / Ginecológico</h6>
+                          <h6 className="font-semibold text-xs text-muted-foreground mb-1">
+                            {c.specialty_name && !c.specialty_name.toLowerCase().includes("ginec") ? "Examen Físico Especializado" : "Examen Físico / Ginecológico"}
+                          </h6>
                           <p className="text-foreground whitespace-pre-wrap">{c.gynecological}</p>
                         </div>
                       )}
                     </div>
+
+                    {/* Specialty Dynamic Data */}
+                    {c.specialty_data && Object.keys(c.specialty_data).length > 0 && (
+                      <SpecialtyDataViewer specialtyName={c.specialty_name} data={c.specialty_data} />
+                    )}
                   </div>
 
                   {/* Columna Derecha */}

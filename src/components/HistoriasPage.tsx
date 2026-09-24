@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { generateRecipePDF } from "@/lib/utils/recipePdf";
 import { sendRecipeViaWhatsApp } from "@/lib/utils/whatsapp";
 import { PatientFilesTab } from "@/components/PatientFilesTab";
+import { SpecialtyDataViewer } from "@/components/consultation/SpecialtyDataViewer";
+import { getSpecialtyBadgeStyle } from "@/lib/constants/specialtyForms";
 
 export function HistoriasPage() {
   const [selectedPatientId, setSelectedPatientId] = useState<string | null>(null);
@@ -531,6 +533,11 @@ export function HistoriasPage() {
                                     )}>
                                       {c.visit_type}
                                     </span>
+                                    {c.specialty_name && (
+                                      <span className={cn("px-2.5 py-0.5 rounded-full text-[10px] font-extrabold shrink-0 border", getSpecialtyBadgeStyle(c.specialty_name).className)}>
+                                        {c.specialty_name}
+                                      </span>
+                                    )}
                                     <span className="text-muted-foreground font-normal truncate max-w-[180px] md:max-w-[280px]">
                                       {c.diagnosis || "Sin diagnóstico registrado"}
                                     </span>
@@ -577,13 +584,22 @@ export function HistoriasPage() {
                                       {c.head_neck && <div><span className="text-muted-foreground text-[10px] block">Cabeza y Cuello</span><span className="font-semibold">{c.head_neck}</span></div>}
                                       {c.breasts && <div><span className="text-muted-foreground text-[10px] block">Mamas</span><span className="font-semibold">{c.breasts}</span></div>}
                                       {c.abdomen && <div><span className="text-muted-foreground text-[10px] block">Abdomen</span><span className="font-semibold">{c.abdomen}</span></div>}
-                                      {c.gynecological && <div className="col-span-1 sm:col-span-2"><span className="text-muted-foreground text-[10px] block">Examen Ginecológico</span><span className="font-semibold">{c.gynecological}</span></div>}
+                                      {c.gynecological && (
+                                        <div className="col-span-1 sm:col-span-2">
+                                          <span className="text-muted-foreground text-[10px] block font-medium">
+                                            {c.specialty_name && !c.specialty_name.toLowerCase().includes("ginec") ? "Examen Focalizado" : "Examen Ginecológico"}
+                                          </span>
+                                          <span className="font-semibold">{c.gynecological}</span>
+                                        </div>
+                                      )}
                                       {c.extremities && <div><span className="text-muted-foreground text-[10px] block">Extremidades</span><span className="font-semibold">{c.extremities}</span></div>}
                                       {c.neurological && <div><span className="text-muted-foreground text-[10px] block">Neurológico</span><span className="font-semibold">{c.neurological}</span></div>}
                                     </div>
 
-                                    {/* Special Procedures (Colposcopía y Obstetricia) */}
-                                    {(c.acetic_acid_test || c.lugol_test || c.gestational_age || c.fetal_heart_rate) && (
+                                    {/* Dynamic Specialty Evaluation */}
+                                    {c.specialty_data && Object.keys(c.specialty_data).length > 0 ? (
+                                      <SpecialtyDataViewer specialtyName={c.specialty_name} data={c.specialty_data} />
+                                    ) : (c.acetic_acid_test || c.lugol_test || c.gestational_age || c.fetal_heart_rate) ? (
                                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-muted/20 p-3 rounded-2xl">
                                         {/* Colpo */}
                                         {(c.acetic_acid_test || c.lugol_test) && (
@@ -621,7 +637,7 @@ export function HistoriasPage() {
                                           </div>
                                         )}
                                       </div>
-                                    )}
+                                    ) : null}
 
                                     {/* Diagnosis & Treatments */}
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-border/30 pt-3">
