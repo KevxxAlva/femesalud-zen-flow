@@ -589,20 +589,29 @@ export function ConsultationForm({
             </div>
 
             <Tabs defaultValue="anamnesis" className="flex-1 flex flex-col min-h-0">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-4">
-                <TabsList className="grid w-full max-w-2xl grid-cols-5 bg-muted/50 p-1 rounded-2xl">
-                  <TabsTrigger value="anamnesis" className="rounded-2xl font-medium text-xs">Anamnesis</TabsTrigger>
-                  <TabsTrigger value="vitals" className="rounded-2xl font-medium text-xs">Físico y Vitales</TabsTrigger>
-                  <TabsTrigger value="special" className="rounded-2xl font-medium text-xs truncate px-2" title={specialtyConfig.tabTitle}>
-                    {specialtyConfig.tabTitle}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mb-4">
+                <TabsList className="flex items-center h-10 w-full lg:w-auto bg-muted/60 p-1 rounded-2xl gap-1 overflow-x-auto">
+                  <TabsTrigger value="anamnesis" className="rounded-xl font-semibold text-xs px-3.5 py-1.5 shrink-0 data-[state=active]:shadow-sm">
+                    Anamnesis
                   </TabsTrigger>
-                  <TabsTrigger value="plan" className="rounded-2xl font-medium text-xs">Diagnóstico & Plan</TabsTrigger>
-                  <TabsTrigger value="consumables" className="rounded-2xl font-medium text-xs">Consumibles</TabsTrigger>
+                  <TabsTrigger value="vitals" className="rounded-xl font-semibold text-xs px-3.5 py-1.5 shrink-0 data-[state=active]:shadow-sm">
+                    Físico y Vitales
+                  </TabsTrigger>
+                  <TabsTrigger value="special" className="rounded-xl font-semibold text-xs px-3.5 py-1.5 shrink-0 data-[state=active]:shadow-sm flex items-center gap-1.5" title={specialtyConfig.tabTitle}>
+                    <Sparkles className="w-3 h-3 text-primary shrink-0" />
+                    <span>{specialtyConfig.tabTitle}</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="plan" className="rounded-xl font-semibold text-xs px-3.5 py-1.5 shrink-0 data-[state=active]:shadow-sm">
+                    Diagnóstico & Plan
+                  </TabsTrigger>
+                  <TabsTrigger value="consumables" className="rounded-xl font-semibold text-xs px-3.5 py-1.5 shrink-0 data-[state=active]:shadow-sm">
+                    Consumibles
+                  </TabsTrigger>
                 </TabsList>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0 self-end lg:self-auto">
                   <Wand2 className="h-4 w-4 text-primary" />
                   <Select onValueChange={applyClinicalTemplate}>
-                    <SelectTrigger className="w-[220px] h-8 text-xs rounded-xl bg-white/70 dark:bg-muted font-medium">
+                    <SelectTrigger className="w-[210px] h-9 text-xs rounded-xl bg-background border-border/60 font-medium shadow-none">
                       <SelectValue placeholder="Plantillas rápidas..." />
                     </SelectTrigger>
                     <SelectContent className="rounded-xl max-h-[300px]">
