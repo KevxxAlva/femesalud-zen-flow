@@ -41,17 +41,38 @@ export function useSpecialties() {
 export function useServices() {
   return useQuery({
     queryKey: ["services"],
-    queryFn: async () => {
-      const { data, error } = await supabase
+    queryFn: async (): Promise<Service[]> => {
+      // 1. Fetch all raw services
+      const { data: rawServices, error: servError } = await supabase
         .from("servicios")
-        .select("*, especialidades(id_especialidad, nombre)")
+        .select("*")
         .order("nombre_servicio", { ascending: true });
 
-      if (error) {
-        toast.error("Error al cargar los servicios", { description: error.message });
-        throw error;
+      if (servError) {
+        console.error("Error al cargar los servicios:", servError);
+        toast.error("Error al cargar los servicios", { description: servError.message });
+        throw servError;
       }
-      return (data ?? []) as unknown as Service[];
+
+      // 2. Fetch specialties to map names
+      const { data: rawSpecialties, error: specError } = await supabase
+        .from("especialidades")
+        .select("id_especialidad, nombre");
+
+      if (specError) {
+        console.warn("Advertencia al cargar especialidades:", specError);
+      }
+
+      const specMap = new Map<number, SpecialtyItem>();
+      (rawSpecialties || []).forEach((esp) => {
+        specMap.set(esp.id_especialidad, esp);
+      });
+
+      // 3. Assemble services with their specialty object
+      return (rawServices || []).map((s: any) => ({
+        ...s,
+        especialidades: s.id_especialidad ? specMap.get(s.id_especialidad) || null : null,
+      })) as Service[];
     },
   });
 }
@@ -64,7 +85,7 @@ export function useCreateService() {
       const { data, error } = await supabase
         .from("servicios")
         .insert(service)
-        .select("*, especialidades(id_especialidad, nombre)")
+        .select()
         .single();
 
       if (error) {
@@ -89,7 +110,7 @@ export function useUpdateService() {
         .from("servicios")
         .update(params.data)
         .eq("id_servicio", params.id)
-        .select("*, especialidades(id_especialidad, nombre)")
+        .select()
         .single();
 
       if (error) {

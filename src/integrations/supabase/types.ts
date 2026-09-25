@@ -930,6 +930,7 @@ export type Database = {
           codigo_medico: string | null
           costo_base: number
           descripcion: string | null
+          id_especialidad: number | null
           id_servicio: number
           nombre_servicio: string
         }
@@ -937,6 +938,7 @@ export type Database = {
           codigo_medico?: string | null
           costo_base: number
           descripcion?: string | null
+          id_especialidad?: number | null
           id_servicio?: number
           nombre_servicio: string
         }
@@ -944,10 +946,19 @@ export type Database = {
           codigo_medico?: string | null
           costo_base?: number
           descripcion?: string | null
+          id_especialidad?: number | null
           id_servicio?: number
           nombre_servicio?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "servicios_id_especialidad_fkey"
+            columns: ["id_especialidad"]
+            isOneToOne: false
+            referencedRelation: "especialidades"
+            referencedColumns: ["id_especialidad"]
+          },
+        ]
       }
       support_tickets: {
         Row: {
