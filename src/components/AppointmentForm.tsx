@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -61,6 +61,28 @@ export function AppointmentForm({
   const [duration, setDuration] = useState(String(appointment?.duration_minutes ?? 30));
   const [price, setPrice] = useState(String(appointment?.price ?? 0));
   const [selectedServiceId, setSelectedServiceId] = useState<string>("none");
+
+  const selectedDoctor = useMemo(() => doctors.find((d) => d.id === doctor_id), [doctors, doctor_id]);
+
+  const { matchingServices, generalServices, otherServices } = useMemo(() => {
+    const docSpec = selectedDoctor?.specialty?.toLowerCase().trim() || "";
+    const matching: typeof services = [];
+    const general: typeof services = [];
+    const others: typeof services = [];
+
+    services.forEach((s) => {
+      const sSpec = s.especialidades?.nombre?.toLowerCase().trim() || "";
+      if (!s.id_especialidad) {
+        general.push(s);
+      } else if (docSpec && (sSpec.includes(docSpec) || docSpec.includes(sSpec))) {
+        matching.push(s);
+      } else {
+        others.push(s);
+      }
+    });
+
+    return { matchingServices: matching, generalServices: general, otherServices: others };
+  }, [services, selectedDoctor]);
 
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -235,22 +257,64 @@ export function AppointmentForm({
               onValueChange={(val) => {
                 setSelectedServiceId(val);
                 if (val !== "none") {
-                  const s = services.find(x => x.id_servicio === val);
+                  const s = services.find((x) => String(x.id_servicio) === val);
                   if (s) {
                     setPrice(String(s.costo_base || 0));
                     setReason(s.nombre_servicio);
+                    // If no doctor or doctor doesn't match specialty, auto-suggest doctor of that specialty
+                    if (s.especialidades?.nombre && (!doctor_id || doctor_id === "none")) {
+                      const match = doctors.find((d) => 
+                        d.specialty?.toLowerCase().includes(s.especialidades!.nombre.toLowerCase()) ||
+                        s.especialidades!.nombre.toLowerCase().includes(d.specialty?.toLowerCase() || "")
+                      );
+                      if (match) setDoctorId(match.id);
+                    }
                   }
                 }
               }}
             >
               <SelectTrigger><SelectValue placeholder="Selecciona servicio médico..." /></SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px]">
                 <SelectItem value="none">Ninguno (Consulta General)</SelectItem>
-                {services.map((s) => (
-                  <SelectItem key={s.id_servicio} value={s.id_servicio}>
-                    {s.nombre_servicio} {s.costo_base ? `($${s.costo_base})` : ""}
-                  </SelectItem>
-                ))}
+
+                {matchingServices.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-bold text-primary px-2 py-1">
+                      Servicios de {selectedDoctor?.specialty}
+                    </SelectLabel>
+                    {matchingServices.map((s) => (
+                      <SelectItem key={s.id_servicio} value={String(s.id_servicio)} className="text-xs font-medium">
+                        {s.nombre_servicio} {s.costo_base ? `($${Number(s.costo_base).toFixed(2)})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+
+                {generalServices.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-bold text-muted-foreground px-2 py-1">
+                      Servicios Generales / Multidisciplinarios
+                    </SelectLabel>
+                    {generalServices.map((s) => (
+                      <SelectItem key={s.id_servicio} value={String(s.id_servicio)} className="text-xs font-medium">
+                        {s.nombre_servicio} {s.costo_base ? `($${Number(s.costo_base).toFixed(2)})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
+
+                {otherServices.length > 0 && (
+                  <SelectGroup>
+                    <SelectLabel className="text-xs font-bold text-muted-foreground px-2 py-1">
+                      {selectedDoctor?.specialty ? "Otras Especialidades" : "Todos los Servicios"}
+                    </SelectLabel>
+                    {otherServices.map((s) => (
+                      <SelectItem key={s.id_servicio} value={String(s.id_servicio)} className="text-xs font-medium">
+                        {s.nombre_servicio} {s.costo_base ? `($${Number(s.costo_base).toFixed(2)})` : ""} {s.especialidades?.nombre ? `(${s.especialidades.nombre})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                )}
               </SelectContent>
             </Select>
           </div>

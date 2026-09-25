@@ -1,11 +1,42 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Database } from "@/integrations/supabase/types";
 
-export type Service = Database["public"]["Tables"]["servicios"]["Row"];
-export type ServiceInsert = Database["public"]["Tables"]["servicios"]["Insert"];
-export type ServiceUpdate = Database["public"]["Tables"]["servicios"]["Update"];
+export interface SpecialtyItem {
+  id_especialidad: number;
+  nombre: string;
+}
+
+export interface Service {
+  id_servicio: number;
+  nombre_servicio: string;
+  codigo_medico: string | null;
+  descripcion: string | null;
+  costo_base: number;
+  id_especialidad: number | null;
+  especialidades?: SpecialtyItem | null;
+}
+
+export type ServiceInsert = Omit<Service, "id_servicio" | "especialidades">;
+export type ServiceUpdate = Partial<ServiceInsert>;
+
+export function useSpecialties() {
+  return useQuery({
+    queryKey: ["specialties"],
+    queryFn: async (): Promise<SpecialtyItem[]> => {
+      const { data, error } = await supabase
+        .from("especialidades")
+        .select("id_especialidad, nombre")
+        .order("nombre", { ascending: true });
+
+      if (error) {
+        console.error("Error cargando especialidades:", error);
+        throw error;
+      }
+      return data ?? [];
+    },
+  });
+}
 
 export function useServices() {
   return useQuery({
@@ -13,14 +44,14 @@ export function useServices() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("servicios")
-        .select("*")
+        .select("*, especialidades(id_especialidad, nombre)")
         .order("nombre_servicio", { ascending: true });
 
       if (error) {
-        toast.error("Error loading treatments", { description: error.message });
+        toast.error("Error al cargar los servicios", { description: error.message });
         throw error;
       }
-      return data as Service[];
+      return (data ?? []) as unknown as Service[];
     },
   });
 }
@@ -33,18 +64,18 @@ export function useCreateService() {
       const { data, error } = await supabase
         .from("servicios")
         .insert(service)
-        .select()
+        .select("*, especialidades(id_especialidad, nombre)")
         .single();
 
       if (error) {
-        toast.error("Error creating treatment", { description: error.message });
+        toast.error("Error al crear el servicio", { description: error.message });
         throw error;
       }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] });
-      toast.success("Treatment added successfully");
+      toast.success("Servicio médico añadido con éxito");
     },
   });
 }
@@ -58,18 +89,18 @@ export function useUpdateService() {
         .from("servicios")
         .update(params.data)
         .eq("id_servicio", params.id)
-        .select()
+        .select("*, especialidades(id_especialidad, nombre)")
         .single();
 
       if (error) {
-        toast.error("Error updating treatment", { description: error.message });
+        toast.error("Error al actualizar el servicio", { description: error.message });
         throw error;
       }
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] });
-      toast.success("Treatment updated successfully");
+      toast.success("Servicio médico actualizado con éxito");
     },
   });
 }
@@ -81,13 +112,13 @@ export function useDeleteService() {
     mutationFn: async (id: number) => {
       const { error } = await supabase.from("servicios").delete().eq("id_servicio", id);
       if (error) {
-        toast.error("Error deleting treatment", { description: error.message });
+        toast.error("Error al eliminar el servicio", { description: error.message });
         throw error;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["services"] });
-      toast.success("Treatment deleted successfully");
+      toast.success("Servicio médico eliminado con éxito");
     },
   });
 }

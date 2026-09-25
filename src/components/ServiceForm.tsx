@@ -1,11 +1,13 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Service, ServiceInsert, useCreateService, useUpdateService } from "@/lib/api/services";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Service, ServiceInsert, useCreateService, useUpdateService, useSpecialties } from "@/lib/api/services";
+import { Stethoscope } from "lucide-react";
 
 interface ServiceFormProps {
   open: boolean;
@@ -15,7 +17,9 @@ interface ServiceFormProps {
 
 export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<ServiceInsert>();
+  const [selectedEspId, setSelectedEspId] = useState<string>("none");
   
+  const { data: specialties = [] } = useSpecialties();
   const createService = useCreateService();
   const updateService = useUpdateService();
 
@@ -27,6 +31,7 @@ export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
         codigo_medico: service.codigo_medico,
         descripcion: service.descripcion,
       });
+      setSelectedEspId(service.id_especialidad ? String(service.id_especialidad) : "none");
     } else {
       reset({
         nombre_servicio: "",
@@ -34,17 +39,23 @@ export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
         codigo_medico: "",
         descripcion: "",
       });
+      setSelectedEspId("none");
     }
   }, [service, reset, open]);
 
   const onSubmit = (data: ServiceInsert) => {
+    const payload = {
+      ...data,
+      id_especialidad: selectedEspId === "none" ? null : parseInt(selectedEspId),
+    };
+
     if (service) {
       updateService.mutate(
-        { id: service.id_servicio, data },
+        { id: service.id_servicio, data: payload },
         { onSuccess: () => onOpenChange(false) }
       );
     } else {
-      createService.mutate(data, { onSuccess: () => onOpenChange(false) });
+      createService.mutate(payload, { onSuccess: () => onOpenChange(false) });
     }
   };
 
@@ -52,15 +63,36 @@ export function ServiceForm({ open, onOpenChange, service }: ServiceFormProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[460px] rounded-3xl">
         <DialogHeader>
-          <DialogTitle>{service ? "Editar Servicio" : "Añadir Nuevo Servicio"}</DialogTitle>
+          <DialogTitle className="text-lg font-bold flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-primary" />
+            {service ? "Editar Servicio Médico" : "Nuevo Servicio Médico"}
+          </DialogTitle>
           <DialogDescription>
-            {service ? "Actualizar los detalles del servicio a continuación." : "Introducir los detalles para el nuevo servicio."}
+            {service ? "Actualiza los detalles y la especialidad asignada a este servicio." : "Registra un nuevo servicio médico y asígnalo a una especialidad."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+          <div className="space-y-2">
+            <Label htmlFor="id_especialidad" className="text-xs font-bold text-foreground">ESPECIALIDAD MÉDICA</Label>
+            <Select value={selectedEspId} onValueChange={setSelectedEspId}>
+              <SelectTrigger className="w-full rounded-xl bg-muted border-border/60 text-sm">
+                <SelectValue placeholder="Seleccione especialidad..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl max-h-[250px]">
+                <SelectItem value="none" className="font-semibold text-muted-foreground">
+                  Servicio General / Multidisciplinario
+                </SelectItem>
+                {specialties.map((esp) => (
+                  <SelectItem key={esp.id_especialidad} value={String(esp.id_especialidad)}>
+                    {esp.nombre}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label htmlFor="nombre_servicio" className="text-xs font-bold text-foreground">NOMBRE DEL SERVICIO *</Label>
             <Input 
