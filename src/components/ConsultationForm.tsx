@@ -23,6 +23,7 @@ import { Loader2, Plus, Trash2, ShieldAlert, Printer, Wand2, MessageSquare, Spar
 import { CLINICAL_TEMPLATES, PRESCRIPTION_TEMPLATES, getTemplatesForSpecialty, getPrescriptionsForSpecialty } from "@/lib/constants/clinicalTemplates";
 import { getSpecialtyConfig, AVAILABLE_SPECIALTIES, getSpecialtyBadgeStyle } from "@/lib/constants/specialtyForms";
 import { DynamicSpecialtyFields } from "@/components/consultation/DynamicSpecialtyFields";
+import { cn } from "@/lib/utils";
 
 const CONTACT_CHANNELS = ["WhatsApp", "Instagram", "Facebook", "Radio", "Recomendado", "Prensa", "Volante", "Otro"];
 
