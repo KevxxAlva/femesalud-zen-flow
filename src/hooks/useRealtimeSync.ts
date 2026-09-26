@@ -15,7 +15,6 @@ const TABLE_TO_QUERY_KEYS: Record<string, string[][]> = {
   financial_purchases: [["financial_accounts"], ["dashboard_stats"]],
   inventory_stocks: [["inventory_stocks"]],
   financial_accounts: [["financial_accounts"]],
-  inventory_peripherals: [["inventory_peripherals"]],
   medicos: [["doctors"]],
   usuarios: [["users"]]
 };

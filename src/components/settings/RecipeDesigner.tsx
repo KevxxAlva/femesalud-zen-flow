@@ -78,9 +78,9 @@ export function RecipeDesigner() {
         recipe_font_family: fontFamily,
         recipe_header_text: headerText,
       });
-      toast.success("Configuración del recetario guardada con éxito");
+      toast.success("Nombre de la clínica y diseño de récipe guardados con éxito");
     } catch (err: any) {
-      toast.error("Error al guardar: Asegúrate de ejecutar el comando SQL de la base de datos.");
+      toast.error(err?.message || "Error al guardar los datos de la clínica");
     }
   };
 
@@ -228,12 +228,17 @@ export function RecipeDesigner() {
                 onChange={(e) => setClinicType(e.target.value)}
               />
 
-              <Input 
-                placeholder="Nombre de la Clínica"
-                className="rounded-xl bg-background border-border/40 text-sm font-bold text-primary"
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
-              />
+              <div className="space-y-1">
+                <Label className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">
+                  Nombre de la Clínica (Menú Lateral y Récipes)
+                </Label>
+                <Input 
+                  placeholder="Nombre de la Clínica"
+                  className="rounded-xl bg-background border-border/40 text-sm font-bold text-primary"
+                  value={clinicName}
+                  onChange={(e) => setClinicName(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* Header Text */}

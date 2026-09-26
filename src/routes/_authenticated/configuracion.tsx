@@ -1,6 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
-import { Settings, User as UserIcon, Building, Save, Loader2, Shield, Search, ClipboardList } from "lucide-react";
+import { 
+  Settings, User as UserIcon, Building, Save, Loader2, Shield, Search, ClipboardList, 
+  FileText, Lock, KeyRound, ShieldCheck, CheckCircle2, AlertCircle, Eye, EyeOff, Trash2, Check 
+} from "lucide-react";
 import { useAuthSession, useIsAdmin, useRoles } from "@/hooks/useAuth";
 import { useMyProfile, useUpdateProfile } from "@/lib/api/profiles";
 import { useAuditLogs } from "@/lib/api/audit";
@@ -10,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { RecipeDesigner } from "@/components/settings/RecipeDesigner";
-import { FileText, Lock } from "lucide-react";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
@@ -77,14 +80,14 @@ function ConfiguracionPage() {
     <div className="space-y-6 max-w-4xl mx-auto py-2 font-sans text-foreground">
       <header className="flex flex-col gap-1 ml-14 md:ml-0">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ajustes Generales</p>
-        <h1 className="text-primaryxl font-bold text-primary tracking-tight flex items-center gap-2">
+        <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2">
           <Settings className="h-6 w-6 animate-spin-slow" /> Configuración
         </h1>
       </header>
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 bg-muted/50 p-1 rounded-2xl mb-6 max-w-2xl h-auto flex-wrap">
-          <TabsTrigger value="profile" className="rounded-xl font-bold text-xs flex items-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground">
+          <TabsTrigger value="profile" className="rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 py-2.5 data-[state=active]:bg-card data-[state=active]:text-primary data-[state=active]:shadow-sm text-muted-foreground">
             <UserIcon className="h-4 w-4" /> Mi Perfil
           </TabsTrigger>
           <TabsTrigger
@@ -230,7 +233,6 @@ function ConfiguracionPage() {
           </div>
         </TabsContent>
 
-
         {/* TAB 2: SEGURIDAD */}
         <TabsContent value="security" className="outline-none space-y-4">
           <SecuritySection />
@@ -313,92 +315,316 @@ function AuditLogSection() {
 }
 
 function SecuritySection() {
-  const [qrCode, setQrCode] = useState<string | null>(null);
-  const [verifyCode, setVerifyCode] = useState("");
-  const [factorId, setFactorId] = useState("");
+  const { user } = useAuthSession();
+  const [pin, setPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [showPin, setShowPin] = useState(false);
+  const [savedPin, setSavedPin] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [enabled, setEnabled] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const handleEnable2FA = async () => {
+  // Interactive PIN verification test
+  const [testPin, setTestPin] = useState("");
+  const [testResult, setTestResult] = useState<"success" | "error" | null>(null);
+
+  // Load existing PIN
+  useEffect(() => {
+    const fetchExistingPin = async () => {
+      // 1. Check user_metadata
+      const metaPin = user?.user_metadata?.security_pin;
+      if (metaPin) {
+        setSavedPin(String(metaPin));
+        return;
+      }
+
+      // 2. Check localStorage
+      if (user?.id) {
+        const localPin = localStorage.getItem(`femesalud_pin_${user.id}`);
+        if (localPin) {
+          setSavedPin(localPin);
+          return;
+        }
+      }
+
+      // 3. Check usuarios table
+      if (user?.id) {
+        const { data } = await supabase
+          .from("usuarios")
+          .select("pin_seguridad")
+          .eq("auth_id", user.id)
+          .maybeSingle();
+
+        if (data?.pin_seguridad) {
+          setSavedPin(data.pin_seguridad);
+        }
+      }
+    };
+
+    fetchExistingPin();
+  }, [user]);
+
+  const handleSavePin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+      toast.error("La clave debe tener exactamente 4 dígitos numéricos.");
+      return;
+    }
+    if (pin !== confirmPin) {
+      toast.error("Las claves ingresadas no coinciden.");
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.mfa.enroll({
-        factorType: "totp",
+      // 1. Update Supabase Auth user metadata
+      await supabase.auth.updateUser({
+        data: { security_pin: pin },
       });
-      if (error) throw error;
-      
-      setFactorId(data.id);
-      setQrCode(data.totp.qr_code);
-    } catch (error: any) {
-      toast.error(error.message || "Error al habilitar 2FA");
+
+      // 2. Update public.usuarios table
+      if (user?.id) {
+        await supabase
+          .from("usuarios")
+          .update({ pin_seguridad: pin })
+          .eq("auth_id", user.id);
+
+        localStorage.setItem(`femesalud_pin_${user.id}`, pin);
+      }
+
+      setSavedPin(pin);
+      setPin("");
+      setConfirmPin("");
+      setIsEditing(false);
+      setTestPin("");
+      setTestResult(null);
+      toast.success("¡Clave de 4 dígitos guardada con éxito!");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al guardar la clave");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerify2FA = async () => {
+  const handleRemovePin = async () => {
+    if (!confirm("¿Estás seguro de que deseas eliminar tu clave de seguridad de 4 dígitos?")) return;
+
     setLoading(true);
     try {
-      const challenge = await supabase.auth.mfa.challenge({ factorId });
-      if (challenge.error) throw challenge.error;
-      
-      const verify = await supabase.auth.mfa.verify({
-        factorId,
-        challengeId: challenge.data.id,
-        code: verifyCode
+      await supabase.auth.updateUser({
+        data: { security_pin: null },
       });
-      if (verify.error) throw verify.error;
-      
-      toast.success("2FA habilitado correctamente");
-      setQrCode(null);
-      setEnabled(true);
-    } catch (error: any) {
-      toast.error(error.message || "Error al verificar código");
+
+      if (user?.id) {
+        await supabase
+          .from("usuarios")
+          .update({ pin_seguridad: null })
+          .eq("auth_id", user.id);
+
+        localStorage.removeItem(`femesalud_pin_${user.id}`);
+      }
+
+      setSavedPin(null);
+      setPin("");
+      setConfirmPin("");
+      setIsEditing(false);
+      setTestPin("");
+      setTestResult(null);
+      toast.success("Clave de seguridad eliminada.");
+    } catch (err: any) {
+      toast.error(err?.message || "Error al eliminar la clave");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTestPinChange = (val: string) => {
+    const cleanVal = val.replace(/\D/g, "");
+    setTestPin(cleanVal);
+    if (cleanVal.length === 4) {
+      if (cleanVal === savedPin) {
+        setTestResult("success");
+        toast.success("¡Clave correcta! ✅");
+      } else {
+        setTestResult("error");
+        toast.error("Clave incorrecta ❌");
+      }
+    } else {
+      setTestResult(null);
     }
   };
 
   return (
-    <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm">
-      <h2 className="text-xl font-bold text-primary mb-4 flex items-center gap-2">
-        <Lock className="h-5 w-5" /> Seguridad
-      </h2>
-      <div className="space-y-4">
-        <h3 className="font-bold">Autenticación de Dos Factores (2FA)</h3>
-        {enabled ? (
-          <p className="text-sm text-green-600 font-semibold">2FA ya está habilitado en tu cuenta.</p>
-        ) : !qrCode ? (
-          <div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Añade una capa extra de seguridad a tu cuenta habilitando la autenticación de dos factores.
-            </p>
-            <Button onClick={handleEnable2FA} disabled={loading}>
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Habilitar 2FA
-            </Button>
+    <div className="bg-card border border-border/40 rounded-[2rem] p-8 shadow-sm relative overflow-hidden space-y-6">
+      <div className="flex items-center justify-between pb-4 border-b border-border/40 flex-wrap gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+            <KeyRound className="h-5 w-5" />
           </div>
+          <div>
+            <h2 className="text-lg font-bold text-foreground">Clave de Seguridad</h2>
+            <p className="text-xs text-muted-foreground">Protección con PIN numérico de 4 dígitos</p>
+          </div>
+        </div>
+
+        {savedPin ? (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+            <CheckCircle2 className="h-3.5 w-3.5" /> Clave Activa
+          </span>
         ) : (
-          <div className="space-y-4 border border-border/40 p-4 rounded-xl">
-            <p className="text-sm font-medium">1. Escanea este código QR con tu aplicación de autenticación (ej. Google Authenticator, Authy).</p>
-            <div className="bg-white p-2 inline-block rounded-lg" dangerouslySetInnerHTML={{ __html: qrCode }} />
-            <div className="max-w-xs space-y-2 mt-4">
-              <Label className="font-medium">2. Ingresa el código de verificación</Label>
-              <Input 
-                value={verifyCode} 
-                onChange={e => setVerifyCode(e.target.value)} 
-                placeholder="000000"
-                maxLength={6}
-                className="text-center tracking-widest text-lg font-bold"
-              />
-              <Button onClick={handleVerify2FA} disabled={loading || verifyCode.length < 6} className="w-full mt-2">
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Verificar y Activar
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-500/10 text-amber-600 border border-amber-500/20">
+            <AlertCircle className="h-3.5 w-3.5" /> Sin Configurar
+          </span>
+        )}
+      </div>
+
+      {/* If PIN already exists and user is not currently editing */}
+      {savedPin && !isEditing ? (
+        <div className="space-y-6">
+          <div className="bg-muted/40 p-5 rounded-2xl border border-border/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-bold text-foreground flex items-center gap-2">
+                <ShieldCheck className="h-4 w-4 text-emerald-500" /> Clave de 4 dígitos establecida
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Tu cuenta está protegida. Puedes cambiar tu clave o probar que funcione correctamente en cualquier momento.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="rounded-xl font-bold text-xs"
+              >
+                Cambiar Clave
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleRemovePin}
+                disabled={loading}
+                className="text-destructive hover:bg-destructive/10 rounded-xl font-bold text-xs"
+              >
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Eliminar
               </Button>
             </div>
           </div>
-        )}
-      </div>
+
+          {/* Quick interactive test area */}
+          <div className="bg-card p-5 rounded-2xl border border-border/40 space-y-3">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+              Probar mi clave de seguridad
+            </p>
+            <div className="flex items-center gap-4 flex-wrap">
+              <InputOTP
+                maxLength={4}
+                value={testPin}
+                onChange={handleTestPinChange}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-11 h-12 text-lg font-bold" />
+                  <InputOTPSlot index={1} className="w-11 h-12 text-lg font-bold" />
+                  <InputOTPSlot index={2} className="w-11 h-12 text-lg font-bold" />
+                  <InputOTPSlot index={3} className="w-11 h-12 text-lg font-bold" />
+                </InputOTPGroup>
+              </InputOTP>
+
+              {testResult === "success" && (
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                  <Check className="h-4 w-4" /> ¡Clave correcta!
+                </span>
+              )}
+              {testResult === "error" && (
+                <span className="text-xs font-bold text-destructive">
+                  Clave incorrecta
+                </span>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Ingresa tus 4 dígitos aquí para confirmar que los recuerdas.
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* Form to set or change PIN */
+        <form onSubmit={handleSavePin} className="space-y-6 max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center justify-between">
+                <span>Nueva Clave de 4 Dígitos</span>
+                <button
+                  type="button"
+                  onClick={() => setShowPin(!showPin)}
+                  className="text-muted-foreground hover:text-foreground text-[11px] flex items-center gap-1 font-semibold"
+                >
+                  {showPin ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                  {showPin ? "Ocultar" : "Mostrar"}
+                </button>
+              </Label>
+              <InputOTP
+                maxLength={4}
+                value={pin}
+                onChange={(val) => setPin(val.replace(/\D/g, ""))}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={1} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={2} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={3} className="w-12 h-14 text-xl font-bold" />
+                </InputOTPGroup>
+              </InputOTP>
+              <p className="text-[11px] text-muted-foreground">
+                Ingresa exactamente 4 números (ej. 1234).
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                Confirmar Clave de 4 Dígitos
+              </Label>
+              <InputOTP
+                maxLength={4}
+                value={confirmPin}
+                onChange={(val) => setConfirmPin(val.replace(/\D/g, ""))}
+              >
+                <InputOTPGroup>
+                  <InputOTPSlot index={0} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={1} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={2} className="w-12 h-14 text-xl font-bold" />
+                  <InputOTPSlot index={3} className="w-12 h-14 text-xl font-bold" />
+                </InputOTPGroup>
+              </InputOTP>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 pt-2">
+            <Button
+              type="submit"
+              disabled={loading || pin.length !== 4 || confirmPin.length !== 4}
+              className="rounded-xl bg-primary text-primary-foreground font-bold px-6 h-11"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Guardar Clave de 4 Dígitos
+            </Button>
+
+            {isEditing && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setIsEditing(false);
+                  setPin("");
+                  setConfirmPin("");
+                }}
+                className="rounded-xl font-bold text-xs"
+              >
+                Cancelar
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
     </div>
   );
 }
+

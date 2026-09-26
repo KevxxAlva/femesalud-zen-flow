@@ -3,8 +3,8 @@ import { Link, useRouterState, useRouter } from "@tanstack/react-router";
 import {
   LayoutGrid, Calendar, UserRound, Stethoscope, Users,
   Wallet, ReceiptText, Bookmark, CreditCard,
-  Box, Monitor, RotateCw, Headphones, Settings,
-  Menu, X, LogOut, ChevronLeft, Building2
+  Box, RotateCw, Headphones, Settings,
+  Menu, X, LogOut, ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuthSession, useIsAdmin } from "@/hooks/useAuth";
@@ -37,7 +37,6 @@ const navigation: ModuleDef[] = [
   { title: "Métodos de Pago", url: "/metodos-pago", icon: CreditCard, adminOnly: true },
   { category: "ACTIVOS FÍSICOS" },
   { title: "Inventario", url: "/stocks", icon: Box, adminOnly: true },
-  { title: "Periféricos", url: "/peripherals", icon: Monitor, adminOnly: true },
   { category: "OTROS" },
   { title: "Reportes", url: "/reportes", icon: RotateCw },
   { title: "Atención al Cliente", url: "/support", icon: Headphones },
@@ -64,12 +63,18 @@ function SidebarBody({ onNavigate, isCollapsed }: { onNavigate?: () => void, isC
         {/* Logo Area */}
         <div className={cn("pt-6 pb-4", isCollapsed ? "px-2" : "px-6")}>
           <div className={cn("flex items-center mb-6", isCollapsed ? "justify-center" : "gap-2")}>
-            <div className="text-primary flex-shrink-0 bg-primary/10 p-2 rounded-xl">
-              <Building2 className="h-6 w-6" strokeWidth={2.5} />
+            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <img src="/favicon.svg" alt="Logo" className="h-6 w-6 object-contain" />
             </div>
-            {!isCollapsed && <span className="font-display font-bold text-xl tracking-tight text-foreground truncate bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">FemeSalud</span>}
+            {!isCollapsed && (
+              <span
+                className="font-display font-bold text-xl tracking-tight text-foreground truncate bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70"
+                title={clinic?.name || "FemeSalud"}
+              >
+                {clinic?.name || "FemeSalud"}
+              </span>
+            )}
           </div>
-
         </div>
 
         {/* Navigation List */}

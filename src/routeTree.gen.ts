@@ -16,7 +16,6 @@ import { Route as AuthenticatedSupportRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedStocksRouteImport } from './routes/_authenticated/stocks'
 import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
-import { Route as AuthenticatedPeripheralsRouteImport } from './routes/_authenticated/peripherals'
 import { Route as AuthenticatedMetodosPagoRouteImport } from './routes/_authenticated/metodos-pago'
 import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
@@ -62,12 +61,6 @@ const AuthenticatedReportesRoute = AuthenticatedReportesRouteImport.update({
   path: '/reportes',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedPeripheralsRoute =
-  AuthenticatedPeripheralsRouteImport.update({
-    id: '/peripherals',
-    path: '/peripherals',
-    getParentRoute: () => AuthenticatedRouteRoute,
-  } as any)
 const AuthenticatedMetodosPagoRoute =
   AuthenticatedMetodosPagoRouteImport.update({
     id: '/metodos-pago',
@@ -135,7 +128,6 @@ export interface FileRoutesByFullPath {
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
   '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
-  '/peripherals': typeof AuthenticatedPeripheralsRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
   '/stocks': typeof AuthenticatedStocksRoute
@@ -153,7 +145,6 @@ export interface FileRoutesByTo {
   '/facturacion': typeof AuthenticatedFacturacionRoute
   '/historias': typeof AuthenticatedHistoriasRoute
   '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
-  '/peripherals': typeof AuthenticatedPeripheralsRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
   '/stocks': typeof AuthenticatedStocksRoute
@@ -174,7 +165,6 @@ export interface FileRoutesById {
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
   '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
   '/_authenticated/metodos-pago': typeof AuthenticatedMetodosPagoRoute
-  '/_authenticated/peripherals': typeof AuthenticatedPeripheralsRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
   '/_authenticated/stocks': typeof AuthenticatedStocksRoute
@@ -196,7 +186,6 @@ export interface FileRouteTypes {
     | '/facturacion'
     | '/historias'
     | '/metodos-pago'
-    | '/peripherals'
     | '/reportes'
     | '/servicios'
     | '/stocks'
@@ -214,7 +203,6 @@ export interface FileRouteTypes {
     | '/facturacion'
     | '/historias'
     | '/metodos-pago'
-    | '/peripherals'
     | '/reportes'
     | '/servicios'
     | '/stocks'
@@ -234,7 +222,6 @@ export interface FileRouteTypes {
     | '/_authenticated/facturacion'
     | '/_authenticated/historias'
     | '/_authenticated/metodos-pago'
-    | '/_authenticated/peripherals'
     | '/_authenticated/reportes'
     | '/_authenticated/servicios'
     | '/_authenticated/stocks'
@@ -298,13 +285,6 @@ declare module '@tanstack/react-router' {
       path: '/reportes'
       fullPath: '/reportes'
       preLoaderRoute: typeof AuthenticatedReportesRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/peripherals': {
-      id: '/_authenticated/peripherals'
-      path: '/peripherals'
-      fullPath: '/peripherals'
-      preLoaderRoute: typeof AuthenticatedPeripheralsRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/metodos-pago': {
@@ -389,7 +369,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
   AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
   AuthenticatedMetodosPagoRoute: typeof AuthenticatedMetodosPagoRoute
-  AuthenticatedPeripheralsRoute: typeof AuthenticatedPeripheralsRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
   AuthenticatedStocksRoute: typeof AuthenticatedStocksRoute
@@ -408,7 +387,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
   AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
   AuthenticatedMetodosPagoRoute: AuthenticatedMetodosPagoRoute,
-  AuthenticatedPeripheralsRoute: AuthenticatedPeripheralsRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,
   AuthenticatedStocksRoute: AuthenticatedStocksRoute,

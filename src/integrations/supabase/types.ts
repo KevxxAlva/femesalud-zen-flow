@@ -597,31 +597,6 @@ export type Database = {
             referencedColumns: ["id_medico"]
           },
         ]
-      }
-      inventory_peripherals: {
-        Row: {
-          assigned_to: string
-          condition: string | null
-          created_at: string | null
-          id: string
-          name: string
-        }
-        Insert: {
-          assigned_to: string
-          condition?: string | null
-          created_at?: string | null
-          id?: string
-          name: string
-        }
-        Update: {
-          assigned_to?: string
-          condition?: string | null
-          created_at?: string | null
-          id?: string
-          name?: string
-        }
-        Relationships: []
-      }
       inventory_stocks: {
         Row: {
           category: string
@@ -999,6 +974,7 @@ export type Database = {
           id_rol: number | null
           id_usuario: number
           nombre_usuario: string
+          pin_seguridad: string | null
         }
         Insert: {
           auth_id?: string | null
@@ -1008,6 +984,7 @@ export type Database = {
           id_rol?: number | null
           id_usuario?: number
           nombre_usuario: string
+          pin_seguridad?: string | null
         }
         Update: {
           auth_id?: string | null
@@ -1017,6 +994,7 @@ export type Database = {
           id_rol?: number | null
           id_usuario?: number
           nombre_usuario?: string
+          pin_seguridad?: string | null
         }
         Relationships: [
           {
