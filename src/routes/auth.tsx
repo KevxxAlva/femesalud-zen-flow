@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { 
+import {
   Heart, Loader2, Eye, EyeOff, Headphones, ChevronLeft, ChevronRight, ArrowLeft,
   KeyRound, ShieldCheck, User, Users, Trash2, ArrowRight, CheckCircle2, Lock
 } from "lucide-react";
@@ -10,13 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { 
-  getQuickAccessAccounts, 
-  getLastQuickAccessAccount, 
-  saveQuickAccessAccount, 
-  unlockQuickAccessAccount, 
+import {
+  getQuickAccessAccounts,
+  getLastQuickAccessAccount,
+  saveQuickAccessAccount,
+  unlockQuickAccessAccount,
   removeQuickAccessAccount,
-  QuickAccessProfile 
+  QuickAccessProfile
 } from "@/lib/auth/quickAccess";
 
 export const Route = createFileRoute("/auth")({
@@ -46,7 +46,7 @@ function AuthPage() {
     // Detect if we landed from a Supabase password recovery link
     const hash = window.location.hash;
     const params = new URLSearchParams(window.location.search);
-    
+
     if (hash && hash.includes("type=recovery")) {
       setMode("reset-password");
     } else if (params.get("bootstrap") === "true") {
@@ -292,7 +292,7 @@ function AuthPage() {
               </div>
               <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">Hoy</span>
             </div>
-            
+
             <div className="space-y-2.5">
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100/30 dark:border-zinc-800/30">
                 <div className="flex items-center gap-2.5">
@@ -304,7 +304,7 @@ function AuthPage() {
                 </div>
                 <span className="text-[9px] font-semibold text-zinc-500 bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 rounded-md">14:30</span>
               </div>
-              
+
               <div className="flex items-center justify-between p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100/30 dark:border-zinc-800/30">
                 <div className="flex items-center gap-2.5">
                   <div className="w-1.5 h-7 rounded-full bg-primary/40" />
@@ -316,7 +316,7 @@ function AuthPage() {
                 <span className="text-[9px] font-semibold text-zinc-500 bg-zinc-100 dark:bg-zinc-700 px-2 py-0.5 rounded-md">15:15</span>
               </div>
             </div>
-            
+
             {/* Overlapping floating card */}
             <div className="absolute -bottom-4 -right-2 bg-card dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-2.5 shadow-xl flex items-center gap-2.5 animate-bounce-slow">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -331,7 +331,7 @@ function AuthPage() {
             </div>
           </div>
         );
-        
+
       case 1: // Historias
         return (
           <div className="relative w-full h-[220px] bg-card dark:bg-zinc-900 rounded-3xl border border-zinc-100 dark:border-zinc-800 p-5 shadow-xl select-none animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -345,7 +345,7 @@ function AuthPage() {
               </div>
               <span className="text-[8px] font-bold text-green-500 bg-green-500/10 px-2 py-0.5 rounded-full">Activo</span>
             </div>
-            
+
             <div className="space-y-2 text-left">
               <div>
                 <p className="text-[8px] font-medium text-zinc-400 uppercase tracking-wider">Diagnóstico Principal</p>
@@ -360,7 +360,7 @@ function AuthPage() {
                 <span className="text-[8px] bg-destructive/100/10 text-destructive font-semibold px-2 py-0.5 rounded">Alergia: Penicilina</span>
               </div>
             </div>
-            
+
             {/* Overlapping floating card */}
             <div className="absolute -bottom-4 -right-2 bg-card dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-2.5 shadow-xl flex items-center gap-2.5 animate-bounce-slow">
               <div className="w-7 h-7 rounded-lg bg-green-500/10 flex items-center justify-center text-green-500">
@@ -375,7 +375,7 @@ function AuthPage() {
             </div>
           </div>
         );
-        
+
       case 2: // Facturas
         return (
           <div className="relative w-full h-[220px] bg-gradient-to-tr from-[#4361ee] to-[#3451d6] rounded-3xl p-5 shadow-xl text-primary-foreground select-none animate-in fade-in slide-in-from-bottom-4 duration-500 flex flex-col justify-between">
@@ -396,11 +396,11 @@ function AuthPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="text-left my-1">
               <p className="text-base font-mono tracking-widest">**** **** **** 2026</p>
             </div>
-            
+
             <div className="flex justify-between items-end">
               <div className="text-left">
                 <p className="text-[8px] uppercase opacity-70">Médico Suscriptor</p>
@@ -411,7 +411,7 @@ function AuthPage() {
                 <p className="text-[10px] font-bold font-mono">12/28</p>
               </div>
             </div>
-            
+
             {/* Overlapping floating card */}
             <div className="absolute -bottom-4 -right-2 bg-card dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 rounded-2xl p-2.5 shadow-xl flex items-center gap-2.5 text-zinc-800 dark:text-zinc-100 animate-bounce-slow">
               <div className="w-7 h-7 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -426,7 +426,7 @@ function AuthPage() {
             </div>
           </div>
         );
-        
+
       default:
         return null;
     }
@@ -436,7 +436,7 @@ function AuthPage() {
     <div className="min-h-screen w-full flex bg-background font-sans">
       {/* Left side: Login/Register Form */}
       <div className="w-full md:w-[50%] lg:w-[45%] flex flex-col justify-between p-6 sm:p-10 lg:p-16 bg-card dark:bg-zinc-950 min-h-screen md:min-h-0">
-        
+
         {/* Top brand logo */}
         <div className="flex items-center gap-3">
           <img src="/favicon.svg" alt="Logo" className="h-8 w-8 object-contain flex-shrink-0" />
@@ -531,29 +531,25 @@ function AuthPage() {
                     autoFocus
                   >
                     <InputOTPGroup className="gap-2.5">
-                      <InputOTPSlot 
-                        index={0} 
-                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
-                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
-                        }`} 
+                      <InputOTPSlot
+                        index={0}
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                          }`}
                       />
-                      <InputOTPSlot 
-                        index={1} 
-                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
-                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
-                        }`} 
+                      <InputOTPSlot
+                        index={1}
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                          }`}
                       />
-                      <InputOTPSlot 
-                        index={2} 
-                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
-                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
-                        }`} 
+                      <InputOTPSlot
+                        index={2}
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                          }`}
                       />
-                      <InputOTPSlot 
-                        index={3} 
-                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
-                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
-                        }`} 
+                      <InputOTPSlot
+                        index={3}
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                          }`}
                       />
                     </InputOTPGroup>
                   </InputOTP>
@@ -856,13 +852,13 @@ function AuthPage() {
 
         {/* Footer info */}
         <div className="text-center text-[10px] text-zinc-400 font-medium">
-          © {new Date().getFullYear()} FemeSalud. Todos los derechos reservados.
+          © {new Date().getFullYear()} Medizen. Todos los derechos reservados.
         </div>
       </div>
 
       {/* Right side: Image Showcase Carousel */}
       <div className="hidden md:flex md:w-[50%] lg:w-[55%] flex-col justify-between p-12 lg:p-16 relative overflow-hidden bg-gradient-to-br from-[#0b1437] via-[#111c44] to-[#1b2559] text-primary-foreground">
-        
+
         {/* Glow Effects */}
         <div className="absolute top-[-20%] left-[-20%] w-[80%] h-[80%] bg-primary/10 rounded-full blur-[120px] pointer-events-none" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-primary/15 rounded-full blur-[100px] pointer-events-none" />
@@ -880,7 +876,7 @@ function AuthPage() {
 
         {/* Mid section: Visual Card Showcase */}
         <div className="my-auto max-w-[440px] mx-auto w-full z-10 flex flex-col items-center">
-          
+
           {/* Card Presentation Frame */}
           <div className="w-full relative mb-12 px-6">
             {renderSlideVisual(currentSlide)}
@@ -920,9 +916,8 @@ function AuthPage() {
                 <button
                   key={i}
                   onClick={() => setCurrentSlide(i)}
-                  className={`h-2 rounded-full cursor-pointer transition-all border-0 p-0 ${
-                    i === currentSlide ? "w-5 bg-primary" : "w-2 bg-card/20 hover:bg-card/40"
-                  }`}
+                  className={`h-2 rounded-full cursor-pointer transition-all border-0 p-0 ${i === currentSlide ? "w-5 bg-primary" : "w-2 bg-card/20 hover:bg-card/40"
+                    }`}
                   aria-label={`Ir al slide ${i + 1}`}
                 />
               ))}
