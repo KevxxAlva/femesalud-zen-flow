@@ -20,14 +20,21 @@ export interface ClinicInfo {
 export function useClinicInfo() {
   return useQuery({
     queryKey: ["clinic_info"],
-    queryFn: async (): Promise<ClinicInfo> => {
-      const { data, error } = await supabase
-        .from("clinic_info")
-        .select("*")
-        .eq("id", 1)
-        .single();
-      if (error) throw error;
-      return data;
+    queryFn: async (): Promise<ClinicInfo | null> => {
+      try {
+        const { data, error } = await supabase
+          .from("clinic_info")
+          .select("*")
+          .eq("id", 1)
+          .maybeSingle();
+        if (error) {
+          console.warn("clinic_info query warning:", error);
+          return null;
+        }
+        return data;
+      } catch {
+        return null;
+      }
     },
   });
 }
