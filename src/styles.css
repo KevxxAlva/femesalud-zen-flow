@@ -184,3 +184,14 @@
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid color-mix(in oklab, var(--color-border) 60%, transparent);
 }
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+

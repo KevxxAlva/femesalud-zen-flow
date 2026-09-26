@@ -1,11 +1,23 @@
 import { useState, useEffect } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { Heart, Loader2, Eye, EyeOff, Headphones, ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react";
+import { 
+  Heart, Loader2, Eye, EyeOff, Headphones, ChevronLeft, ChevronRight, ArrowLeft,
+  KeyRound, ShieldCheck, User, Users, Trash2, ArrowRight, CheckCircle2, Lock
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
+import { 
+  getQuickAccessAccounts, 
+  getLastQuickAccessAccount, 
+  saveQuickAccessAccount, 
+  unlockQuickAccessAccount, 
+  removeQuickAccessAccount,
+  QuickAccessProfile 
+} from "@/lib/auth/quickAccess";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -15,13 +27,20 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<"login" | "bootstrap" | "recovery" | "reset-password">("login");
+  const [mode, setMode] = useState<"login" | "quick-login" | "bootstrap" | "recovery" | "reset-password">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Quick Login / PIN State
+  const [quickAccounts, setQuickAccounts] = useState<QuickAccessProfile[]>([]);
+  const [selectedAccount, setSelectedAccount] = useState<QuickAccessProfile | null>(null);
+  const [pin, setPin] = useState("");
+  const [pinError, setPinError] = useState(false);
+  const [isShaking, setIsShaking] = useState(false);
 
   useEffect(() => {
     // Detect if we landed from a Supabase password recovery link
@@ -32,6 +51,15 @@ function AuthPage() {
       setMode("reset-password");
     } else if (params.get("bootstrap") === "true") {
       setMode("bootstrap");
+    } else {
+      // Check for saved quick access accounts on this device
+      const accounts = getQuickAccessAccounts();
+      setQuickAccounts(accounts);
+      const last = getLastQuickAccessAccount();
+      if (last) {
+        setSelectedAccount(last);
+        setMode("quick-login");
+      }
     }
 
     supabase.auth.getSession().then(({ data }) => {
@@ -40,7 +68,7 @@ function AuthPage() {
         router.navigate({ to: "/", replace: true });
       }
     });
-  }, [router, mode]);
+  }, [router]);
 
   // Auto-rotate slides on the right side
   useEffect(() => {
@@ -53,11 +81,111 @@ function AuthPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      setLoading(false);
+      return toast.error(error.message);
+    }
+
+    // Attempt to register in device quick access if user has a 4-digit PIN configured
+    try {
+      const user = data.user;
+      if (user) {
+        let userPin = user.user_metadata?.security_pin;
+        let userFullName = user.user_metadata?.full_name || email.split("@")[0];
+        let userRole = "Usuario";
+
+        const { data: dbUser } = await supabase
+          .from("usuarios")
+          .select("pin_seguridad, id_rol, roles(nombre_rol), medicos(nombre, apellido)")
+          .eq("auth_id", user.id)
+          .maybeSingle();
+
+        if (dbUser) {
+          if (!userPin && dbUser.pin_seguridad) {
+            userPin = dbUser.pin_seguridad;
+          }
+          if (dbUser.medicos) {
+            const doc = Array.isArray(dbUser.medicos) ? dbUser.medicos[0] : dbUser.medicos;
+            if (doc?.nombre) {
+              userFullName = `${doc.nombre} ${doc.apellido || ""}`.trim();
+            }
+          }
+          if (dbUser.roles) {
+            const role = Array.isArray(dbUser.roles) ? dbUser.roles[0] : dbUser.roles;
+            if (role?.nombre_rol) {
+              userRole = role.nombre_rol === "admin" ? "Administrador" : "Médico";
+            }
+          }
+        }
+
+        if (userPin && String(userPin).length === 4) {
+          await saveQuickAccessAccount({
+            userId: user.id,
+            email: user.email || email,
+            fullName: userFullName,
+            role: userRole,
+            password,
+            pin: String(userPin),
+          });
+        }
+      }
+    } catch (saveErr) {
+      console.warn("Could not save to quick access vault:", saveErr);
+    }
+
     setLoading(false);
-    if (error) return toast.error(error.message);
     toast.success("Bienvenido a FemeSalud");
     router.navigate({ to: "/", replace: true });
+  };
+
+  const handlePinUnlock = async (enteredPin: string) => {
+    if (!selectedAccount) return;
+    if (enteredPin.length !== 4) {
+      toast.error("Por favor ingresa los 4 dígitos.");
+      return;
+    }
+
+    setLoading(true);
+    setPinError(false);
+
+    const res = await unlockQuickAccessAccount(selectedAccount.userId, enteredPin);
+    setLoading(false);
+
+    if (!res.success) {
+      setPinError(true);
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 600);
+      setPin("");
+      toast.error(res.error || "Clave de 4 dígitos incorrecta.");
+      return;
+    }
+
+    toast.success(`¡Hola de nuevo, ${selectedAccount.fullName.split(" ")[0]}!`);
+    router.navigate({ to: "/", replace: true });
+  };
+
+  const handlePinChange = (val: string) => {
+    const clean = val.replace(/\D/g, "");
+    setPin(clean);
+    setPinError(false);
+    if (clean.length === 4) {
+      handlePinUnlock(clean);
+    }
+  };
+
+  const handleForgetAccount = (userId: string) => {
+    if (!confirm("¿Deseas olvidar esta cuenta en este equipo? Tendrás que ingresar con correo y contraseña la próxima vez.")) return;
+    removeQuickAccessAccount(userId);
+    const remaining = getQuickAccessAccounts();
+    setQuickAccounts(remaining);
+    if (remaining.length > 0) {
+      setSelectedAccount(remaining[0]);
+    } else {
+      setSelectedAccount(null);
+      setMode("login");
+    }
+    toast.info("Cuenta olvidada de este equipo.");
   };
 
   const handleBootstrap = async (e: React.FormEvent) => {
@@ -291,8 +419,8 @@ function AuthPage() {
         
         {/* Top brand logo */}
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm">
-            <Heart className="h-5 w-5" fill="currentColor" />
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm overflow-hidden">
+            <img src="/favicon.svg" alt="Logo" className="h-5 w-5 object-contain" />
           </div>
           <span className="font-display font-bold text-xl tracking-tight text-foreground">
             feme<span className="text-primary">salud</span>
@@ -301,9 +429,184 @@ function AuthPage() {
 
         {/* Form Body Container */}
         <div className="my-auto py-8 max-w-[360px] w-full mx-auto">
+          {mode === "quick-login" && selectedAccount && (
+            <div className="space-y-6 text-center animate-in fade-in duration-300">
+              {/* Header */}
+              <div className="space-y-1">
+                <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">
+                  ¡Hola de nuevo!
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  Ingresa tu clave de 4 dígitos para acceder al sistema
+                </p>
+              </div>
+
+              {/* Account Card (Apple / Google Style) */}
+              <div className="p-4 rounded-3xl bg-muted/40 border border-border/40 text-left flex items-center justify-between gap-3 shadow-xs">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="h-11 w-11 rounded-2xl bg-primary text-primary-foreground font-black text-sm flex items-center justify-center shadow-sm shadow-primary/20 flex-shrink-0">
+                    {selectedAccount.fullName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h3 className="font-bold text-sm text-foreground truncate">
+                        {selectedAccount.fullName}
+                      </h3>
+                      {selectedAccount.role && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary uppercase">
+                          {selectedAccount.role}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {selectedAccount.email}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleForgetAccount(selectedAccount.userId)}
+                  title="Olvidar esta cuenta en este equipo"
+                  className="text-muted-foreground hover:text-destructive p-2 rounded-xl hover:bg-destructive/10 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Multi-account switcher (if multiple accounts saved) */}
+              {quickAccounts.length > 1 && (
+                <div className="flex items-center justify-center gap-1.5 flex-wrap text-xs">
+                  <span className="text-muted-foreground text-[11px] font-medium">Otras cuentas:</span>
+                  {quickAccounts
+                    .filter((acc) => acc.userId !== selectedAccount.userId)
+                    .map((acc) => (
+                      <button
+                        key={acc.userId}
+                        type="button"
+                        onClick={() => {
+                          setSelectedAccount(acc);
+                          setPin("");
+                          setPinError(false);
+                        }}
+                        className="text-[11px] font-bold text-primary hover:underline bg-primary/5 px-2 py-0.5 rounded-lg transition-colors"
+                      >
+                        {acc.fullName.split(" ")[0]}
+                      </button>
+                    ))}
+                </div>
+              )}
+
+              {/* 4-Digit OTP PIN Slots */}
+              <div className={`space-y-4 pt-1 ${isShaking ? "animate-shake" : ""}`}>
+                <div className="flex flex-col items-center justify-center gap-2">
+                  <InputOTP
+                    maxLength={4}
+                    value={pin}
+                    onChange={handlePinChange}
+                    disabled={loading}
+                    autoFocus
+                  >
+                    <InputOTPGroup className="gap-2.5">
+                      <InputOTPSlot 
+                        index={0} 
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
+                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                        }`} 
+                      />
+                      <InputOTPSlot 
+                        index={1} 
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
+                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                        }`} 
+                      />
+                      <InputOTPSlot 
+                        index={2} 
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
+                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                        }`} 
+                      />
+                      <InputOTPSlot 
+                        index={3} 
+                        className={`w-12 h-14 rounded-2xl text-2xl font-bold bg-card border-2 transition-all ${
+                          pinError ? "border-destructive text-destructive" : "border-border/60 focus:border-primary"
+                        }`} 
+                      />
+                    </InputOTPGroup>
+                  </InputOTP>
+
+                  <p className="text-[11px] text-muted-foreground flex items-center gap-1 mt-1">
+                    <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                    Protegido con clave de 4 dígitos
+                  </p>
+                </div>
+
+                <Button
+                  type="button"
+                  disabled={loading || pin.length !== 4}
+                  onClick={() => handlePinUnlock(pin)}
+                  className="w-full h-11 rounded-2xl bg-primary hover:bg-[#3451d6] text-primary-foreground font-semibold shadow-md shadow-blue-500/10 hover:shadow-primary/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2 border-0"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin text-primary-foreground" />
+                      <span>Verificando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continuar</span>
+                      <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+
+                {/* Switch to standard login */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode("login");
+                    setPin("");
+                    setPinError(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 text-xs font-bold text-muted-foreground hover:text-foreground pt-1 bg-transparent border-0 cursor-pointer transition-colors"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  Ingresar con otra cuenta o contraseña
+                </button>
+              </div>
+            </div>
+          )}
+
           {mode === "login" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Iniciar sesión</h2>
+              {/* Back to quick access shortcut if account is remembered */}
+              {quickAccounts.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedAccount(quickAccounts[0]);
+                    setMode("quick-login");
+                    setPin("");
+                    setPinError(false);
+                  }}
+                  className="w-full flex items-center justify-between p-3 mb-6 rounded-2xl bg-primary/5 hover:bg-primary/10 border border-primary/20 text-xs font-bold text-primary transition-all group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-7 w-7 rounded-xl bg-primary text-primary-foreground text-[11px] font-black flex items-center justify-center shadow-xs">
+                      {quickAccounts[0].fullName.slice(0, 2).toUpperCase()}
+                    </div>
+                    <span>Continuar como {quickAccounts[0].fullName.split(" ")[0]} con PIN</span>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-0.5 transition-transform" />
+                </button>
+              )}
+
+              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">Iniciar sesión</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Introduce tus credenciales para acceder a la suite clínica.
               </p>
@@ -376,7 +679,7 @@ function AuthPage() {
 
           {mode === "recovery" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Recuperar contraseña</h2>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">Recuperar contraseña</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Ingresa tu correo y te enviaremos las instrucciones para restablecer tu acceso.
               </p>
@@ -417,7 +720,7 @@ function AuthPage() {
 
           {mode === "reset-password" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Nueva contraseña</h2>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">Nueva contraseña</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Ingresa tu nueva contraseña para reestablecer tu acceso a la plataforma.
               </p>
@@ -458,7 +761,7 @@ function AuthPage() {
 
           {mode === "bootstrap" && (
             <>
-              <h2 className="font-display text-primaryxl font-bold tracking-tight text-foreground">Primer Admin</h2>
+              <h2 className="font-display text-2xl font-bold tracking-tight text-foreground">Primer Admin</h2>
               <p className="text-sm text-zinc-400 mt-2">
                 Crea la primera cuenta del sistema. Quedará automáticamente como administrador.
               </p>

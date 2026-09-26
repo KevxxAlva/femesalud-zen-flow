@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { RecipeDesigner } from "@/components/settings/RecipeDesigner";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { supabase } from "@/integrations/supabase/client";
+import { removeQuickAccessAccount, saveQuickAccessAccount } from "@/lib/auth/quickAccess";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
   head: () => ({ meta: [{ title: "Configuración — FemeSalud" }] }),
@@ -389,6 +390,18 @@ function SecuritySection() {
           .eq("auth_id", user.id);
 
         localStorage.setItem(`femesalud_pin_${user.id}`, pin);
+
+        // Update device quick access vault
+        try {
+          await saveQuickAccessAccount({
+            userId: user.id,
+            email: user.email || "",
+            fullName: user.user_metadata?.full_name || user.email?.split("@")[0] || "Usuario",
+            pin,
+          });
+        } catch {
+          // vault will register on next login
+        }
       }
 
       setSavedPin(pin);
@@ -421,6 +434,7 @@ function SecuritySection() {
           .eq("auth_id", user.id);
 
         localStorage.removeItem(`femesalud_pin_${user.id}`);
+        removeQuickAccessAccount(user.id);
       }
 
       setSavedPin(null);
