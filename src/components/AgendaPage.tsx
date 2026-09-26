@@ -178,7 +178,7 @@ export function AgendaPage() {
         
         {/* HEADER */}
         <header className="flex justify-between items-center mb-6">
-          <h1 className="text-primaryxl font-bold text-primary tracking-tight">Agenda</h1>
+          <h1 className="text-2xl font-bold text-primary tracking-tight">Agenda</h1>
           <button 
             onClick={() => { setDefaultFormDate(formatToYMD(new Date())); setEditingApp(null); setFormOpen(true); }}
             className="flex items-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-full font-bold shadow-md hover:bg-[#3451d6] transition-colors"

@@ -1,12 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { LayoutGrid, Calendar, UserRound, FileText } from "lucide-react";
+import { LayoutGrid, Calendar, UserRound, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { title: "Dashboard", url: "/", icon: LayoutGrid },
   { title: "Agenda", url: "/agenda", icon: Calendar },
   { title: "Pacientes", url: "/pacientes", icon: UserRound },
-  { title: "Historias", url: "/historias", icon: FileText },
+  { title: "Servicios", url: "/servicios", icon: Stethoscope },
 ];
 
 export function BottomNavBar() {

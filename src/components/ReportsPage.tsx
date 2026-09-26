@@ -279,7 +279,7 @@ export function ReportsPage() {
     { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-primary bg-primary/10" },
     { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-primary bg-primary/10" },
     { label: "Pacientes nuevos", value: stats.newPatients, icon: Users, tone: "text-primary bg-primary/10" },
-    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-primarymerald-500 bg-emerald-50" },
+    { label: "Ingresos", value: `$${stats.income.toLocaleString("es-ES")}`, icon: DollarSign, tone: "text-emerald-500 bg-emerald-50" },
   ];
 
   return (
@@ -287,7 +287,7 @@ export function ReportsPage() {
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div className="flex-1">
           <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Métricas y Resúmenes</p>
-          <h1 className="text-primaryxl font-bold tracking-tight flex items-center gap-2">
+          <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
             <FileBarChart className="h-7 w-7 text-primary" /> Reportes Analíticos
           </h1>
         </div>
@@ -296,7 +296,7 @@ export function ReportsPage() {
         </Button>
       </header>
 
-      <div className="bg-card border border-border/40 rounded-[2rem] p-5 shadow-sm border border-border/40">
+      <div className="bg-card border border-border/40 rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-5 shadow-sm">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
             <CalIcon className="h-3.5 w-3.5" /> Rango de fechas

@@ -44,6 +44,56 @@ function base64ToBuffer(base64: string): ArrayBuffer {
   return bytes.buffer;
 }
 
+const hasSubtleCrypto = typeof window !== "undefined" && !!window.crypto && !!window.crypto.subtle;
+
+function fallbackEncrypt(data: object, pin: string): EncryptedVault {
+  const json = JSON.stringify(data);
+  const salt = Math.random().toString(36).slice(2) + Date.now().toString(36);
+  let hash = 0;
+  const seed = `${pin}:${salt}:femesalud-pin-vault`;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  let cipher = "";
+  for (let i = 0; i < json.length; i++) {
+    const keyByte = (Math.abs(hash) + i * 31 + pin.charCodeAt(i % pin.length)) % 256;
+    cipher += String.fromCharCode(json.charCodeAt(i) ^ keyByte);
+  }
+  return {
+    ciphertext: btoa(cipher),
+    iv: btoa(`fb-${pin}`),
+    salt: btoa(salt),
+  };
+}
+
+function fallbackDecrypt(vault: EncryptedVault, pin: string): any {
+  let decodedIv = "";
+  try {
+    decodedIv = atob(vault.iv);
+  } catch {
+    throw new Error("Clave de seguridad incorrecta");
+  }
+
+  if (decodedIv !== `fb-${pin}`) {
+    throw new Error("Clave de seguridad incorrecta");
+  }
+  const cipher = atob(vault.ciphertext);
+  const salt = atob(vault.salt);
+  let hash = 0;
+  const seed = `${pin}:${salt}:femesalud-pin-vault`;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  let json = "";
+  for (let i = 0; i < cipher.length; i++) {
+    const keyByte = (Math.abs(hash) + i * 31 + pin.charCodeAt(i % pin.length)) % 256;
+    json += String.fromCharCode(cipher.charCodeAt(i) ^ keyByte);
+  }
+  return JSON.parse(json);
+}
+
 async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
   const enc = new TextEncoder();
   const keyMaterial = await window.crypto.subtle.importKey(
@@ -69,41 +119,59 @@ async function deriveKey(pin: string, salt: Uint8Array): Promise<CryptoKey> {
 }
 
 async function encryptData(data: object, pin: string): Promise<EncryptedVault> {
-  const salt = window.crypto.getRandomValues(new Uint8Array(16));
-  const iv = window.crypto.getRandomValues(new Uint8Array(12));
-  const key = await deriveKey(pin, salt);
+  if (!hasSubtleCrypto) {
+    return fallbackEncrypt(data, pin);
+  }
+  try {
+    const salt = window.crypto.getRandomValues(new Uint8Array(16));
+    const iv = window.crypto.getRandomValues(new Uint8Array(12));
+    const key = await deriveKey(pin, salt);
 
-  const enc = new TextEncoder();
-  const encodedData = enc.encode(JSON.stringify(data));
+    const enc = new TextEncoder();
+    const encodedData = enc.encode(JSON.stringify(data));
 
-  const cipherBuffer = await window.crypto.subtle.encrypt(
-    { name: "AES-GCM", iv },
-    key,
-    encodedData
-  );
+    const cipherBuffer = await window.crypto.subtle.encrypt(
+      { name: "AES-GCM", iv },
+      key,
+      encodedData
+    );
 
-  return {
-    ciphertext: bufferToBase64(cipherBuffer),
-    iv: bufferToBase64(iv),
-    salt: bufferToBase64(salt),
-  };
+    return {
+      ciphertext: bufferToBase64(cipherBuffer),
+      iv: bufferToBase64(iv),
+      salt: bufferToBase64(salt),
+    };
+  } catch {
+    return fallbackEncrypt(data, pin);
+  }
 }
 
 async function decryptData(vault: EncryptedVault, pin: string): Promise<any> {
-  const salt = new Uint8Array(base64ToBuffer(vault.salt));
-  const iv = new Uint8Array(base64ToBuffer(vault.iv));
-  const ciphertext = base64ToBuffer(vault.ciphertext);
+  if (!hasSubtleCrypto || (vault.iv && vault.iv.startsWith("ZmIt"))) {
+    return fallbackDecrypt(vault, pin);
+  }
+  try {
+    const salt = new Uint8Array(base64ToBuffer(vault.salt));
+    const iv = new Uint8Array(base64ToBuffer(vault.iv));
+    const ciphertext = base64ToBuffer(vault.ciphertext);
 
-  const key = await deriveKey(pin, salt);
+    const key = await deriveKey(pin, salt);
 
-  const decryptedBuffer = await window.crypto.subtle.decrypt(
-    { name: "AES-GCM", iv },
-    key,
-    ciphertext
-  );
+    const decryptedBuffer = await window.crypto.subtle.decrypt(
+      { name: "AES-GCM", iv },
+      key,
+      ciphertext
+    );
 
-  const dec = new TextDecoder();
-  return JSON.parse(dec.decode(decryptedBuffer));
+    const dec = new TextDecoder();
+    return JSON.parse(dec.decode(decryptedBuffer));
+  } catch (e) {
+    try {
+      return fallbackDecrypt(vault, pin);
+    } catch {
+      throw e;
+    }
+  }
 }
 
 // --- VAULT STORAGE MANAGEMENT ---

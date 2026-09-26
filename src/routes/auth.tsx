@@ -21,7 +21,7 @@ import {
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
-  head: () => ({ meta: [{ title: "Iniciar sesión — FemeSalud" }] }),
+  head: () => ({ meta: [{ title: "Iniciar sesión — Medizen" }] }),
   component: AuthPage,
 });
 
@@ -95,9 +95,16 @@ function AuthPage() {
         let userFullName = user.user_metadata?.full_name || email.split("@")[0];
         let userRole = "Usuario";
 
+        // Check if PIN was previously saved in localStorage
+        const localPin = localStorage.getItem(`femesalud_pin_${user.id}`);
+        if (!userPin && localPin) {
+          userPin = localPin;
+        }
+
+        // Fetch user from public.usuarios
         const { data: dbUser } = await supabase
           .from("usuarios")
-          .select("pin_seguridad, id_rol, roles(nombre_rol), medicos(nombre, apellido)")
+          .select("id_usuario, pin_seguridad, id_rol, nombre_usuario")
           .eq("auth_id", user.id)
           .maybeSingle();
 
@@ -105,21 +112,34 @@ function AuthPage() {
           if (!userPin && dbUser.pin_seguridad) {
             userPin = dbUser.pin_seguridad;
           }
-          if (dbUser.medicos) {
-            const doc = Array.isArray(dbUser.medicos) ? dbUser.medicos[0] : dbUser.medicos;
-            if (doc?.nombre) {
-              userFullName = `${doc.nombre} ${doc.apellido || ""}`.trim();
+          if (dbUser.nombre_usuario) {
+            userFullName = dbUser.nombre_usuario;
+          }
+          if (dbUser.id_rol) {
+            const { data: roleData } = await supabase
+              .from("roles")
+              .select("nombre_rol")
+              .eq("id_rol", dbUser.id_rol)
+              .maybeSingle();
+            if (roleData?.nombre_rol) {
+              userRole = roleData.nombre_rol === "admin" ? "Administrador" : roleData.nombre_rol;
             }
           }
-          if (dbUser.roles) {
-            const role = Array.isArray(dbUser.roles) ? dbUser.roles[0] : dbUser.roles;
-            if (role?.nombre_rol) {
-              userRole = role.nombre_rol === "admin" ? "Administrador" : "Médico";
+          if (dbUser.id_usuario) {
+            const { data: medico } = await supabase
+              .from("medicos")
+              .select("nombre, apellido")
+              .eq("id_usuario", dbUser.id_usuario)
+              .maybeSingle();
+            if (medico?.nombre) {
+              userFullName = `${medico.nombre} ${medico.apellido || ""}`.trim();
+              if (userRole === "Usuario") userRole = "Médico";
             }
           }
         }
 
         if (userPin && String(userPin).length === 4) {
+          localStorage.setItem(`femesalud_pin_${user.id}`, String(userPin));
           await saveQuickAccessAccount({
             userId: user.id,
             email: user.email || email,
@@ -135,7 +155,7 @@ function AuthPage() {
     }
 
     setLoading(false);
-    toast.success("Bienvenido a FemeSalud");
+    toast.success("Bienvenido a Medizen");
     router.navigate({ to: "/", replace: true });
   };
 
@@ -415,15 +435,13 @@ function AuthPage() {
   return (
     <div className="min-h-screen w-full flex bg-background font-sans">
       {/* Left side: Login/Register Form */}
-      <div className="w-full md:w-[50%] lg:w-[45%] flex flex-col justify-between p-8 sm:p-12 lg:p-16 bg-card dark:bg-zinc-950">
+      <div className="w-full md:w-[50%] lg:w-[45%] flex flex-col justify-between p-6 sm:p-10 lg:p-16 bg-card dark:bg-zinc-950 min-h-screen md:min-h-0">
         
         {/* Top brand logo */}
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shadow-sm overflow-hidden">
-            <img src="/favicon.svg" alt="Logo" className="h-5 w-5 object-contain" />
-          </div>
+        <div className="flex items-center gap-3">
+          <img src="/favicon.svg" alt="Logo" className="h-8 w-8 object-contain flex-shrink-0" />
           <span className="font-display font-bold text-xl tracking-tight text-foreground">
-            feme<span className="text-primary">salud</span>
+            Medi<span className="text-primary">zen</span>
           </span>
         </div>
 

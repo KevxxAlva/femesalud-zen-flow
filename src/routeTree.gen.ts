@@ -17,7 +17,6 @@ import { Route as AuthenticatedStocksRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedServiciosRouteImport } from './routes/_authenticated/servicios'
 import { Route as AuthenticatedReportesRouteImport } from './routes/_authenticated/reportes'
 import { Route as AuthenticatedMetodosPagoRouteImport } from './routes/_authenticated/metodos-pago'
-import { Route as AuthenticatedHistoriasRouteImport } from './routes/_authenticated/historias'
 import { Route as AuthenticatedFacturacionRouteImport } from './routes/_authenticated/facturacion'
 import { Route as AuthenticatedDoctoresRouteImport } from './routes/_authenticated/doctores'
 import { Route as AuthenticatedCuentasRouteImport } from './routes/_authenticated/cuentas'
@@ -67,11 +66,6 @@ const AuthenticatedMetodosPagoRoute =
     path: '/metodos-pago',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedHistoriasRoute = AuthenticatedHistoriasRouteImport.update({
-  id: '/historias',
-  path: '/historias',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedFacturacionRoute =
   AuthenticatedFacturacionRouteImport.update({
     id: '/facturacion',
@@ -126,7 +120,6 @@ export interface FileRoutesByFullPath {
   '/cuentas': typeof AuthenticatedCuentasRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
-  '/historias': typeof AuthenticatedHistoriasRoute
   '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
@@ -143,7 +136,6 @@ export interface FileRoutesByTo {
   '/cuentas': typeof AuthenticatedCuentasRoute
   '/doctores': typeof AuthenticatedDoctoresRoute
   '/facturacion': typeof AuthenticatedFacturacionRoute
-  '/historias': typeof AuthenticatedHistoriasRoute
   '/metodos-pago': typeof AuthenticatedMetodosPagoRoute
   '/reportes': typeof AuthenticatedReportesRoute
   '/servicios': typeof AuthenticatedServiciosRoute
@@ -163,7 +155,6 @@ export interface FileRoutesById {
   '/_authenticated/cuentas': typeof AuthenticatedCuentasRoute
   '/_authenticated/doctores': typeof AuthenticatedDoctoresRoute
   '/_authenticated/facturacion': typeof AuthenticatedFacturacionRoute
-  '/_authenticated/historias': typeof AuthenticatedHistoriasRoute
   '/_authenticated/metodos-pago': typeof AuthenticatedMetodosPagoRoute
   '/_authenticated/reportes': typeof AuthenticatedReportesRoute
   '/_authenticated/servicios': typeof AuthenticatedServiciosRoute
@@ -184,7 +175,6 @@ export interface FileRouteTypes {
     | '/cuentas'
     | '/doctores'
     | '/facturacion'
-    | '/historias'
     | '/metodos-pago'
     | '/reportes'
     | '/servicios'
@@ -201,7 +191,6 @@ export interface FileRouteTypes {
     | '/cuentas'
     | '/doctores'
     | '/facturacion'
-    | '/historias'
     | '/metodos-pago'
     | '/reportes'
     | '/servicios'
@@ -220,7 +209,6 @@ export interface FileRouteTypes {
     | '/_authenticated/cuentas'
     | '/_authenticated/doctores'
     | '/_authenticated/facturacion'
-    | '/_authenticated/historias'
     | '/_authenticated/metodos-pago'
     | '/_authenticated/reportes'
     | '/_authenticated/servicios'
@@ -294,13 +282,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMetodosPagoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/historias': {
-      id: '/_authenticated/historias'
-      path: '/historias'
-      fullPath: '/historias'
-      preLoaderRoute: typeof AuthenticatedHistoriasRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/facturacion': {
       id: '/_authenticated/facturacion'
       path: '/facturacion'
@@ -367,7 +348,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCuentasRoute: typeof AuthenticatedCuentasRoute
   AuthenticatedDoctoresRoute: typeof AuthenticatedDoctoresRoute
   AuthenticatedFacturacionRoute: typeof AuthenticatedFacturacionRoute
-  AuthenticatedHistoriasRoute: typeof AuthenticatedHistoriasRoute
   AuthenticatedMetodosPagoRoute: typeof AuthenticatedMetodosPagoRoute
   AuthenticatedReportesRoute: typeof AuthenticatedReportesRoute
   AuthenticatedServiciosRoute: typeof AuthenticatedServiciosRoute
@@ -385,7 +365,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCuentasRoute: AuthenticatedCuentasRoute,
   AuthenticatedDoctoresRoute: AuthenticatedDoctoresRoute,
   AuthenticatedFacturacionRoute: AuthenticatedFacturacionRoute,
-  AuthenticatedHistoriasRoute: AuthenticatedHistoriasRoute,
   AuthenticatedMetodosPagoRoute: AuthenticatedMetodosPagoRoute,
   AuthenticatedReportesRoute: AuthenticatedReportesRoute,
   AuthenticatedServiciosRoute: AuthenticatedServiciosRoute,

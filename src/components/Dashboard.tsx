@@ -304,7 +304,7 @@ export function Dashboard() {
         title: "Nuevos Pacientes",
         desc: `${recentPatients.length} paciente(s) registrados recientemente.`,
         icon: Users,
-        color: "text-primarymerald-500",
+        color: "text-emerald-500",
         bg: "bg-emerald-50",
       });
     }

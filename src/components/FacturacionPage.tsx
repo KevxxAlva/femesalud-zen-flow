@@ -459,7 +459,7 @@ export function FacturacionPage() {
   return (
     <div className="space-y-6">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div className="ml-14 md:ml-0">
+        <div>
           <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Módulo Financiero</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">Facturación y Recibos</h1>
           <p className="text-sm text-muted-foreground">Control de caja, cobros de consultas y estados de pago.</p>

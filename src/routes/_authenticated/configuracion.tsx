@@ -18,7 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { removeQuickAccessAccount, saveQuickAccessAccount } from "@/lib/auth/quickAccess";
 
 export const Route = createFileRoute("/_authenticated/configuracion")({
-  head: () => ({ meta: [{ title: "Configuración — FemeSalud" }] }),
+  head: () => ({ meta: [{ title: "Configuración — Medizen" }] }),
   component: ConfiguracionPage,
 });
 
@@ -79,7 +79,7 @@ function ConfiguracionPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto py-2 font-sans text-foreground">
-      <header className="flex flex-col gap-1 ml-14 md:ml-0">
+      <header className="flex flex-col gap-1">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Ajustes Generales</p>
         <h1 className="text-2xl font-bold text-primary tracking-tight flex items-center gap-2">
           <Settings className="h-6 w-6 animate-spin-slow" /> Configuración

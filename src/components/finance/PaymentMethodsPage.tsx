@@ -75,14 +75,14 @@ export function PaymentMethodsPage() {
   }
 
   return (
-    <div className="bg-card rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
+    <div className="bg-card rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
       <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
           <button className="text-muted-foreground hover:text-foreground"><ChevronLeft className="h-5 w-5" /></button>
           <h1 className="text-xl font-bold text-foreground">Métodos de Pago</h1>
         </div>
-        <div className="flex-1 max-w-xl mx-auto">
-          <div className="flex items-center gap-2 rounded-full bg-muted border border-gray-100 px-4 py-2.5 w-full">
+        <div className="flex-1 max-w-xl mx-auto w-full sm:w-auto">
+          <div className="flex items-center gap-2 rounded-full bg-muted border border-border/50 px-4 py-2.5 w-full">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input
               value={q}
@@ -96,15 +96,15 @@ export function PaymentMethodsPage() {
         <div className="flex items-center gap-4 hidden md:flex"></div>
       </header>
 
-      <div className="flex flex-wrap items-center justify-between mb-4 border-b border-border/40 pb-4 mt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-border/40 pb-4 mt-2">
         <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
           <CreditCard className="h-4 w-4" /> {filtered.length} métodos
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted">
+          <button className="flex items-center gap-2 px-3 sm:px-4 py-2 text-xs font-bold text-foreground border border-border/40 rounded-xl hover:bg-muted">
             <Filter className="h-3.5 w-3.5" /> Filtros
           </button>
-          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="flex items-center gap-2 bg-black text-primary-foreground px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-gray-800 transition">
+          <button onClick={() => { setEditing(null); setFormOpen(true); }} className="flex items-center gap-2 bg-primary text-primary-foreground px-4 sm:px-5 py-2.5 rounded-xl text-xs font-bold shadow-md hover:bg-[#3451d6] transition">
             <Plus className="h-3.5 w-3.5" /> Añadir Método
           </button>
         </div>

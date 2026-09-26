@@ -62,16 +62,14 @@ function SidebarBody({ onNavigate, isCollapsed }: { onNavigate?: () => void, isC
       <div className="flex flex-col h-full bg-card text-foreground border-r border-border/40 overflow-hidden">
         {/* Logo Area */}
         <div className={cn("pt-6 pb-4", isCollapsed ? "px-2" : "px-6")}>
-          <div className={cn("flex items-center mb-6", isCollapsed ? "justify-center" : "gap-2")}>
-            <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
-              <img src="/favicon.svg" alt="Logo" className="h-6 w-6 object-contain" />
-            </div>
+          <div className={cn("flex items-center mb-6", isCollapsed ? "justify-center" : "gap-3")}>
+            <img src="/favicon.svg" alt="Logo" className="h-8 w-8 object-contain flex-shrink-0" />
             {!isCollapsed && (
               <span
                 className="font-display font-bold text-xl tracking-tight text-foreground truncate bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70"
-                title={clinic?.name || "FemeSalud"}
+                title={clinic?.name || "Medizen"}
               >
-                {clinic?.name || "FemeSalud"}
+                {clinic?.name || "Medizen"}
               </span>
             )}
           </div>
@@ -169,11 +167,41 @@ function SidebarBody({ onNavigate, isCollapsed }: { onNavigate?: () => void, isC
   );
 }
 
-export function AppSidebar({ isCollapsed, onToggle }: { isCollapsed?: boolean; onToggle?: () => void }) {
-  const [mobileOpen, setMobileOpen] = useState(false);
-
+export function AppSidebar({ 
+  isCollapsed, 
+  onToggle,
+  mobileOpen,
+  onMobileClose
+}: { 
+  isCollapsed?: boolean; 
+  onToggle?: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}) {
   return (
     <>
+      {/* Mobile Drawer */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div 
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity" 
+            onClick={onMobileClose} 
+          />
+          {/* Sliding Drawer */}
+          <div className="relative w-[280px] max-w-[85vw] h-full bg-card shadow-2xl z-50 flex flex-col animate-in slide-in-from-left duration-300">
+            <button
+              onClick={onMobileClose}
+              className="absolute right-3 top-5 p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors z-50"
+              aria-label="Cerrar menú"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <SidebarBody onNavigate={onMobileClose} isCollapsed={false} />
+          </div>
+        </div>
+      )}
+
       {/* Desktop Sidebar */}
       <aside className={cn(
         "fixed left-0 top-0 bottom-0 z-30 hidden flex-col bg-card md:flex shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-all duration-300",

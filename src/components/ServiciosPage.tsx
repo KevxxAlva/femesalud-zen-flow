@@ -64,7 +64,7 @@ export function ServiciosPage() {
   };
 
   return (
-    <div className="bg-card rounded-[2rem] p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
+    <div className="bg-card rounded-[1.5rem] sm:rounded-[2rem] p-4 sm:p-6 shadow-sm min-h-[calc(100vh-8rem)] font-sans flex flex-col">
       {/* TOP HEADER */}
       <header className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-3">
@@ -78,7 +78,7 @@ export function ServiciosPage() {
             </p>
           </div>
         </div>
-        <div className="flex-1 max-w-xl mx-auto">
+        <div className="flex-1 max-w-xl mx-auto w-full sm:w-auto">
           <div className="flex items-center gap-2 rounded-full bg-muted border border-border/50 px-4 py-2.5 w-full">
             <Search className="h-4 w-4 text-muted-foreground" />
             <input

@@ -1,12 +1,37 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
-  <g transform="translate(16, 16) scale(1.3333)">
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M12 6v4"/>
-      <path d="M14 14h-4"/>
-      <path d="M14 18h-4"/>
-      <path d="M14 8h-4"/>
-      <path d="M18 12h2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h2"/>
-      <path d="M18 22V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v18"/>
-    </svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="10 14 80 60" width="100%" height="100%" fill="none">
+  <defs>
+    <!-- System Primary Color (#4361EE) with subtle lighting for ribbon depth -->
+    <linearGradient id="medizenPrimaryOnly" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#607AF6" />
+      <stop offset="50%" stop-color="#4361EE" />
+      <stop offset="100%" stop-color="#2D45C8" />
+    </linearGradient>
+
+    <!-- Depth filter for crossing ribbon -->
+    <filter id="ribbonDepth" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="1.5" stdDeviation="2" flood-color="#1E293B" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- 100% TRANSPARENT BACKGROUND (No boxes, no circles, edge-to-edge vector) -->
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <!-- Back Loop of the Möbius Ribbon -->
+    <path
+      d="M26 50 C14 30, 34 18, 50 38 C66 58, 86 70, 74 50 C60 30, 42 18, 26 50 Z"
+      stroke="url(#medizenPrimaryOnly)"
+      stroke-width="7.5"
+    />
+
+    <!-- Front Crossing Ribbon in Primary Color with depth shadow -->
+    <path
+      filter="url(#ribbonDepth)"
+      d="M74 50 C86 30, 66 18, 50 38 C34 58, 14 70, 26 50"
+      stroke="url(#medizenPrimaryOnly)"
+      stroke-width="7.5"
+    />
+
+    <!-- Central Precision Focus Point in Pure Primary Color -->
+    <circle cx="50" cy="38" r="4" fill="#4361EE" />
+    <circle cx="50" cy="38" r="7" stroke="#4361EE" stroke-width="1.5" opacity="0.4" />
   </g>
 </svg>
